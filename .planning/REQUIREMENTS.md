@@ -16,14 +16,14 @@
 
 ### Movie Game (GAME)
 
-- [ ] **GAME-01**: User can start a Movie Game session by manually selecting any movie as the starting point
+- [x] **GAME-01**: User can start a Movie Game session by manually selecting any movie as the starting point
 - [x] **GAME-02**: User sees an Eligible Actors panel: cast of current movie, excluding already-picked actors
-- [ ] **GAME-03**: User selects an actor to view their Eligible Movies panel (unwatched filmography)
-- [ ] **GAME-04**: Session tracks picked actors so no actor can repeat within a session
-- [ ] **GAME-05**: User can sort Eligible Movies by genre, TMDB rating, or aggregated rating
-- [ ] **GAME-06**: User can toggle between unwatched-only or all movies with watched badges
-- [ ] **GAME-07**: Only unwatched movies are selectable in Game mode
-- [ ] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
+- [x] **GAME-03**: User selects an actor to view their Eligible Movies panel (unwatched filmography)
+- [x] **GAME-04**: Session tracks picked actors so no actor can repeat within a session
+- [x] **GAME-05**: User can sort Eligible Movies by genre, TMDB rating, or aggregated rating
+- [x] **GAME-06**: User can toggle between unwatched-only or all movies with watched badges
+- [x] **GAME-07**: Only unwatched movies are selectable in Game mode
+- [x] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
 
 ### Query Mode (QUERY)
 
