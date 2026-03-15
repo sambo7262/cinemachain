@@ -88,7 +88,7 @@ export default function GameLobby() {
   const createMutation = useMutation({
     mutationFn: (tmdb_id: number) =>
       api.createSession({ start_movie_tmdb_id: tmdb_id }),
-    onSuccess: (session) => navigate(`/game/${session.id}`),
+    onSuccess: (session) => navigate(`/game/${session.id}`, { state: { radarr_status: session.radarr_status ?? null } }),
     onError: (err: Error & { status?: number }) => {
       if (err.status === 409)
         toast("A session is already in progress — resume or end it first.")

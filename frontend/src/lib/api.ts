@@ -18,7 +18,17 @@ export interface GameSessionDTO {
   id: number
   status: "active" | "paused" | "awaiting_continue" | "ended"
   current_movie_tmdb_id: number
+  current_movie_watched: boolean
   steps: GameSessionStepDTO[]
+  radarr_status?: string | null
+}
+
+export interface PaginatedMoviesDTO {
+  items: EligibleMovieDTO[]
+  total: number
+  page: number
+  page_size: number
+  has_more: boolean
 }
 
 export interface GameSessionStepDTO {
@@ -68,12 +78,14 @@ export const api = {
   getEligibleActors: (sessionId: number) =>
     apiFetch<EligibleActorDTO[]>(`/game/sessions/${sessionId}/eligible-actors`),
 
-  getEligibleMovies: (sessionId: number, params?: { actor_id?: number; sort?: string; all_movies?: boolean }) => {
+  getEligibleMovies: (sessionId: number, params?: { actor_id?: number; sort?: string; all_movies?: boolean; page?: number; page_size?: number }) => {
     const q = new URLSearchParams()
     if (params?.actor_id) q.set("actor_id", String(params.actor_id))
     if (params?.sort) q.set("sort", params.sort)
     if (params?.all_movies) q.set("all_movies", "true")
-    return apiFetch<EligibleMovieDTO[]>(`/game/sessions/${sessionId}/eligible-movies?${q}`)
+    if (params?.page != null) q.set("page", String(params.page))
+    if (params?.page_size != null) q.set("page_size", String(params.page_size))
+    return apiFetch<PaginatedMoviesDTO>(`/game/sessions/${sessionId}/eligible-movies?${q}`)
   },
 
   pickActor: (sessionId: number, body: { actor_tmdb_id: number; actor_name: string }) =>
@@ -90,6 +102,9 @@ export const api = {
 
   endSession: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/end`, { method: "POST" }),
+
+  markCurrentWatched: (sessionId: number) =>
+    apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/mark-current-watched`, { method: "POST" }),
 
   importCsv: (rows: Array<{ movieName: string; actorName: string; order: number }>) =>
     apiFetch<GameSessionDTO>("/game/sessions/import-csv", { method: "POST", body: JSON.stringify({ rows }) }),
