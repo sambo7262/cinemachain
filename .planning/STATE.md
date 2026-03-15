@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-15-PLAN.md
-last_updated: "2026-03-15T20:41:28.278Z"
+status: blocked
+stopped_at: 03-16 verification partial pass — session state machine flow defect found; 03-17 required before Phase 3 can close
+last_updated: "2026-03-15T21:03:00.415Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — second round gap closure required)
-- **Plan:** Completed 03-13; 03-14 required (GAME-01 session lifecycle still broken)
-- **Status:** 03-13 re-verification PARTIAL PASS — GAME-01 session lifecycle defect persists; 03-14 gap-closure plan needed
+- **Phase:** Phase 3 — Movie Game (in progress — third round gap closure required)
+- **Plan:** Completed 03-16 re-verification; 03-17 required (session state machine flow defect found)
+- **Status:** 03-16 re-verification PARTIAL PASS — GAME-01 session start and GAME-03 eligible movies fail due to incorrect state machine flow; 03-17 gap-closure plan needed
 
 ## Progress
 
-`[██████████] 96%` — 24 of 25 total plans complete (Phase 3 gap closure 03-15 done; 03-16 pending)
+`[██████████] 100%` — 25 of 25 planned plans complete (03-16 done; 03-17 unplanned gap-closure needed)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11/03-12/03-13/03-14/03-15 done; 03-16 gap-closure pending |
+| 3. Movie Game | In progress — 03-11 through 03-16 done; 03-17 gap-closure needed (session state machine flow defect) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-16: Phase 3 not closed — session state machine flow defect found in live testing; correct flow is: movie search → select movie (session created, movie_selected_unwatched, NO actor prompt) → user watches → user picks actor → user picks next movie → Radarr queried only if movie not already in Radarr; 03-17 required
+- **2026-03-15:** 03-16: setQueryData end-session fix (03-14) confirmed working in live NAS — GAME-01 end-session sub-requirement passes; NavBar (03-15) confirmed on all pages
 - **2026-03-15:** 03-15: isMovieSelected derived client-side from lastStep.actor_tmdb_id === null && steps.length > 1 — avoids new backend field for movie_selected_unwatched sub-state; NavBar added as sticky layout element above Routes in App.tsx
 - **2026-03-15:** 03-14: setQueryData(['activeSession'], null) in endMutation.onSuccess guarantees synchronous banner clear — eliminates async refetchQueries timing race on NAS hardware; staleTime reduced to 0; eligibleMovies enabled on !!session (not activeTab) so combined view loads on mount
 - **2026-03-15:** 03-13 checkpoint PARTIAL PASS — GAME-01 session lifecycle (end-session + start-new-session from lobby) still broken after 03-12 refetchQueries fix; root cause unknown; 03-14 must diagnose and fix before Phase 3 can close
@@ -104,8 +106,8 @@ progress:
   1. Routing: FIXED — Docker `--no-cache` rebuild resolved Phase 1 placeholder at `/`
   3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
   4. Pause button: FIXED — pause/resume toggle working correctly in live app
-- **[FIXED IN 03-14] GAME-01 session lifecycle:**
-  2. Session lifecycle: setQueryData(null) synchronous cache clear applied in endMutation.onSuccess — banner should clear immediately on same render cycle; staleTime reduced to 0 on activeSession query; requires deploy + smoke test to confirm fix
+- **[CONFIRMED IN 03-16] GAME-01 end-session:** setQueryData(null) fix confirmed working — banner clears immediately in live NAS test
+- **[OPEN — 03-17 REQUIRED] GAME-01 session start + GAME-03 eligible movies:** Session state machine flow is wrong — UI prompts actor selection immediately on movie search, but correct flow starts with movie selection creating the session in movie_selected_unwatched state, NO actor prompt until after user watches the movie. Eligible Movies combined view also broken in this context. Radarr query timing also needs correction (should only fire on next-movie selection, and only if not already in Radarr).
 - RT ratings source unresolved (no public API — TMDB proxy vs OMDb vs scraping TBD before Phase 3 UI)
 - pyarr currency risk: last release July 2023; verify against installed Radarr/Sonarr API version before writing integration code
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
@@ -133,6 +135,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T20:41:28.274Z
-Stopped at: Completed 03-15-PLAN.md
-Resume with: Write and execute 03-14 gap-closure plan to fix GAME-01 session lifecycle (end-session banner clear + new-session start from lobby); then re-verify GAME-04, GAME-07 which were blocked in 03-13
+Last session: 2026-03-15T20:57:00Z
+Stopped at: 03-16 verification partial pass — session state machine flow defect documented
+Resume with: Write and execute 03-17 gap-closure plan to fix session state machine flow (movie selection creates session → watch → pick actor → pick next movie → Radarr query); also fix eligible movies combined view at session start and Radarr query timing/notification logic
