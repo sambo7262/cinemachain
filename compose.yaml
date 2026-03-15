@@ -10,7 +10,7 @@
 #   - All volumes use host bind-mounts to /volume1/docker/appdata/cinemachain/
 #     (visible in DSM File Station; survive Docker package reinstalls)
 #   - Tailscale NOT included — system-wide Tailscale on NAS handles remote access
-#     Access remotely via Tailscale IP + local ports (8000 backend, 3000 frontend)
+#     Access remotely via Tailscale IP + local ports (8111 backend, 3111 frontend)
 #   - All services on synobridge network — same internal network as Plex, Radarr, Sonarr
 
 services:
@@ -22,7 +22,7 @@ services:
     networks:
       - synobridge
     ports:
-      - "8000:8000"
+      - "8111:8000"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -73,7 +73,7 @@ services:
     networks:
       - synobridge
     ports:
-      - "3000:80"
+      - "3111:80"
     depends_on:
       - backend
 
