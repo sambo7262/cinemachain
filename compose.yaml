@@ -11,6 +11,7 @@
 #     (visible in DSM File Station; survive Docker package reinstalls)
 #   - Tailscale NOT included — system-wide Tailscale on NAS handles remote access
 #     Access remotely via Tailscale IP + local ports (8000 backend, 3000 frontend)
+#   - All services on synobridge network — same internal network as Plex, Radarr, Sonarr
 
 services:
   backend:
@@ -18,6 +19,8 @@ services:
     container_name: cinemachain-backend
     restart: unless-stopped
     mem_limit: 512m
+    networks:
+      - synobridge
     ports:
       - "8000:8000"
     environment:
@@ -44,6 +47,8 @@ services:
     container_name: cinemachain-postgres
     restart: unless-stopped
     mem_limit: 256m
+    networks:
+      - synobridge
     ports:
       - "127.0.0.1:5433:5432"
     environment:
@@ -65,7 +70,13 @@ services:
     container_name: cinemachain-frontend
     restart: unless-stopped
     mem_limit: 64m
+    networks:
+      - synobridge
     ports:
       - "3000:80"
     depends_on:
       - backend
+
+networks:
+  synobridge:
+    external: true
