@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-12-PLAN.md
-last_updated: "2026-03-15T18:29:48.152Z"
+status: executing
+stopped_at: Completed 03-11-PLAN.md
+last_updated: "2026-03-15T18:30:51.988Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # STATE.md — CinemaChain
@@ -41,6 +41,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-11: _ensure_actor_credits_in_db uses pg_insert on_conflict_do_nothing — idempotent upsert; TMDB errors swallowed so eligible-movies endpoint degrades gracefully to cached data
+- **2026-03-15:** 03-11: Makefile rebuild target tags images as sambo7262/cinemachain-*:latest matching compose.yaml — Docker Compose picks up locally built images instead of Hub versions
 - **2026-03-15:** resumeMutation added to GameSession header as sibling of pauseMutation — distinct from handleContinue which handles awaiting_continue UX path
 - **2026-03-15:** refetchQueries used over invalidateQueries in GameLobby endMutation.onSuccess — forces immediate synchronous banner clear rather than lazy re-render on next query cycle
 - **2026-03-15:** 03-10 checkpoint FAILED — eligible-movies endpoint must call TMDBClient.fetch_actor_credits on demand when credits are missing from DB; no on-demand fetch was implemented in 03-06
@@ -125,6 +127,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T18:29:48.148Z
-Stopped at: Completed 03-12-PLAN.md
+Last session: 2026-03-15T18:30:51.985Z
+Stopped at: Completed 03-11-PLAN.md
 Resume with: Create and execute remediation plan 03-11 to fix eligible-movies on-demand fetch, Docker cache, session lifecycle, and pause mutation cache invalidation
