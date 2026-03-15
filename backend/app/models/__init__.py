@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import enum
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -14,15 +17,15 @@ class Movie(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    year: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    poster_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    vote_average: Mapped[float | None] = mapped_column(Float, nullable=True)
-    genres: Mapped[str | None] = mapped_column(String(512), nullable=True)  # JSON-encoded list of genre names
-    runtime: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    poster_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    vote_average: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    genres: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)  # JSON-encoded list of genre names
+    runtime: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    credits: Mapped[list["Credit"]] = relationship(back_populates="movie", lazy="raise")
-    watch_events: Mapped[list["WatchEvent"]] = relationship(back_populates="movie", lazy="raise")
+    credits: Mapped[list[Credit]] = relationship(back_populates="movie", lazy="raise")
+    watch_events: Mapped[list[WatchEvent]] = relationship(back_populates="movie", lazy="raise")
 
 
 class Actor(Base):
@@ -31,10 +34,10 @@ class Actor(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    profile_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    profile_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    credits: Mapped[list["Credit"]] = relationship(back_populates="actor", lazy="raise")
+    credits: Mapped[list[Credit]] = relationship(back_populates="actor", lazy="raise")
 
 
 class Credit(Base):
@@ -44,11 +47,11 @@ class Credit(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), nullable=False, index=True)
     actor_id: Mapped[int] = mapped_column(ForeignKey("actors.id"), nullable=False, index=True)
-    character: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    order: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    character: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    movie: Mapped["Movie"] = relationship(back_populates="credits", lazy="raise")
-    actor: Mapped["Actor"] = relationship(back_populates="credits", lazy="raise")
+    movie: Mapped[Movie] = relationship(back_populates="credits", lazy="raise")
+    actor: Mapped[Actor] = relationship(back_populates="credits", lazy="raise")
 
 
 class WatchEvent(Base):
@@ -57,11 +60,11 @@ class WatchEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    movie_id: Mapped[int | None] = mapped_column(ForeignKey("movies.id"), nullable=True)
+    movie_id: Mapped[Optional[int]] = mapped_column(ForeignKey("movies.id"), nullable=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False)  # plex_sync | plex_webhook | manual
     watched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    movie: Mapped["Movie | None"] = relationship(back_populates="watch_events", lazy="raise")
+    movie: Mapped[Optional[Movie]] = relationship(back_populates="watch_events", lazy="raise")
 
 
 class SessionStatus(str, enum.Enum):
@@ -80,7 +83,7 @@ class GameSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    steps: Mapped[list["GameSessionStep"]] = relationship(
+    steps: Mapped[list[GameSessionStep]] = relationship(
         back_populates="session", lazy="raise", order_by="GameSessionStep.step_order"
     )
 
@@ -92,9 +95,9 @@ class GameSessionStep(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey("game_sessions.id"), nullable=False, index=True)
     step_order: Mapped[int] = mapped_column(Integer, nullable=False)
     movie_tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    actor_tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    actor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    movie_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    actor_tmdb_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    actor_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    movie_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    session: Mapped["GameSession"] = relationship(back_populates="steps", lazy="raise")
+    session: Mapped[GameSession] = relationship(back_populates="steps", lazy="raise")
