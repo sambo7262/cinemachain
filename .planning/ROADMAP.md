@@ -45,7 +45,14 @@ Plans:
   3. Movies the user has watched in Plex are reflected as watched in the app after a Plex library sync
   4. A Plex playback completion event (webhook) automatically marks the corresponding movie as watched
   5. User can manually mark a movie as watched through the UI (fallback for non-Plex-Pass setups)
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0: test stubs for DATA-01 through DATA-06
+- [ ] 02-02-PLAN.md — Wave 1: ORM models (Movie, Actor, Credit, WatchEvent) + Alembic migration
+- [ ] 02-03-PLAN.md — Wave 2: TMDBClient service + GET /movies/{id} + GET /actors/{id}/filmography
+- [ ] 02-04-PLAN.md — Wave 2: PlexSyncService + startup library sync
+- [ ] 02-05-PLAN.md — Wave 3: POST /webhooks/plex + PATCH /movies/{id}/watched + main.py wiring
 
 ### Phase 3: Movie Game
 **Goal:** A user can start a Movie Game session, navigate an actor-chain across movies without repeating actors, and queue a chosen movie via Radarr — with session state fully persisted to the database.
@@ -80,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
-| 2. Data Foundation | 0/? | Not started | — |
+| 2. Data Foundation | 0/5 | Planned | — |
 | 3. Movie Game | 0/? | Not started | — |
 | 4. Query Mode | 0/? | Not started | — |
 
@@ -131,4 +138,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-14 — Phase 1 planned (4 plans, 3 waves)*
+*Last updated: 2026-03-15 — Phase 2 planned (5 plans, 4 waves)*
