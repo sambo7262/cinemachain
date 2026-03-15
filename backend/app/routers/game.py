@@ -500,6 +500,12 @@ async def get_eligible_movies(
         eligible_actor_rows = await db.execute(actor_stmt)
         eligible_actor_tmdb_ids = [actor.tmdb_id for actor, _ in eligible_actor_rows.all()]
 
+        # Ensure filmography credits are in DB for each eligible actor.
+        # Mirrors the actor_id-scoped branch — fetches from TMDB on demand if missing.
+        tmdb: TMDBClient = request.app.state.tmdb_client
+        for aid in eligible_actor_tmdb_ids:
+            await _ensure_actor_credits_in_db(aid, tmdb, db)
+
         if eligible_actor_tmdb_ids:
             film_stmt = (
                 select(Movie, Credit, Actor)
