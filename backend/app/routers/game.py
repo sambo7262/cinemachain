@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import get_db
-from app.models import GameSession, GameSessionStep, Movie
+from app.models import Actor, Credit, GameSession, GameSessionStep, Movie, WatchEvent
+from app.services.radarr import RadarrClient
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -52,6 +53,16 @@ class CSVRow(BaseModel):
 
 class ImportCSVRequest(BaseModel):
     rows: list[CSVRow]
+
+
+class PickActorRequest(BaseModel):
+    actor_tmdb_id: int
+    actor_name: str
+
+
+class RequestMovieRequest(BaseModel):
+    movie_tmdb_id: int
+    movie_title: str
 
 
 # ---------------------------------------------------------------------------
@@ -280,3 +291,291 @@ async def end_session(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     return GameSessionResponse.model_validate(session)
+
+
+# ---------------------------------------------------------------------------
+# Radarr helper
+# ---------------------------------------------------------------------------
+
+async def _request_radarr(tmdb_id: int, radarr: RadarrClient) -> dict:
+    """Two-step Radarr add flow: check existence, then lookup + add."""
+    if await radarr.movie_exists(tmdb_id):
+        return {"status": "already_in_radarr"}
+    movie_payload = await radarr.lookup_movie(tmdb_id)
+    if not movie_payload:
+        raise HTTPException(status_code=502, detail="Movie not found in Radarr lookup")
+    movie_payload["monitored"] = True
+    movie_payload["addOptions"] = {"searchForMovie": True}
+    movie_payload["rootFolderPath"] = await radarr.get_root_folder()
+    movie_payload["qualityProfileId"] = await radarr.get_quality_profile_id()
+    await radarr.add_movie(movie_payload)
+    return {"status": "queued"}
+
+
+# ---------------------------------------------------------------------------
+# Eligible actors endpoint
+# ---------------------------------------------------------------------------
+
+@router.get("/sessions/{session_id}/eligible-actors")
+async def get_eligible_actors(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return actors from the session's current movie, excluding already-picked actors."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Collect already-picked actor tmdb_ids from steps
+    picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
+
+    # SQL join: Credit → Actor + Movie, filter by current movie
+    stmt = (
+        select(Actor, Credit)
+        .join(Credit, Credit.actor_id == Actor.id)
+        .join(Movie, Movie.id == Credit.movie_id)
+        .where(Movie.tmdb_id == session.current_movie_tmdb_id)
+    )
+    if picked_ids:
+        stmt = stmt.where(Actor.tmdb_id.not_in(picked_ids))
+
+    rows = await db.execute(stmt)
+    actors = []
+    for actor, credit in rows.all():
+        actors.append({
+            "tmdb_id": actor.tmdb_id,
+            "name": actor.name,
+            "profile_path": actor.profile_path,
+            "character": credit.character,
+        })
+    return actors
+
+
+# ---------------------------------------------------------------------------
+# Eligible movies endpoint
+# ---------------------------------------------------------------------------
+
+@router.get("/sessions/{session_id}/eligible-movies")
+async def get_eligible_movies(
+    session_id: int,
+    actor_id: int | None = Query(default=None),
+    sort: str | None = Query(default=None),
+    all_movies: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return eligible movies for the current game session.
+
+    - actor_id: filter to a specific actor's filmography
+    - sort: 'rating' (desc vote_average), 'runtime' (asc), 'genre' (asc)
+    - all_movies: if False (default), only return unwatched movies
+    """
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Watched state: fetch all watched tmdb_ids
+    watched_result = await db.execute(select(WatchEvent.tmdb_id))
+    watched_ids = {row[0] for row in watched_result.all()}
+
+    movies_map: dict[int, dict] = {}  # tmdb_id → movie dict
+
+    if actor_id is not None:
+        # Specific actor filmography
+        stmt = (
+            select(Movie, Credit, Actor)
+            .join(Credit, Credit.movie_id == Movie.id)
+            .join(Actor, Actor.id == Credit.actor_id)
+            .where(Actor.tmdb_id == actor_id)
+        )
+        rows = await db.execute(stmt)
+        for movie, credit, actor in rows.all():
+            if movie.tmdb_id not in movies_map:
+                movies_map[movie.tmdb_id] = {
+                    "tmdb_id": movie.tmdb_id,
+                    "title": movie.title,
+                    "year": movie.year,
+                    "poster_path": movie.poster_path,
+                    "vote_average": movie.vote_average,
+                    "genres": movie.genres,
+                    "runtime": movie.runtime,
+                    "watched": movie.tmdb_id in watched_ids,
+                    "selectable": movie.tmdb_id not in watched_ids,
+                    "via_actor_name": actor.name,
+                }
+    else:
+        # Combined view: get eligible actors first, then their filmographies
+        picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
+
+        actor_stmt = (
+            select(Actor, Credit)
+            .join(Credit, Credit.actor_id == Actor.id)
+            .join(Movie, Movie.id == Credit.movie_id)
+            .where(Movie.tmdb_id == session.current_movie_tmdb_id)
+        )
+        if picked_ids:
+            actor_stmt = actor_stmt.where(Actor.tmdb_id.not_in(picked_ids))
+
+        eligible_actor_rows = await db.execute(actor_stmt)
+        eligible_actor_tmdb_ids = [actor.tmdb_id for actor, _ in eligible_actor_rows.all()]
+
+        if eligible_actor_tmdb_ids:
+            film_stmt = (
+                select(Movie, Credit, Actor)
+                .join(Credit, Credit.movie_id == Movie.id)
+                .join(Actor, Actor.id == Credit.actor_id)
+                .where(Actor.tmdb_id.in_(eligible_actor_tmdb_ids))
+            )
+            film_rows = await db.execute(film_stmt)
+            for movie, credit, actor in film_rows.all():
+                if movie.tmdb_id not in movies_map:
+                    movies_map[movie.tmdb_id] = {
+                        "tmdb_id": movie.tmdb_id,
+                        "title": movie.title,
+                        "year": movie.year,
+                        "poster_path": movie.poster_path,
+                        "vote_average": movie.vote_average,
+                        "genres": movie.genres,
+                        "runtime": movie.runtime,
+                        "watched": movie.tmdb_id in watched_ids,
+                        "selectable": movie.tmdb_id not in watched_ids,
+                        "via_actor_name": actor.name,
+                    }
+
+    movies = list(movies_map.values())
+
+    # Filter: default only unwatched
+    if not all_movies:
+        movies = [m for m in movies if not m["watched"]]
+
+    # Sort
+    if sort == "rating":
+        movies.sort(key=lambda m: (m["vote_average"] is None, -(m["vote_average"] or 0)))
+    elif sort == "runtime":
+        movies.sort(key=lambda m: (m["runtime"] is None, m["runtime"] or 0))
+    elif sort == "genre":
+        movies.sort(key=lambda m: (
+            m["genres"] is None or m["genres"] == "",
+            m["genres"] or "",
+        ))
+
+    return movies
+
+
+# ---------------------------------------------------------------------------
+# Pick actor endpoint
+# ---------------------------------------------------------------------------
+
+@router.post("/sessions/{session_id}/pick-actor", response_model=GameSessionResponse)
+async def pick_actor(
+    session_id: int,
+    body: PickActorRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Record an actor pick, adding a new GameSessionStep. Returns 409 if actor already picked."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
+    if body.actor_tmdb_id in picked_ids:
+        raise HTTPException(status_code=409, detail="Actor already picked in this session")
+
+    next_order = max((s.step_order for s in session.steps), default=-1) + 1
+    new_step = GameSessionStep(
+        session_id=session.id,
+        step_order=next_order,
+        movie_tmdb_id=session.current_movie_tmdb_id,
+        actor_tmdb_id=body.actor_tmdb_id,
+        actor_name=body.actor_name,
+    )
+    db.add(new_step)
+    await db.commit()
+
+    # Re-fetch with steps loaded
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+    return GameSessionResponse.model_validate(session)
+
+
+# ---------------------------------------------------------------------------
+# Request movie endpoint
+# ---------------------------------------------------------------------------
+
+@router.post("/sessions/{session_id}/request-movie")
+async def request_movie(
+    session_id: int,
+    body: RequestMovieRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Queue a movie via Radarr and advance the session's current movie."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Validate: only unwatched movies can be requested
+    watched_result = await db.execute(
+        select(WatchEvent).where(WatchEvent.tmdb_id == body.movie_tmdb_id)
+    )
+    if watched_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=422,
+            detail="Movie is already watched; select an unwatched movie",
+        )
+
+    # Add step for the chosen movie
+    next_order = max((s.step_order for s in session.steps), default=-1) + 1
+    new_step = GameSessionStep(
+        session_id=session.id,
+        step_order=next_order,
+        movie_tmdb_id=body.movie_tmdb_id,
+        movie_title=body.movie_title,
+        actor_tmdb_id=None,
+        actor_name=None,
+    )
+    db.add(new_step)
+
+    # Advance the session's current movie
+    session.current_movie_tmdb_id = body.movie_tmdb_id
+    await db.commit()
+
+    # Re-fetch with steps loaded
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+
+    # Trigger Radarr
+    radarr: RadarrClient = request.app.state.radarr_client
+    radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
+
+    return {
+        "status": radarr_result["status"],
+        "session": GameSessionResponse.model_validate(session),
+    }
