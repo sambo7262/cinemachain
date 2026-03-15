@@ -27,6 +27,7 @@ async def _maybe_advance_session(tmdb_id: int, db: AsyncSession) -> None:
     )
     session = result.scalar_one_or_none()
     if session and session.current_movie_tmdb_id == tmdb_id:
+        session.current_movie_watched = True
         session.status = "awaiting_continue"
         await db.commit()
         logger.info(

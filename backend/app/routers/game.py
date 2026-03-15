@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from app.db import get_db
+from app.db import engine, get_db
 from app.models import Actor, Credit, GameSession, GameSessionStep, Movie, WatchEvent
 from app.services.radarr import RadarrClient
 from app.services.tmdb import TMDBClient
+
+# Background-task DB session factory (separate from request-scoped sessions)
+_bg_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -33,7 +36,9 @@ class GameSessionResponse(BaseModel):
     id: int
     status: str
     current_movie_tmdb_id: int
+    current_movie_watched: bool = False
     steps: list[StepResponse]
+    radarr_status: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -146,6 +151,29 @@ async def _ensure_actor_credits_in_db(
     await db.commit()
 
 
+async def _prefetch_credits_background(
+    movie_tmdb_id: int,
+    tmdb: TMDBClient,
+) -> None:
+    """Background task: fetch cast of starting movie from TMDB, then populate credits for each cast member.
+
+    Creates its own DB session (cannot share the request-scoped session after response is sent).
+    Errors are swallowed — this is best-effort pre-population; eligible-movies falls back to on-demand fetch.
+    """
+    try:
+        r = await tmdb._client.get(f"/movie/{movie_tmdb_id}/credits")
+        r.raise_for_status()
+        cast = r.json().get("cast", [])[:20]  # limit to top 20 billed actors
+        async with _bg_session_factory() as db:
+            for member in cast:
+                actor_tmdb_id = member.get("id")
+                if actor_tmdb_id:
+                    await _ensure_actor_credits_in_db(actor_tmdb_id, tmdb, db)
+    except Exception:
+        # Best-effort — never crash background task
+        pass
+
+
 async def _resolve_movie_tmdb_id(title: str, tmdb: TMDBClient) -> int | None:
     """Search TMDB for a movie by title; pick the result with the highest vote_count."""
     r = await tmdb._client.get("/search/movie", params={"query": title})
@@ -232,6 +260,8 @@ async def import_csv_session(
 @router.post("/sessions", status_code=201, response_model=GameSessionResponse)
 async def create_session(
     body: CreateSessionRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new active game session. Returns 409 if an active/paused session already exists."""
@@ -274,7 +304,22 @@ async def create_session(
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+
+    # Fire Radarr check for starting movie (inline — result must be in response)
+    radarr: RadarrClient = request.app.state.radarr_client
+    try:
+        radarr_result = await _request_radarr(body.start_movie_tmdb_id, radarr)
+        radarr_status = radarr_result["status"]
+    except Exception:
+        radarr_status = "error"
+
+    # Spawn background credits pre-fetch for starting movie cast
+    tmdb: TMDBClient = request.app.state.tmdb_client
+    background_tasks.add_task(_prefetch_credits_background, body.start_movie_tmdb_id, tmdb)
+
+    response = GameSessionResponse.model_validate(session)
+    response.radarr_status = radarr_status
+    return response
 
 
 @router.get("/sessions/active", response_model=GameSessionResponse | None)
@@ -322,6 +367,7 @@ async def resume_session(session_id: int, db: AsyncSession = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     session.status = "active"
+    session.current_movie_watched = False
     # Restore current movie to the last step's movie so eligible-actors panel is correct
     if session.steps:
         last_step = max(session.steps, key=lambda s: s.step_order)
@@ -350,6 +396,53 @@ async def end_session(session_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Session not found")
     session.status = "ended"
     await db.commit()
+    # Re-fetch with steps
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session.id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+    return GameSessionResponse.model_validate(session)
+
+
+@router.post("/sessions/{session_id}/mark-current-watched", response_model=GameSessionResponse)
+async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Mark the session's current movie as watched (manual fallback for non-Plex-Pass setups).
+
+    Sets current_movie_watched=True, creates a WatchEvent for the current movie,
+    and sets session status to 'awaiting_continue' so the UI shows the Continue prompt.
+    Only operates on active sessions.
+    """
+    from datetime import datetime as _datetime
+
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.status not in ("active",):
+        raise HTTPException(status_code=422, detail="Can only mark watched on an active session")
+
+    # Mark watched on session
+    session.current_movie_watched = True
+
+    # Upsert WatchEvent for current movie
+    stmt = pg_insert(WatchEvent).values(
+        tmdb_id=session.current_movie_tmdb_id,
+        movie_id=None,
+        source="manual",
+        watched_at=_datetime.utcnow(),
+    ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+    await db.execute(stmt)
+
+    # Advance to awaiting_continue (mirrors _maybe_advance_session in plex.py)
+    session.status = "awaiting_continue"
+    await db.commit()
+
     # Re-fetch with steps
     result = await db.execute(
         select(GameSession)
@@ -397,6 +490,12 @@ async def get_eligible_actors(
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session.current_movie_watched:
+        raise HTTPException(
+            status_code=423,
+            detail="Watch the current movie before viewing eligible actors",
+        )
 
     # Collect already-picked actor tmdb_ids from steps
     picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
@@ -450,6 +549,12 @@ async def get_eligible_movies(
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session.current_movie_watched:
+        raise HTTPException(
+            status_code=423,
+            detail="Watch the current movie before viewing eligible movies",
+        )
 
     # Watched state: fetch all watched tmdb_ids
     watched_result = await db.execute(select(WatchEvent.tmdb_id))
