@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type { EligibleActorDTO, EligibleMovieDTO } from "@/lib/api"
+import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO } from "@/lib/api"
 import { ChainHistory } from "@/components/ChainHistory"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -21,14 +21,18 @@ export default function GameSession() {
   const sid = Number(sessionId)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const location = useLocation()
 
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
   const [sort, setSort] = useState<"rating" | "runtime" | "genre">("rating")
   const [allMovies, setAllMovies] = useState(false)
+  const [moviesPage, setMoviesPage] = useState(1)
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
-  const [radarrStatus, setRadarrStatus] = useState<string | null>(null)
+  const [radarrStatus, setRadarrStatus] = useState<string | null>(
+    (location.state as { radarr_status?: string } | null)?.radarr_status ?? null
+  )
 
   // Session polling — stops when awaiting_continue
   const { data: session } = useQuery({
@@ -39,30 +43,36 @@ export default function GameSession() {
     enabled: !!sid,
   })
 
+  // Derive watched state from session
+  const isWatched: boolean = session?.current_movie_watched ?? false
+
   // Eligible actors for the current movie
   const { data: eligibleActors = [] } = useQuery({
     queryKey: ["eligibleActors", sid, session?.current_movie_tmdb_id],
     queryFn: () => api.getEligibleActors(sid),
-    enabled: !!sid && session?.status === "active",
+    enabled: !!sid && session?.status === "active" && isWatched,
   })
 
   // Eligible movies — scoped to selected actor + sort/filter params
-  const { data: eligibleMovies = [] } = useQuery({
-    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id, sort, allMovies],
+  const { data: eligibleMoviesData } = useQuery<PaginatedMoviesDTO>({
+    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id, sort, allMovies, moviesPage],
     queryFn: () =>
       api.getEligibleMovies(sid, {
         actor_id: selectedActor?.tmdb_id,
         sort,
         all_movies: allMovies,
+        page: moviesPage,
+        page_size: 20,
       }),
-    // Fetch on mount so Eligible Movies tab shows combined view immediately.
-    // actor_id is undefined when no actor selected — backend returns combined view.
-    enabled: !!sid && !!session,
+    enabled: !!sid && !!session && isWatched,
   })
+  const eligibleMovies = eligibleMoviesData?.items ?? []
+  const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
 
   // Actor selection switches to Eligible Movies tab
   const handleActorSelect = (actor: EligibleActorDTO) => {
     setSelectedActor(actor)
+    setMoviesPage(1)
     setActiveTab("movies")
   }
 
@@ -93,6 +103,8 @@ export default function GameSession() {
       }
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+      setMoviesPage(1)
+      setSelectedActor(null)
     } catch (err: unknown) {
       // If pick-actor succeeded but request-movie failed, show targeted error.
       // Do NOT re-pick the actor — that step is already recorded on the server.
@@ -118,6 +130,16 @@ export default function GameSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+    },
+  })
+
+  // Mark current movie as watched (manual fallback)
+  const markWatchedMutation = useMutation({
+    mutationFn: () => api.markCurrentWatched(sid),
+    onSuccess: (updatedSession) => {
+      queryClient.setQueryData(["session", sid], updatedSession)
+      queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+      queryClient.invalidateQueries({ queryKey: ["eligibleMovies", sid] })
     },
   })
 
@@ -219,23 +241,45 @@ export default function GameSession() {
               </div>
             )}
 
-            {isStartingMovie && (
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                <p className="text-muted-foreground">
-                  Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span>,
-                  then come back and pick an actor to begin the chain.
-                </p>
+            {isStartingMovie && !isWatched && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <p className="text-muted-foreground">
+                    Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span>,
+                    then come back and pick an actor to begin the chain.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => markWatchedMutation.mutate()}
+                  disabled={markWatchedMutation.isPending}
+                  className="flex-shrink-0 ml-4"
+                >
+                  {markWatchedMutation.isPending ? "Marking…" : "Mark as Watched"}
+                </Button>
               </div>
             )}
 
-            {session.status === "active" && isMovieSelected && (
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">{currentMovieTitle}</span> added to Radarr.
-                  Mark it as watched when you're done, then continue the chain.
-                </p>
+            {session.status === "active" && isMovieSelected && !isWatched && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <p className="text-muted-foreground">
+                    <span className="font-semibold text-foreground">{currentMovieTitle}</span> added to Radarr.
+                    Mark it as watched when you're done, then continue the chain.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => markWatchedMutation.mutate()}
+                  disabled={markWatchedMutation.isPending}
+                  className="flex-shrink-0 ml-4"
+                >
+                  {markWatchedMutation.isPending ? "Marking…" : "Mark as Watched"}
+                </Button>
               </div>
             )}
 
@@ -315,7 +359,14 @@ export default function GameSession() {
 
           {/* Eligible Actors tab */}
           <TabsContent value="actors" className="mt-3">
-            {eligibleActors.length === 0 ? (
+            {!isWatched ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <Clock className="w-8 h-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span> to unlock eligible actors.
+                </p>
+              </div>
+            ) : eligibleActors.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No eligible actors found.</p>
             ) : (
               <div className="rounded-md border border-border overflow-hidden">
@@ -359,104 +410,126 @@ export default function GameSession() {
 
           {/* Eligible Movies tab */}
           <TabsContent value="movies" className="mt-3">
-            {/* Sort + filter controls */}
-            <div className="flex items-center gap-2 mb-3">
-              <Select
-                value={sort}
-                onValueChange={(v) => setSort(v as "rating" | "runtime" | "genre")}
-              >
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rating">By Rating</SelectItem>
-                  <SelectItem value="runtime">By Runtime</SelectItem>
-                  <SelectItem value="genre">By Genre</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant={allMovies ? "default" : "outline"}
-                size="sm"
-                onClick={() => setAllMovies((a) => !a)}
-              >
-                {allMovies ? "All Movies" : "Unwatched Only"}
-              </Button>
-              {selectedActor && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedActor(null)}
-                  className="ml-auto text-muted-foreground"
-                >
-                  Show all eligible movies
-                </Button>
-              )}
-            </div>
-
-            {/* Movies list — compact table */}
-            {eligibleMovies.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                {selectedActor
-                  ? `No eligible movies via ${selectedActor.name}.`
-                  : isStartingMovie
-                    ? "Loading eligible movies… credits are being fetched. Try again in a moment."
-                    : "No eligible movies found."}
-              </p>
-            ) : (
-              <div className="rounded-md border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium text-muted-foreground w-10"></th>
-                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
-                      <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
-                      <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Rating</th>
-                      <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Year</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {eligibleMovies.map((movie) => (
-                      <tr
-                        key={movie.tmdb_id}
-                        onClick={movie.selectable ? () => handleMovieConfirm(movie) : undefined}
-                        className={cn(
-                          "transition-colors",
-                          movie.selectable
-                            ? "cursor-pointer hover:bg-accent/50"
-                            : "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        <td className="px-4 py-2">
-                          {movie.poster_path ? (
-                            <img
-                              src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
-                              alt={movie.title}
-                              className="w-8 h-12 rounded object-cover"
-                            />
-                          ) : (
-                            <div className="w-8 h-12 rounded bg-muted" />
-                          )}
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="font-medium">{movie.title}</span>
-                          {movie.watched && (
-                            <span className="ml-2 text-xs text-green-400 border border-green-400 rounded px-1">Watched</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-muted-foreground italic hidden sm:table-cell">
-                          {movie.via_actor_name ?? (selectedActor?.name ?? "—")}
-                        </td>
-                        <td className="px-4 py-2 text-right text-amber-400 hidden md:table-cell">
-                          {movie.vote_average != null ? `★ ${movie.vote_average.toFixed(1)}` : "—"}
-                        </td>
-                        <td className="px-4 py-2 text-right text-muted-foreground hidden md:table-cell">
-                          {movie.year ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {!isWatched ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <Clock className="w-8 h-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span> to unlock eligible movies.
+                </p>
               </div>
+            ) : (
+              <>
+                {/* Sort + filter controls */}
+                <div className="flex items-center gap-2 mb-3">
+                  <Select
+                    value={sort}
+                    onValueChange={(v) => setSort(v as "rating" | "runtime" | "genre")}
+                  >
+                    <SelectTrigger className="w-36">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rating">By Rating</SelectItem>
+                      <SelectItem value="runtime">By Runtime</SelectItem>
+                      <SelectItem value="genre">By Genre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant={allMovies ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAllMovies((a) => !a)}
+                  >
+                    {allMovies ? "All Movies" : "Unwatched Only"}
+                  </Button>
+                  {selectedActor && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSelectedActor(null); setMoviesPage(1) }}
+                      className="ml-auto text-muted-foreground"
+                    >
+                      Show all eligible movies
+                    </Button>
+                  )}
+                </div>
+
+                {/* Movies list — compact table */}
+                {eligibleMovies.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    {selectedActor
+                      ? `No eligible movies via ${selectedActor.name}.`
+                      : "No eligible movies found."}
+                  </p>
+                ) : (
+                  <div className="rounded-md border border-border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left px-4 py-2 font-medium text-muted-foreground w-10"></th>
+                          <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
+                          <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
+                          <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Rating</th>
+                          <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Year</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {eligibleMovies.map((movie) => (
+                          <tr
+                            key={movie.tmdb_id}
+                            onClick={movie.selectable ? () => handleMovieConfirm(movie) : undefined}
+                            className={cn(
+                              "transition-colors",
+                              movie.selectable
+                                ? "cursor-pointer hover:bg-accent/50"
+                                : "opacity-40 cursor-not-allowed"
+                            )}
+                          >
+                            <td className="px-4 py-2">
+                              {movie.poster_path ? (
+                                <img
+                                  src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
+                                  alt={movie.title}
+                                  className="w-8 h-12 rounded object-cover"
+                                />
+                              ) : (
+                                <div className="w-8 h-12 rounded bg-muted" />
+                              )}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="font-medium">{movie.title}</span>
+                              {movie.watched && (
+                                <span className="ml-2 text-xs text-green-400 border border-green-400 rounded px-1">Watched</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-muted-foreground italic hidden sm:table-cell">
+                              {movie.via_actor_name ?? (selectedActor?.name ?? "—")}
+                            </td>
+                            <td className="px-4 py-2 text-right text-amber-400 hidden md:table-cell">
+                              {movie.vote_average != null ? `★ ${movie.vote_average.toFixed(1)}` : "—"}
+                            </td>
+                            <td className="px-4 py-2 text-right text-muted-foreground hidden md:table-cell">
+                              {movie.year ?? "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Load More pagination */}
+                {eligibleMoviesHasMore && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMoviesPage((p) => p + 1)}
+                    >
+                      Load more
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>
