@@ -27,7 +27,7 @@
   2. PostgreSQL data survives a container restart (volumes correctly bind-mounted)
   3. All API keys and service URLs are loaded from .env with no credentials baked into images
   4. The application UI is reachable at the Tailscale IP or hostname from another device on the network
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] 01-01-PLAN.md — Wave 0: pytest config and test stubs for INFRA-01, INFRA-02, INFRA-03
@@ -79,7 +79,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 0/4 | Not started | — |
+| 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 0/? | Not started | — |
 | 3. Movie Game | 0/? | Not started | — |
 | 4. Query Mode | 0/? | Not started | — |
