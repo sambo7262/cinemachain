@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: blocked
-stopped_at: 03-16 verification partial pass — session state machine flow defect found; 03-17 required before Phase 3 can close
-last_updated: "2026-03-15T21:03:00.415Z"
+status: verifying
+stopped_at: Completed 03-17-PLAN.md
+last_updated: "2026-03-15T21:25:48.666Z"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 25
-  completed_plans: 25
+  completed_phases: 2
+  total_plans: 27
+  completed_plans: 26
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,24 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — third round gap closure required)
-- **Plan:** Completed 03-16 re-verification; 03-17 required (session state machine flow defect found)
-- **Status:** 03-16 re-verification PARTIAL PASS — GAME-01 session start and GAME-03 eligible movies fail due to incorrect state machine flow; 03-17 gap-closure plan needed
+- **Phase:** Phase 3 — Movie Game (in progress — 03-17 complete; live NAS verification required)
+- **Plan:** Completed 03-17; 03-18 verification required
+- **Status:** 03-17 complete — combined-view credits pre-fetch, isStartingMovie watch-first guidance, Radarr result notification; awaiting live NAS end-to-end verification
 
 ## Progress
 
-`[██████████] 100%` — 25 of 25 planned plans complete (03-16 done; 03-17 unplanned gap-closure needed)
+`[██████████] 96%` — 26 of 27 planned plans complete (03-17 done; 03-18 live verification required)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11 through 03-16 done; 03-17 gap-closure needed (session state machine flow defect) |
+| 3. Movie Game | In progress — 03-11 through 03-17 done; 03-18 live NAS verification required |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-17: Combined-view branch now mirrors actor-scoped branch — added tmdb declaration and _ensure_actor_credits_in_db loop before filmography query in else branch; isStartingMovie derived from steps.length===1 && lastStep.actor_tmdb_id===null; radarrStatus captures requestResult.status for conditional user feedback; confirm dialog changed to neutral wording
 - **2026-03-15:** 03-16: Phase 3 not closed — session state machine flow defect found in live testing; correct flow is: movie search → select movie (session created, movie_selected_unwatched, NO actor prompt) → user watches → user picks actor → user picks next movie → Radarr queried only if movie not already in Radarr; 03-17 required
 - **2026-03-15:** 03-16: setQueryData end-session fix (03-14) confirmed working in live NAS — GAME-01 end-session sub-requirement passes; NavBar (03-15) confirmed on all pages
 - **2026-03-15:** 03-15: isMovieSelected derived client-side from lastStep.actor_tmdb_id === null && steps.length > 1 — avoids new backend field for movie_selected_unwatched sub-state; NavBar added as sticky layout element above Routes in App.tsx
@@ -135,6 +136,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T20:57:00Z
-Stopped at: 03-16 verification partial pass — session state machine flow defect documented
+Last session: 2026-03-15T21:25:48.662Z
+Stopped at: Completed 03-17-PLAN.md
 Resume with: Write and execute 03-17 gap-closure plan to fix session state machine flow (movie selection creates session → watch → pick actor → pick next movie → Radarr query); also fix eligible movies combined view at session start and Radarr query timing/notification logic
