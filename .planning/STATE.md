@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-06-PLAN.md (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
-last_updated: "2026-03-15T17:46:33.184Z"
+stopped_at: "03-10 checkpoint FAILED — 4 defects found in live verification; remediation plan (03-11) required before Phase 3 can close"
+last_updated: "2026-03-15T18:15:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -24,23 +24,27 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-06 complete (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
-- **Status:** Executing
+- **Phase:** Phase 3 — Movie Game (in progress — verification FAILED)
+- **Plan:** 03-10 checkpoint FAILED; remediation plan (03-11) required
+- **Status:** Blocked — 4 live defects identified during 03-10 human verification
 
 ## Progress
 
-`[█████████░] 89%` — 17 of 19 total plans complete
+`[█████████░] 89%` — 17 of 19 total plans complete (Phase 3 blocked on verification)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-01 through 03-08 done; 03-06 game interaction endpoints complete) |
+| 3. Movie Game | In progress — 03-10 verification FAILED; remediation plan (03-11) needed |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-10 checkpoint FAILED — eligible-movies endpoint must call TMDBClient.fetch_actor_credits on demand when credits are missing from DB; no on-demand fetch was implemented in 03-06
+- **2026-03-15:** 03-10 checkpoint FAILED — Docker build cache likely serving Phase 1 placeholder frontend; force `--no-cache` rebuild required as part of remediation
+- **2026-03-15:** 03-10 checkpoint FAILED — session query cache not invalidated after pause/resume mutations in GameSession; `onSuccess` must invalidate `["session", sid]` key
+- **2026-03-15:** 03-10 checkpoint FAILED — session lifecycle in lobby broken; existing active session blocks new session start and end button is ineffective
 - **2026-03-15:** Python-side sort on eligible-movies result list — DB sort would require complex joins; filmography result sizes bounded (<200 movies)
 - **2026-03-15:** WatchEvent tmdb_id set fetched once per eligible-movies request — single SELECT, Python set for O(1) lookup; avoids N+1 EXISTS queries per movie
 - **2026-03-15:** request-movie records GameSessionStep before Radarr call — ensures DB consistency even if Radarr is slow or fails
@@ -87,6 +91,11 @@ progress:
 
 ## Blockers / Concerns
 
+- **[ACTIVE] 03-10 verification FAILED — 4 defects must be fixed before Phase 3 can close:**
+  1. Routing: Docker build cache serving Phase 1 placeholder at `/` (fix: `docker compose build --no-cache`)
+  2. Session lifecycle: cannot end existing session or start new one from lobby (fix: debug end-session mutation and lobby isSessionActive guard)
+  3. Eligible movies: actor filmography not fetched from TMDB on demand — only cached credits returned (fix: add on-demand `fetch_actor_credits` call in eligible-movies endpoint or on pick-actor)
+  4. Pause button: session query cache not invalidated after pause/resume mutations (fix: invalidate `["session", sid]` in mutation onSuccess)
 - RT ratings source unresolved (no public API — TMDB proxy vs OMDb vs scraping TBD before Phase 3 UI)
 - pyarr currency risk: last release July 2023; verify against installed Radarr/Sonarr API version before writing integration code
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
@@ -114,6 +123,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T17:46:33.180Z
-Stopped at: Completed 03-06-PLAN.md (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-09)
+Last session: 2026-03-15T18:15:00.000Z
+Stopped at: 03-10 verification checkpoint FAILED — 4 defects require remediation before re-verification
+Resume with: Create and execute remediation plan 03-11 to fix eligible-movies on-demand fetch, Docker cache, session lifecycle, and pause mutation cache invalidation
