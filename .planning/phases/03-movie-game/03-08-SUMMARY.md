@@ -120,6 +120,16 @@ None - no external service configuration required.
 - Manual verification checkpoint (plan 03-10) can exercise the full game flow once routing is wired
 - Build passes cleanly at 362 KB JS bundle (up 80 KB from plan 03-07 — expected for full game session page)
 
+## Self-Check: PASSED
+
+- FOUND: frontend/src/components/ActorCard.tsx
+- FOUND: frontend/src/components/ChainHistory.tsx
+- FOUND: frontend/src/pages/GameSession.tsx
+- FOUND: .planning/phases/03-movie-game/03-08-SUMMARY.md
+- FOUND: commit 06ef8ca (Task 1 — ActorCard and ChainHistory)
+- FOUND: commit 1dc291a (Task 2 — GameSession page)
+- Build: clean at 362 KB (1886 modules transformed, 0 errors)
+
 ---
 *Phase: 03-movie-game*
 *Completed: 2026-03-15*
