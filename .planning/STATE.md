@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-13-PLAN.md (partial pass — 03-14 required)
-last_updated: "2026-03-15T19:55:00.000Z"
+stopped_at: Completed 03-14-PLAN.md
+last_updated: "2026-03-15T23:22:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 23
-  completed_plans: 22
+  total_plans: 25
+  completed_plans: 23
 ---
 
 # STATE.md — CinemaChain
@@ -36,11 +36,12 @@ progress:
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11/03-12/03-13 done; 03-14 pending (GAME-01 session lifecycle) |
+| 3. Movie Game | In progress — 03-11/03-12/03-13/03-14 done; 03-15/03-16 gap-closure pending |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-14: setQueryData(['activeSession'], null) in endMutation.onSuccess guarantees synchronous banner clear — eliminates async refetchQueries timing race on NAS hardware; staleTime reduced to 0; eligibleMovies enabled on !!session (not activeTab) so combined view loads on mount
 - **2026-03-15:** 03-13 checkpoint PARTIAL PASS — GAME-01 session lifecycle (end-session + start-new-session from lobby) still broken after 03-12 refetchQueries fix; root cause unknown; 03-14 must diagnose and fix before Phase 3 can close
 - **2026-03-15:** GAME-03 confirmed FIXED: eligible-movies populates full TMDB filmography after actor selection; user confirmed 5+ movies appear
 - **2026-03-15:** GAME-08 confirmed FIXED: Radarr request triggered and session advances on movie selection; Pause/resume toggle (03-12) confirmed working
@@ -102,8 +103,8 @@ progress:
   1. Routing: FIXED — Docker `--no-cache` rebuild resolved Phase 1 placeholder at `/`
   3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
   4. Pause button: FIXED — pause/resume toggle working correctly in live app
-- **[ACTIVE] 03-13 PARTIAL PASS — GAME-01 session lifecycle still broken:**
-  2. Session lifecycle: Cannot end existing session or start new session from lobby — banner does not clear after "End Session" click; 03-14 must diagnose root cause (TanStack Query stale cache race, backend end endpoint failure, or nginx proxy issue on NAS) and fix
+- **[FIXED IN 03-14] GAME-01 session lifecycle:**
+  2. Session lifecycle: setQueryData(null) synchronous cache clear applied in endMutation.onSuccess — banner should clear immediately on same render cycle; staleTime reduced to 0 on activeSession query; requires deploy + smoke test to confirm fix
 - RT ratings source unresolved (no public API — TMDB proxy vs OMDb vs scraping TBD before Phase 3 UI)
 - pyarr currency risk: last release July 2023; verify against installed Radarr/Sonarr API version before writing integration code
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
