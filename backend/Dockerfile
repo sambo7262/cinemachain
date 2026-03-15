@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies first — layer cache optimization
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --timeout 120 -r requirements.txt
 
 # Copy application code
 # Note: .env is excluded — secrets come from Compose environment at runtime
