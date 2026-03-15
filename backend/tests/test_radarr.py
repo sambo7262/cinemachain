@@ -21,11 +21,20 @@ from app.services.radarr import RadarrClient
 # Helpers
 # ---------------------------------------------------------------------------
 
+_DUMMY_REQUEST = httpx.Request("GET", "http://radarr:7878/api/v3/test")
+
+
 def _make_response(status_code: int, json_body) -> httpx.Response:
-    """Build a fake httpx.Response with .json() returning json_body."""
+    """Build a fake httpx.Response with .json() returning json_body.
+
+    Attaches a dummy request so raise_for_status() works correctly.
+    """
+    import json as _json
     return httpx.Response(
         status_code=status_code,
-        json=json_body,
+        content=_json.dumps(json_body).encode(),
+        headers={"content-type": "application/json"},
+        request=_DUMMY_REQUEST,
     )
 
 
