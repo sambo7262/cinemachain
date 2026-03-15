@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "03-10 checkpoint FAILED — 4 defects found in live verification; remediation plan (03-11) required before Phase 3 can close"
-last_updated: "2026-03-15T18:15:00.000Z"
+status: verifying
+stopped_at: Completed 03-12-PLAN.md
+last_updated: "2026-03-15T18:29:48.152Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 19
-  completed_plans: 17
+  total_plans: 22
+  completed_plans: 20
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — verification FAILED)
-- **Plan:** 03-10 checkpoint FAILED; remediation plan (03-11) required
-- **Status:** Blocked — 4 live defects identified during 03-10 human verification
+- **Phase:** Phase 3 — Movie Game (in progress — remediation in progress)
+- **Plan:** Completed 03-12; 03-13 remains (gap closure)
+- **Status:** Executing remediation plans (03-11, 03-12 done; 03-13 pending)
 
 ## Progress
 
-`[█████████░] 89%` — 17 of 19 total plans complete (Phase 3 blocked on verification)
+`[█████████░] 91%` — 20 of 22 total plans complete (Phase 3 remediation in progress)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-10 verification FAILED; remediation plan (03-11) needed |
+| 3. Movie Game | In progress — remediation plans 03-11/03-12 done; 03-13 pending |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** resumeMutation added to GameSession header as sibling of pauseMutation — distinct from handleContinue which handles awaiting_continue UX path
+- **2026-03-15:** refetchQueries used over invalidateQueries in GameLobby endMutation.onSuccess — forces immediate synchronous banner clear rather than lazy re-render on next query cycle
 - **2026-03-15:** 03-10 checkpoint FAILED — eligible-movies endpoint must call TMDBClient.fetch_actor_credits on demand when credits are missing from DB; no on-demand fetch was implemented in 03-06
 - **2026-03-15:** 03-10 checkpoint FAILED — Docker build cache likely serving Phase 1 placeholder frontend; force `--no-cache` rebuild required as part of remediation
 - **2026-03-15:** 03-10 checkpoint FAILED — session query cache not invalidated after pause/resume mutations in GameSession; `onSuccess` must invalidate `["session", sid]` key
@@ -123,6 +125,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T18:15:00.000Z
-Stopped at: 03-10 verification checkpoint FAILED — 4 defects require remediation before re-verification
+Last session: 2026-03-15T18:29:48.148Z
+Stopped at: Completed 03-12-PLAN.md
 Resume with: Create and execute remediation plan 03-11 to fix eligible-movies on-demand fetch, Docker cache, session lifecycle, and pause mutation cache invalidation
