@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-15T14:32:03.321Z"
+status: in-progress
+stopped_at: "Completed 02-data-foundation/02-01-PLAN.md"
+last_updated: "2026-03-15T14:52:00Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -24,23 +24,26 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 1 — Infrastructure (not started)
-- **Plan:** —
-- **Status:** Roadmap complete; ready to plan Phase 1
+- **Phase:** Phase 2 — Data Foundation (in progress)
+- **Plan:** 02-01 complete; 02-02 next
+- **Status:** Wave 0 test stubs complete; ready for Wave 1 implementation plans
 
 ## Progress
 
-`[░░░░░░░░░░] 0%` — Phase 1 of 4 not started
+`[██░░░░░░░░] 20%` — Phase 2 of 4 in progress (plan 1 of N complete)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Not started |
-| 2. Data Foundation | Not started |
+| 2. Data Foundation | In progress (02-01 complete) |
 | 3. Movie Game | Not started |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** DATA-05 webhook tests use multipart/form-data (`data=` param) not JSON — matches actual Plex payload format and FastAPI Form(...) requirement
+- **2026-03-15:** DATA-03 cache verification uses fetched_at timestamp stability (black-box) not mock call counting — keeps tests decoupled from implementation
+- **2026-03-15:** Idempotency tests for DATA-05 and DATA-06 explicitly exercise ON CONFLICT DO NOTHING semantics that Wave 2 must implement
 - **2026-03-14:** PostgreSQL chosen over SQLite — game session join queries (eligibility filtering, actor exclusion) require the richer query support; SQLite recommendation from Stack research overridden
 - **2026-03-14:** Plex webhook (DATA-05) included in Phase 2 as a v1 requirement; DATA-06 (manual mark) is the fallback if webhook proves unreliable
 - **2026-03-14:** Phase 4 (Query Mode) depends only on Phase 2 (data layer), not Phase 3 (game); shared services, no session state dependency
@@ -81,6 +84,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T14:32:03.306Z
-Stopped at: Phase 2 context gathered
-Resume with: `/gsd:plan-phase 1`
+Last session: 2026-03-15T14:52:00Z
+Stopped at: Completed 02-data-foundation/02-01-PLAN.md
+Resume with: `/gsd:execute-phase 02-data-foundation` (next plan: 02-02)
