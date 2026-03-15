@@ -2,7 +2,9 @@
 .env
 
 # Docker volume data — stored on NAS, not in repo
-volumes/
+# Subdirectory contents excluded; .gitkeep files committed to track directory structure
+volumes/*/*
+!volumes/*/.gitkeep
 
 # Python
 __pycache__/

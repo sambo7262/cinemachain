@@ -26,6 +26,7 @@ services:
       - TS_SERVE_CONFIG=/config/ts-serve.json
     volumes:
       - /volume1/docker/appdata/cinemachain/tailscale:/var/lib/tailscale
+      - ./frontend/ts-serve.json:/config/ts-serve.json:ro
     cap_add:
       - NET_ADMIN
       - NET_RAW
