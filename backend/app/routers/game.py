@@ -533,6 +533,8 @@ async def get_eligible_movies(
     actor_id: int | None = Query(default=None),
     sort: str | None = Query(default=None),
     all_movies: bool = Query(default=False),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
     """Return eligible movies for the current game session.
@@ -651,7 +653,17 @@ async def get_eligible_movies(
             m["genres"] or "",
         ))
 
-    return movies
+    total = len(movies)
+    offset = (page - 1) * page_size
+    movies = movies[offset : offset + page_size]
+
+    return {
+        "items": movies,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "has_more": (offset + page_size) < total,
+    }
 
 
 # ---------------------------------------------------------------------------
