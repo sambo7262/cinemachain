@@ -28,6 +28,7 @@ export default function GameSession() {
   const [sort, setSort] = useState<"rating" | "runtime" | "genre">("rating")
   const [allMovies, setAllMovies] = useState(false)
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
+  const [radarrStatus, setRadarrStatus] = useState<string | null>(null)
 
   // Session polling — stops when awaiting_continue
   const { data: session } = useQuery({
@@ -68,11 +69,12 @@ export default function GameSession() {
   // Movie selection: confirm -> pick-actor -> request-movie with error recovery
   const handleMovieConfirm = async (movie: EligibleMovieDTO) => {
     const confirmed = window.confirm(
-      `Request "${movie.title}"? This will add it to Radarr and wait for you to watch it.`
+      `Select "${movie.title}" as your next movie?`
     )
     if (!confirmed) return
 
     setMovieRequestError(null)
+    setRadarrStatus(null)
     try {
       if (selectedActor) {
         await api.pickActor(sid, {
@@ -80,10 +82,15 @@ export default function GameSession() {
           actor_name: selectedActor.name,
         })
       }
-      await api.requestMovie(sid, {
+      const requestResult = await api.requestMovie(sid, {
         movie_tmdb_id: movie.tmdb_id,
         movie_title: movie.title,
       })
+      if (requestResult?.status === "already_in_radarr") {
+        setRadarrStatus("Already in your library — waiting for watched event.")
+      } else if (requestResult?.status === "queued") {
+        setRadarrStatus("Added to Radarr queue.")
+      }
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
     } catch (err: unknown) {
@@ -147,6 +154,13 @@ export default function GameSession() {
     && lastStep.actor_tmdb_id === null
     && session.steps.length > 1
 
+  // "starting_movie": session just created, first step exists, no actor picked yet.
+  // The user must watch the starting movie before picking an actor.
+  const isStartingMovie =
+    session?.status === "active" &&
+    session.steps.length === 1 &&
+    lastStep?.actor_tmdb_id === null
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -205,11 +219,14 @@ export default function GameSession() {
               </div>
             )}
 
-            {session.status === "active" && session.steps.length === 1 && (
-              <p className="text-muted-foreground">
-                Starting with <span className="font-semibold text-foreground">{currentMovieTitle}</span>.
-                Pick an actor from the Eligible Actors tab to begin the chain.
-              </p>
+            {isStartingMovie && (
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                <p className="text-muted-foreground">
+                  Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span>,
+                  then come back and pick an actor to begin the chain.
+                </p>
+              </div>
             )}
 
             {session.status === "active" && isMovieSelected && (
@@ -256,6 +273,20 @@ export default function GameSession() {
               onClick={() => setMovieRequestError(null)}
               className="flex-shrink-0 text-red-400 hover:text-red-300"
               aria-label="Dismiss error"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Radarr status notification — auto-displayed after movie selection */}
+        {radarrStatus && (
+          <div className="flex items-center gap-2 rounded-lg border border-blue-700 bg-blue-950/40 px-4 py-3 text-blue-300">
+            <span className="flex-1 text-sm">{radarrStatus}</span>
+            <button
+              onClick={() => setRadarrStatus(null)}
+              className="flex-shrink-0 text-blue-400 hover:text-blue-300"
+              aria-label="Dismiss"
             >
               <X className="w-4 h-4" />
             </button>
@@ -367,7 +398,9 @@ export default function GameSession() {
               <p className="text-sm text-muted-foreground py-8 text-center">
                 {selectedActor
                   ? `No eligible movies via ${selectedActor.name}.`
-                  : "No eligible movies found. Select an actor from the Eligible Actors tab to filter."}
+                  : isStartingMovie
+                    ? "Loading eligible movies… credits are being fetched. Try again in a moment."
+                    : "No eligible movies found."}
               </p>
             ) : (
               <div className="rounded-md border border-border overflow-hidden">
