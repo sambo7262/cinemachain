@@ -12,6 +12,50 @@ from app.models import Actor, Credit, Movie, WatchEvent
 router = APIRouter(prefix="/movies", tags=["movies"])
 
 
+@router.get("/search")
+async def search_movies(
+    q: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Search TMDB for movies by title. Returns lightweight list for lobby movie picker."""
+    from app.services.tmdb import TMDBClient
+    tmdb: TMDBClient = request.app.state.tmdb_client
+    async with tmdb._sem:
+        r = await tmdb._client.get("/search/movie", params={"query": q})
+    r.raise_for_status()
+    results = r.json().get("results", [])[:20]
+    return [
+        {
+            "tmdb_id": m["id"],
+            "title": m.get("title", ""),
+            "year": int(m["release_date"][:4]) if m.get("release_date") else None,
+            "poster_path": m.get("poster_path"),
+        }
+        for m in results
+    ]
+
+
+@router.get("/watched")
+async def get_watched_movies(db: AsyncSession = Depends(get_db)):
+    """Return all movies the user has watched (from WatchEvent table, joined with Movie)."""
+    result = await db.execute(
+        select(Movie)
+        .join(WatchEvent, WatchEvent.tmdb_id == Movie.tmdb_id)
+        .order_by(Movie.title)
+    )
+    movies = result.scalars().all()
+    return [
+        {
+            "tmdb_id": m.tmdb_id,
+            "title": m.title,
+            "year": m.year,
+            "poster_path": m.poster_path,
+        }
+        for m in movies
+    ]
+
+
 @router.get("/{tmdb_id}")
 async def get_movie(tmdb_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     """DATA-01 / DATA-03: Return movie details, fetching from TMDB on cache miss."""
