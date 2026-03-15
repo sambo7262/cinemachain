@@ -104,6 +104,15 @@ export default function GameSession() {
     },
   })
 
+  // Resume session from header (distinct from handleContinue which handles awaiting_continue)
+  const resumeMutation = useMutation({
+    mutationFn: () => api.resumeSession(sid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", sid] })
+      queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+    },
+  })
+
   // End session
   const endMutation = useMutation({
     mutationFn: () => api.endSession(sid),
@@ -132,14 +141,25 @@ export default function GameSession() {
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight">CinemaChain</h1>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => pauseMutation.mutate()}
-            disabled={pauseMutation.isPending || session?.status !== "active"}
-          >
-            Pause
-          </Button>
+          {session?.status === "paused" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => resumeMutation.mutate()}
+              disabled={resumeMutation.isPending}
+            >
+              {resumeMutation.isPending ? "Resuming..." : "Resume"}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pauseMutation.mutate()}
+              disabled={pauseMutation.isPending || session?.status !== "active"}
+            >
+              {pauseMutation.isPending ? "Pausing..." : "Pause"}
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="sm"
