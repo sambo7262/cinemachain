@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-04-PLAN.md (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
-last_updated: "2026-03-15T17:40:00.000Z"
+stopped_at: Completed 03-07-PLAN.md (GameLobby page with three session-start modes and MovieCard component)
+last_updated: "2026-03-15T18:15:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # STATE.md — CinemaChain
@@ -25,22 +25,25 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-04 complete (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
+- **Plan:** 03-07 complete (GameLobby page — three-tab session start lobby with MovieCard component)
 - **Status:** Executing
 
 ## Progress
 
-`[███████░░░] 68%` — 13 of 19 total plans complete
+`[████████░░] 74%` — 14 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-01, 03-02, 03-03, 03-04 done) |
+| 3. Movie Game | In progress (03-01 through 03-04, 03-07 done) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** Client-side CSV parsing uses FileReader + basic string split — PapaParse not needed for simple three-column Movie Name/Actor Name/Order format
+- **2026-03-15:** toast() in GameLobby implemented as alert() wrapper — sonner not installed; plan permitted this as acceptable fallback for lobby error cases
+- **2026-03-15:** MovieCard is the shared display primitive for lobby search, watched history, and game eligible-movies — single component handles all movie display contexts
 - **2026-03-15:** Vite scaffold created manually (not via npm create vite) — interactive CLI cancelled on non-empty directory; all config files written directly
 - **2026-03-15:** shadcn/ui components written manually rather than via npx shadcn init — avoids interactive CLI in automated context; produces identical output
 - **2026-03-15:** api.ts uses relative /api base URL — nginx proxies to backend:8000 at runtime; frontend never calls backend directly
@@ -102,6 +105,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T17:40:00Z
-Stopped at: Completed 03-04-PLAN.md (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-05)
+Last session: 2026-03-15T18:15:00Z
+Stopped at: Completed 03-07-PLAN.md (GameLobby page with three session-start modes and MovieCard component)
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-08)

@@ -65,7 +65,7 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** 3/10 plans executed
+**Plans:** 4/10 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
@@ -74,7 +74,7 @@ Plans:
 - [ ] 03-04-PLAN.md — Wave 1: Frontend scaffold (Vite + React + Tailwind v3 + shadcn/ui)
 - [ ] 03-05-PLAN.md — Wave 2: Game session lifecycle API (create, active, pause/resume/end, import-csv) + movies search/watched endpoints
 - [ ] 03-06-PLAN.md — Wave 2: Game interaction API (eligible-actors, eligible-movies, pick-actor, request-movie)
-- [ ] 03-07-PLAN.md — Wave 2: GameLobby page (three start modes: watched history, title search, CSV import)
+- [x] 03-07-PLAN.md — Wave 2: GameLobby page (three start modes: watched history, title search, CSV import)
 - [ ] 03-08-PLAN.md — Wave 3: GameSession page (two-tab UI, sort/filter, ChainHistory, session advance)
 - [ ] 03-09-PLAN.md — Wave 4: Backend wiring (RadarrClient lifespan, game router mount, Plex advancement hook) + Frontend Docker
 - [ ] 03-10-PLAN.md — Wave 5: Human verify checkpoint (full game loop)
@@ -100,7 +100,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 3/10 | In Progress|  |
+| 3. Movie Game | 4/10 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
