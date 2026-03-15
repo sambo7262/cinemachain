@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
+status: executing
 stopped_at: Phase 3 context gathered
-last_updated: "2026-03-15T16:45:17.165Z"
+last_updated: "2026-03-15T17:26:03.897Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 19
+  completed_plans: 11
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,27 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 2 — Data Foundation (complete)
-- **Plan:** 02-05 complete (Integration — Plex Webhook, Manual Mark Watched, Wired Lifespan)
-- **Status:** Ready to plan
+- **Phase:** Phase 3 — Movie Game (in progress)
+- **Plan:** 03-01 complete (Game session + Radarr TDD stubs — RED phase)
+- **Status:** Executing
 
 ## Progress
 
-`[██████████] 100%` — Phase 2 of 4 complete (9 of 9 total plans)
+`[██████░░░░] 58%` — 11 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | Not started |
+| 3. Movie Game | In progress (03-03 done) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** RadarrClient uses X-Api-Key header auth and Python-side tmdbId filtering to handle Radarr bug #6086; HTTP 400 from add_movie treated as success sentinel
+- **2026-03-15:** from __future__ import annotations required in radarr.py for Python 3.9 union type hint (dict | None) compatibility
+- **2026-03-15:** httpx.Response in unit tests requires explicit request= and content= to support raise_for_status() without RuntimeError
+- **2026-03-15:** pyarr not used — direct async httpx RadarrClient implemented matching TMDBClient pattern (pyarr is synchronous)
 - **2026-03-15:** POST /webhooks/plex uses Form(...) not Body(...) — Plex sends multipart/form-data; JSON body parameter would be rejected by FastAPI
 - **2026-03-15:** TMDBClient stored as app.state.tmdb_client in lifespan — single shared async instance with close() on shutdown to flush httpx connection pool
 - **2026-03-15:** Plex startup sync wrapped in try/except in lifespan — Plex unreachable is non-fatal; app starts regardless (per CONTEXT.md decisions)
@@ -93,6 +97,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T16:45:17.150Z
-Stopped at: Phase 3 context gathered
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 2 complete — next: Phase 3 Movie Game)
+Last session: 2026-03-15T17:35:00Z
+Stopped at: Completed 03-01-PLAN.md (Game session + Radarr TDD stubs)
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-02)

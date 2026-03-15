@@ -23,7 +23,7 @@
 - [ ] **GAME-05**: User can sort Eligible Movies by genre, TMDB rating, or aggregated rating
 - [ ] **GAME-06**: User can toggle between unwatched-only or all movies with watched badges
 - [ ] **GAME-07**: Only unwatched movies are selectable in Game mode
-- [ ] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
+- [x] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
 
 ### Query Mode (QUERY)
 
@@ -83,7 +83,7 @@
 | GAME-05 | Phase 3 | Pending |
 | GAME-06 | Phase 3 | Pending |
 | GAME-07 | Phase 3 | Pending |
-| GAME-08 | Phase 3 | Pending |
+| GAME-08 | Phase 3 | Complete |
 | QUERY-01 | Phase 4 | Pending |
 | QUERY-02 | Phase 4 | Pending |
 | QUERY-03 | Phase 4 | Pending |
