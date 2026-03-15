@@ -164,6 +164,13 @@ export default function GameLobby() {
           </Card>
         ) : (
           /* Three-tab start panel */
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Start a new session</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Choose a starting movie to begin a CinemaChain.
+              </p>
+            </div>
           <Tabs defaultValue="watched">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="watched">Watch History</TabsTrigger>
@@ -295,6 +302,7 @@ export default function GameLobby() {
               </div>
             </TabsContent>
           </Tabs>
+          </div>
         )}
       </div>
     </div>
