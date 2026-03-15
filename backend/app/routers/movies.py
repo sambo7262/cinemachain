@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
@@ -81,3 +82,17 @@ async def get_movie(tmdb_id: int, request: Request, db: AsyncSession = Depends(g
         "fetched_at": movie.fetched_at.isoformat() if movie.fetched_at else None,
         "watched": watch_event is not None,
     }
+
+
+@router.patch("/{tmdb_id}/watched")
+async def mark_movie_watched(tmdb_id: int, db: AsyncSession = Depends(get_db)):
+    """DATA-06: Manually mark a movie as watched (fallback without Plex Pass)."""
+    stmt = pg_insert(WatchEvent).values(
+        tmdb_id=tmdb_id,
+        movie_id=None,
+        source="manual",
+        watched_at=datetime.utcnow(),
+    ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+    await db.execute(stmt)
+    await db.commit()
+    return {"tmdb_id": tmdb_id, "watched": True, "source": "manual"}
