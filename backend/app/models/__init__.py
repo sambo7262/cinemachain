@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -17,6 +18,7 @@ class Movie(Base):
     poster_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     vote_average: Mapped[float | None] = mapped_column(Float, nullable=True)
     genres: Mapped[str | None] = mapped_column(String(512), nullable=True)  # JSON-encoded list of genre names
+    runtime: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     credits: Mapped[list["Credit"]] = relationship(back_populates="movie", lazy="raise")
@@ -60,3 +62,39 @@ class WatchEvent(Base):
     watched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     movie: Mapped["Movie | None"] = relationship(back_populates="watch_events", lazy="raise")
+
+
+class SessionStatus(str, enum.Enum):
+    active = "active"
+    paused = "paused"
+    awaiting_continue = "awaiting_continue"
+    ended = "ended"
+
+
+class GameSession(Base):
+    __tablename__ = "game_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    current_movie_tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    steps: Mapped[list["GameSessionStep"]] = relationship(
+        back_populates="session", lazy="raise", order_by="GameSessionStep.step_order"
+    )
+
+
+class GameSessionStep(Base):
+    __tablename__ = "game_session_steps"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("game_sessions.id"), nullable=False, index=True)
+    step_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    movie_tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    actor_tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    actor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    movie_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    session: Mapped["GameSession"] = relationship(back_populates="steps", lazy="raise")
