@@ -3,7 +3,8 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+import sqlalchemy as sa
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -80,6 +81,9 @@ class GameSession(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     current_movie_tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_movie_watched: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
