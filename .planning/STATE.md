@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-11-PLAN.md
-last_updated: "2026-03-15T18:30:51.988Z"
+stopped_at: Completed 03-13-PLAN.md (partial pass — 03-14 required)
+last_updated: "2026-03-15T19:55:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 22
-  completed_plans: 21
+  total_plans: 23
+  completed_plans: 22
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,26 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — remediation in progress)
-- **Plan:** Completed 03-12; 03-13 remains (gap closure)
-- **Status:** Executing remediation plans (03-11, 03-12 done; 03-13 pending)
+- **Phase:** Phase 3 — Movie Game (in progress — second round gap closure required)
+- **Plan:** Completed 03-13; 03-14 required (GAME-01 session lifecycle still broken)
+- **Status:** 03-13 re-verification PARTIAL PASS — GAME-01 session lifecycle defect persists; 03-14 gap-closure plan needed
 
 ## Progress
 
-`[█████████░] 91%` — 20 of 22 total plans complete (Phase 3 remediation in progress)
+`[█████████░] 96%` — 22 of 23 total plans complete (Phase 3 second-round gap closure pending)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — remediation plans 03-11/03-12 done; 03-13 pending |
+| 3. Movie Game | In progress — 03-11/03-12/03-13 done; 03-14 pending (GAME-01 session lifecycle) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-13 checkpoint PARTIAL PASS — GAME-01 session lifecycle (end-session + start-new-session from lobby) still broken after 03-12 refetchQueries fix; root cause unknown; 03-14 must diagnose and fix before Phase 3 can close
+- **2026-03-15:** GAME-03 confirmed FIXED: eligible-movies populates full TMDB filmography after actor selection; user confirmed 5+ movies appear
+- **2026-03-15:** GAME-08 confirmed FIXED: Radarr request triggered and session advances on movie selection; Pause/resume toggle (03-12) confirmed working
 - **2026-03-15:** 03-11: _ensure_actor_credits_in_db uses pg_insert on_conflict_do_nothing — idempotent upsert; TMDB errors swallowed so eligible-movies endpoint degrades gracefully to cached data
 - **2026-03-15:** 03-11: Makefile rebuild target tags images as sambo7262/cinemachain-*:latest matching compose.yaml — Docker Compose picks up locally built images instead of Hub versions
 - **2026-03-15:** resumeMutation added to GameSession header as sibling of pauseMutation — distinct from handleContinue which handles awaiting_continue UX path
@@ -95,11 +98,12 @@ progress:
 
 ## Blockers / Concerns
 
-- **[ACTIVE] 03-10 verification FAILED — 4 defects must be fixed before Phase 3 can close:**
-  1. Routing: Docker build cache serving Phase 1 placeholder at `/` (fix: `docker compose build --no-cache`)
-  2. Session lifecycle: cannot end existing session or start new one from lobby (fix: debug end-session mutation and lobby isSessionActive guard)
-  3. Eligible movies: actor filmography not fetched from TMDB on demand — only cached credits returned (fix: add on-demand `fetch_actor_credits` call in eligible-movies endpoint or on pick-actor)
-  4. Pause button: session query cache not invalidated after pause/resume mutations (fix: invalidate `["session", sid]` in mutation onSuccess)
+- **[RESOLVED] 03-10 defects 1, 3, 4 fixed by 03-11/03-12:**
+  1. Routing: FIXED — Docker `--no-cache` rebuild resolved Phase 1 placeholder at `/`
+  3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
+  4. Pause button: FIXED — pause/resume toggle working correctly in live app
+- **[ACTIVE] 03-13 PARTIAL PASS — GAME-01 session lifecycle still broken:**
+  2. Session lifecycle: Cannot end existing session or start new session from lobby — banner does not clear after "End Session" click; 03-14 must diagnose root cause (TanStack Query stale cache race, backend end endpoint failure, or nginx proxy issue on NAS) and fix
 - RT ratings source unresolved (no public API — TMDB proxy vs OMDb vs scraping TBD before Phase 3 UI)
 - pyarr currency risk: last release July 2023; verify against installed Radarr/Sonarr API version before writing integration code
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
@@ -127,6 +131,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T18:30:51.985Z
-Stopped at: Completed 03-11-PLAN.md
-Resume with: Create and execute remediation plan 03-11 to fix eligible-movies on-demand fetch, Docker cache, session lifecycle, and pause mutation cache invalidation
+Last session: 2026-03-15T19:55:00.000Z
+Stopped at: Completed 03-13-PLAN.md (partial pass)
+Resume with: Write and execute 03-14 gap-closure plan to fix GAME-01 session lifecycle (end-session banner clear + new-session start from lobby); then re-verify GAME-04, GAME-07 which were blocked in 03-13
