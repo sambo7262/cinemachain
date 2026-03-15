@@ -65,7 +65,19 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** TBD
+**Plans:** 10 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
+- [ ] 03-02-PLAN.md — Wave 1: ORM models (GameSession, GameSessionStep, runtime on Movie) + Alembic migration 0002
+- [ ] 03-03-PLAN.md — Wave 1: RadarrClient service (mirrors TMDBClient pattern)
+- [ ] 03-04-PLAN.md — Wave 1: Frontend scaffold (Vite + React + Tailwind v3 + shadcn/ui)
+- [ ] 03-05-PLAN.md — Wave 2: Game session lifecycle API (create, active, pause/resume/end, import-csv) + movies search/watched endpoints
+- [ ] 03-06-PLAN.md — Wave 2: Game interaction API (eligible-actors, eligible-movies, pick-actor, request-movie)
+- [ ] 03-07-PLAN.md — Wave 2: GameLobby page (three start modes: watched history, title search, CSV import)
+- [ ] 03-08-PLAN.md — Wave 3: GameSession page (two-tab UI, sort/filter, ChainHistory, session advance)
+- [ ] 03-09-PLAN.md — Wave 4: Backend wiring (RadarrClient lifespan, game router mount, Plex advancement hook) + Frontend Docker
+- [ ] 03-10-PLAN.md — Wave 5: Human verify checkpoint (full game loop)
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -88,7 +100,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 0/? | Not started | — |
+| 3. Movie Game | 0/10 | Planned | — |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -135,7 +147,11 @@ Plans:
 | Plex webhook (DATA-05) in Phase 2, not deferred | It is a v1 requirement; manual mark (DATA-06) is the fallback if webhook proves unreliable during development |
 | No separate frontend phase | Backend and UI for each mode are delivered together; splitting them leaves nothing verifiable at phase boundaries |
 | No polish phase | v1 has no explicit polish requirements; hardening tasks belong in individual phase plans as acceptance conditions |
+| RadarrClient uses httpx directly (not pyarr) | pyarr is synchronous (blocks event loop); last release July 2023; httpx matches existing TMDBClient pattern |
+| Tailwind v3 pinned (not v4) | shadcn/ui components authored for Tailwind v3 config.js theming; v4 breaks CSS variable setup |
+| React Router v6 SPA mode (not TanStack Router) | Two-screen app; TanStack Router type-safety overhead unjustified |
+| Game state persisted to PostgreSQL immediately | NAS containers restart unexpectedly; no in-memory session state |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — Phase 2 plan 02-01 complete (Wave 0 test stubs)*
+*Last updated: 2026-03-15 — Phase 3 planned (10 plans, 5 waves)*
