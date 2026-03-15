@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-14-PLAN.md
-last_updated: "2026-03-15T23:22:00.000Z"
+status: verifying
+stopped_at: Completed 03-15-PLAN.md
+last_updated: "2026-03-15T20:41:28.278Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # STATE.md — CinemaChain
@@ -30,17 +30,18 @@ progress:
 
 ## Progress
 
-`[█████████░] 96%` — 22 of 23 total plans complete (Phase 3 second-round gap closure pending)
+`[██████████] 96%` — 24 of 25 total plans complete (Phase 3 gap closure 03-15 done; 03-16 pending)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11/03-12/03-13/03-14 done; 03-15/03-16 gap-closure pending |
+| 3. Movie Game | In progress — 03-11/03-12/03-13/03-14/03-15 done; 03-16 gap-closure pending |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-15: isMovieSelected derived client-side from lastStep.actor_tmdb_id === null && steps.length > 1 — avoids new backend field for movie_selected_unwatched sub-state; NavBar added as sticky layout element above Routes in App.tsx
 - **2026-03-15:** 03-14: setQueryData(['activeSession'], null) in endMutation.onSuccess guarantees synchronous banner clear — eliminates async refetchQueries timing race on NAS hardware; staleTime reduced to 0; eligibleMovies enabled on !!session (not activeTab) so combined view loads on mount
 - **2026-03-15:** 03-13 checkpoint PARTIAL PASS — GAME-01 session lifecycle (end-session + start-new-session from lobby) still broken after 03-12 refetchQueries fix; root cause unknown; 03-14 must diagnose and fix before Phase 3 can close
 - **2026-03-15:** GAME-03 confirmed FIXED: eligible-movies populates full TMDB filmography after actor selection; user confirmed 5+ movies appear
@@ -132,6 +133,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T19:55:00.000Z
-Stopped at: Completed 03-13-PLAN.md (partial pass)
+Last session: 2026-03-15T20:41:28.274Z
+Stopped at: Completed 03-15-PLAN.md
 Resume with: Write and execute 03-14 gap-closure plan to fix GAME-01 session lifecycle (end-session banner clear + new-session start from lobby); then re-verify GAME-04, GAME-07 which were blocked in 03-13
