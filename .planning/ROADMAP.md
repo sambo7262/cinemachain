@@ -11,7 +11,7 @@
 
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
-- [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-18 PARTIAL PASS 2026-03-15 — GAME-01 session start confirmed; GAME-03 combined-view times out; watched state gate + async pre-fetch + pagination required; 03-19 gap-closure required) (completed 2026-03-15)
+- [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-18 PARTIAL PASS 2026-03-15 — GAME-01 session start confirmed; GAME-03 combined-view times out; watched state gate + async pre-fetch + pagination required; 03-19/03-20 gap-closure required) (completed 2026-03-15)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -65,7 +65,7 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** 18/18 plans complete
+**Plans:** 20 plans (18 complete + 2 gap-closure in progress)
 
 Plans:
 - [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
@@ -86,6 +86,8 @@ Plans:
 - [~] 03-16-PLAN.md — Wave 9 (gap-closure): Final re-verification PARTIAL PASS — End Session + NavBar confirmed; session state machine flow defect found; 03-17 required
 - [ ] 03-17-PLAN.md — Wave 10 (gap-closure): Fix isStartingMovie state machine + combined-view _ensure_actor_credits_in_db + Radarr conditional notification
 - [~] 03-18-PLAN.md — Wave 11 (gap-closure): Docker rebuild + human verify — PARTIAL PASS: Test 1 (GAME-01) pass; Test 2 (GAME-03) fail (combined-view timeout); Tests 3-5 blocked; 03-19 required
+- [ ] 03-19-PLAN.md — Wave 12 (gap-closure): Backend — current_movie_watched column, watched gate on eligible endpoints, mark-current-watched endpoint, Radarr on session start, async credits pre-fetch, eligible movies pagination
+- [ ] 03-20-PLAN.md — Wave 13 (gap-closure): Frontend — watched gate UI, Mark as Watched button, Radarr start notification, pagination controls; Docker rebuild + final verify checkpoint
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -108,7 +110,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 18/18 | Complete   | 2026-03-15 |
+| 3. Movie Game | 18/20 | In Progress (03-19/03-20 gap-closure required) | — |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -159,7 +161,8 @@ Plans:
 | Tailwind v3 pinned (not v4) | shadcn/ui components authored for Tailwind v3 config.js theming; v4 breaks CSS variable setup |
 | React Router v6 SPA mode (not TanStack Router) | Two-screen app; TanStack Router type-safety overhead unjustified |
 | Game state persisted to PostgreSQL immediately | NAS containers restart unexpectedly; no in-memory session state |
+| 03-19/03-20 flow redesign | 03-18 live NAS verification: eligible endpoints gated behind current_movie_watched; Radarr fires at session start; manual Mark as Watched button; async background credits pre-fetch; eligible movies paginated |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — 03-18 partial pass: GAME-01 session start confirmed; GAME-03 combined-view times out (async pre-fetch + pagination required); flow redesign: watched state gate on eligible actors/movies, Radarr on session start, manual Mark as Watched button; 03-19 gap-closure required*
+*Last updated: 2026-03-15 — 03-18 partial pass; 03-19 (backend) and 03-20 (frontend + deploy) gap-closure plans added for watched state gate, Radarr on session start, Mark as Watched button, async credits pre-fetch, pagination*
