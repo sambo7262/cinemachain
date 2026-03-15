@@ -16,14 +16,14 @@
 
 ### Movie Game (GAME)
 
-- [x] **GAME-01**: User can start a Movie Game session by manually selecting any movie as the starting point
+- [ ] **GAME-01**: User can start a Movie Game session by manually selecting any movie as the starting point
 - [x] **GAME-02**: User sees an Eligible Actors panel: cast of current movie, excluding already-picked actors
-- [x] **GAME-03**: User selects an actor to view their Eligible Movies panel (unwatched filmography)
-- [x] **GAME-04**: Session tracks picked actors so no actor can repeat within a session
-- [x] **GAME-05**: User can sort Eligible Movies by genre, TMDB rating, or aggregated rating
-- [x] **GAME-06**: User can toggle between unwatched-only or all movies with watched badges
-- [x] **GAME-07**: Only unwatched movies are selectable in Game mode
-- [x] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
+- [ ] **GAME-03**: User selects an actor to view their Eligible Movies panel (unwatched filmography)
+- [ ] **GAME-04**: Session tracks picked actors so no actor can repeat within a session
+- [ ] **GAME-05**: User can sort Eligible Movies by genre, TMDB rating, or aggregated rating
+- [ ] **GAME-06**: User can toggle between unwatched-only or all movies with watched badges
+- [ ] **GAME-07**: Only unwatched movies are selectable in Game mode
+- [ ] **GAME-08**: User requests a movie, triggering an automatic Radarr queue request
 
 ### Query Mode (QUERY)
 
@@ -76,14 +76,14 @@
 | DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Complete |
 | DATA-06 | Phase 2 | Complete |
-| GAME-01 | Phase 3 | Complete |
+| GAME-01 | Phase 3 | Incomplete — session start state machine flow defect (03-17) |
 | GAME-02 | Phase 3 | Complete |
-| GAME-03 | Phase 3 | Complete |
-| GAME-04 | Phase 3 | Complete |
-| GAME-05 | Phase 3 | Complete |
-| GAME-06 | Phase 3 | Complete |
-| GAME-07 | Phase 3 | Complete |
-| GAME-08 | Phase 3 | Complete |
+| GAME-03 | Phase 3 | Incomplete — combined-view credits not populated on mount (03-17) |
+| GAME-04 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
+| GAME-05 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
+| GAME-06 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
+| GAME-07 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
+| GAME-08 | Phase 3 | Incomplete — Radarr result not surfaced to user (03-17) |
 | QUERY-01 | Phase 4 | Pending |
 | QUERY-02 | Phase 4 | Pending |
 | QUERY-03 | Phase 4 | Pending |
@@ -103,4 +103,4 @@
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after roadmap creation — all 25 requirements mapped*
+*Last updated: 2026-03-15 after 03-16 partial pass — GAME-01, GAME-03, GAME-08 incomplete; GAME-04 through GAME-07 blocked pending GAME-01 live verification*
