@@ -19,8 +19,13 @@ def run_migrations_online() -> None:
 
     async def run_async() -> None:
         async with connectable.connect() as conn:
-            await conn.run_sync(context.run_migrations)
+            await conn.run_sync(do_migrations)
         await connectable.dispose()
+
+    def do_migrations(conn) -> None:
+        context.configure(connection=conn, target_metadata=target_metadata)
+        with context.begin_transaction():
+            context.run_migrations()
 
     asyncio.run(run_async())
 
