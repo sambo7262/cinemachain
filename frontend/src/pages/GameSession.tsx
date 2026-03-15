@@ -55,7 +55,9 @@ export default function GameSession() {
         sort,
         all_movies: allMovies,
       }),
-    enabled: !!sid && activeTab === "movies",
+    // Fetch on mount so Eligible Movies tab shows combined view immediately.
+    // actor_id is undefined when no actor selected — backend returns combined view.
+    enabled: !!sid && !!session,
   })
 
   // Actor selection switches to Eligible Movies tab
@@ -287,7 +289,7 @@ export default function GameSession() {
                   onClick={() => setSelectedActor(null)}
                   className="ml-auto text-muted-foreground"
                 >
-                  Clear actor filter
+                  Show all eligible movies
                 </Button>
               )}
             </div>
@@ -298,7 +300,7 @@ export default function GameSession() {
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   {selectedActor
                     ? `No eligible movies via ${selectedActor.name}.`
-                    : "No eligible movies found."}
+                    : "No eligible movies found. Select an actor from the Eligible Actors tab to filter."}
                 </p>
               ) : (
                 eligibleMovies.map((movie) => (
