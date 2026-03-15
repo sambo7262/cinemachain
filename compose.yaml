@@ -4,39 +4,22 @@
 # SYNOLOGY CONSTRAINTS ADDRESSED:
 #   - PUID/PGID set on backend (DSM ACLs != Unix perms)
 #   - PostgreSQL host port 5433 (not 5432 — reserved on Synology DSM)
-#   - TS_USERSPACE=1 on Tailscale sidecar (no kernel TUN in DSM; numeric avoids DSM UI boolean mangling)
 #   - mem_limit on every container (prevent OOM kills on shared NAS RAM)
 #   - restart: unless-stopped (not always — avoids infinite restart loops masking real errors)
 #   - healthcheck-gated depends_on for PostgreSQL — pg_isready with start_period: 30s
-#   - Backend uses network_mode: service:tailscale (shares Tailscale network namespace)
 #   - All volumes use host bind-mounts to /volume1/docker/appdata/cinemachain/
 #     (visible in DSM File Station; survive Docker package reinstalls)
+#   - Tailscale NOT included — system-wide Tailscale on NAS handles remote access
+#     Access remotely via Tailscale IP + local ports (8000 backend, 3000 frontend)
 
 services:
-  tailscale:
-    image: tailscale/tailscale:latest
-    container_name: cinemachain-tailscale
-    hostname: cinemachain
-    restart: unless-stopped
-    mem_limit: 128m
-    environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=1
-      - TS_SERVE_CONFIG=/config/ts-serve.json
-    volumes:
-      - /volume1/docker/appdata/cinemachain/tailscale:/var/lib/tailscale
-      - ./frontend/ts-serve.json:/config/ts-serve.json:ro
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-
   backend:
     build: ./backend
     container_name: cinemachain-backend
     restart: unless-stopped
     mem_limit: 512m
-    network_mode: service:tailscale
+    ports:
+      - "8000:8000"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
