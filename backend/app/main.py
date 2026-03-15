@@ -9,6 +9,7 @@ from app.routers import health
 from app.routers import movies as movies_router
 from app.routers import actors as actors_router
 from app.routers import plex as plex_router
+from app.routers import debug as debug_router
 from app.services.tmdb import TMDBClient
 from app.services.plex import sync_on_startup
 from app.settings import settings
@@ -44,3 +45,4 @@ app.include_router(health.router)
 app.include_router(movies_router.router)
 app.include_router(actors_router.router)
 app.include_router(plex_router.router)
+app.include_router(debug_router.router)
