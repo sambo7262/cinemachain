@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01-PLAN.md (Game session + Radarr TDD stubs)
-last_updated: "2026-03-15T17:26:54.347Z"
+stopped_at: Completed 03-04-PLAN.md (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
+last_updated: "2026-03-15T17:40:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # STATE.md — CinemaChain
@@ -25,22 +25,25 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-02 complete (Game Session ORM models and Alembic migration 0002)
+- **Plan:** 03-04 complete (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
 - **Status:** Executing
 
 ## Progress
 
-`[██████░░░░] 63%` — 12 of 19 total plans complete
+`[███████░░░] 68%` — 13 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-01, 03-02 done) |
+| 3. Movie Game | In progress (03-01, 03-02, 03-03, 03-04 done) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** Vite scaffold created manually (not via npm create vite) — interactive CLI cancelled on non-empty directory; all config files written directly
+- **2026-03-15:** shadcn/ui components written manually rather than via npx shadcn init — avoids interactive CLI in automated context; produces identical output
+- **2026-03-15:** api.ts uses relative /api base URL — nginx proxies to backend:8000 at runtime; frontend never calls backend directly
 - **2026-03-15:** SessionStatus stored as String(20) not PostgreSQL ENUM — avoids Alembic complexity with enum type migrations; Python enum used for application-level type safety only
 - **2026-03-15:** GameSessionStep.actor_tmdb_id/actor_name nullable — first step (starting movie) has no actor transition; nullable fields support this without a special case row
 - **2026-03-15:** RadarrClient uses X-Api-Key header auth and Python-side tmdbId filtering to handle Radarr bug #6086; HTTP 400 from add_movie treated as success sentinel
@@ -99,6 +102,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T16:55:42Z
-Stopped at: Completed 03-02-PLAN.md (Game Session ORM models and Alembic migration 0002)
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-03)
+Last session: 2026-03-15T17:40:00Z
+Stopped at: Completed 03-04-PLAN.md (Frontend scaffold — Vite + React + Tailwind v3 + shadcn/ui)
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-05)
