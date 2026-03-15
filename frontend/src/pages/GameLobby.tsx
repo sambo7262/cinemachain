@@ -106,14 +106,15 @@ export default function GameLobby() {
   // End session mutation
   const endMutation = useMutation({
     mutationFn: (sessionId: number) => api.endSession(sessionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeSession"] })
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["activeSession"] })
     },
     onError: () => toast("Failed to end session."),
   })
 
   const isSessionActive =
-    activeSession &&
+    activeSession !== null &&
+    activeSession !== undefined &&
     ["active", "paused", "awaiting_continue"].includes(activeSession.status)
 
   const currentMovieTitle =
