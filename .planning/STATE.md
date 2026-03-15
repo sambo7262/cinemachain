@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-15T17:26:03.897Z"
+stopped_at: Completed 03-01-PLAN.md (Game session + Radarr TDD stubs)
+last_updated: "2026-03-15T17:26:54.347Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # STATE.md — CinemaChain
@@ -25,22 +25,24 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-01 complete (Game session + Radarr TDD stubs — RED phase)
+- **Plan:** 03-02 complete (Game Session ORM models and Alembic migration 0002)
 - **Status:** Executing
 
 ## Progress
 
-`[██████░░░░] 58%` — 11 of 19 total plans complete
+`[██████░░░░] 63%` — 12 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-03 done) |
+| 3. Movie Game | In progress (03-01, 03-02 done) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** SessionStatus stored as String(20) not PostgreSQL ENUM — avoids Alembic complexity with enum type migrations; Python enum used for application-level type safety only
+- **2026-03-15:** GameSessionStep.actor_tmdb_id/actor_name nullable — first step (starting movie) has no actor transition; nullable fields support this without a special case row
 - **2026-03-15:** RadarrClient uses X-Api-Key header auth and Python-side tmdbId filtering to handle Radarr bug #6086; HTTP 400 from add_movie treated as success sentinel
 - **2026-03-15:** from __future__ import annotations required in radarr.py for Python 3.9 union type hint (dict | None) compatibility
 - **2026-03-15:** httpx.Response in unit tests requires explicit request= and content= to support raise_for_status() without RuntimeError
@@ -97,6 +99,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T17:35:00Z
-Stopped at: Completed 03-01-PLAN.md (Game session + Radarr TDD stubs)
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-02)
+Last session: 2026-03-15T16:55:42Z
+Stopped at: Completed 03-02-PLAN.md (Game Session ORM models and Alembic migration 0002)
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-03)
