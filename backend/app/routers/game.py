@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -77,6 +78,72 @@ async def _get_single_active_session(db: AsyncSession) -> GameSession | None:
         .options(selectinload(GameSession.steps))
     )
     return result.scalar_one_or_none()
+
+
+async def _ensure_actor_credits_in_db(
+    actor_tmdb_id: int,
+    tmdb: TMDBClient,
+    db: AsyncSession,
+) -> None:
+    """Fetch actor filmography from TMDB and upsert Movie + Credit rows.
+
+    Called before eligible-movies DB query to ensure on-demand filmography is populated.
+    Uses on_conflict_do_nothing so repeated calls are safe (idempotent).
+    """
+    try:
+        data = await tmdb.fetch_actor_credits(actor_tmdb_id)
+    except Exception:
+        # TMDB unavailable — proceed with whatever is already cached
+        return
+
+    # Upsert actor row
+    try:
+        person = await tmdb.fetch_person(actor_tmdb_id)
+    except Exception:
+        person = {"name": f"Actor {actor_tmdb_id}", "profile_path": None}
+
+    actor_stmt = pg_insert(Actor).values(
+        tmdb_id=actor_tmdb_id,
+        name=person.get("name", f"Actor {actor_tmdb_id}"),
+        profile_path=person.get("profile_path"),
+    ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+    await db.execute(actor_stmt)
+    await db.commit()
+
+    # Re-fetch actor to get its PK
+    actor_result = await db.execute(select(Actor).where(Actor.tmdb_id == actor_tmdb_id))
+    actor = actor_result.scalar_one_or_none()
+    if actor is None:
+        return
+
+    # Upsert movie stubs from filmography
+    for credit_data in data.get("cast", []):
+        movie_stmt = pg_insert(Movie).values(
+            tmdb_id=credit_data["id"],
+            title=credit_data.get("title", ""),
+            year=int(credit_data["release_date"][:4]) if credit_data.get("release_date") else None,
+            poster_path=credit_data.get("poster_path"),
+            vote_average=credit_data.get("vote_average"),
+            genres=None,
+        ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+        await db.execute(movie_stmt)
+    await db.commit()
+
+    # Upsert Credit rows linking actor to each movie
+    for credit_data in data.get("cast", []):
+        movie_result = await db.execute(
+            select(Movie).where(Movie.tmdb_id == credit_data["id"])
+        )
+        movie = movie_result.scalar_one_or_none()
+        if movie:
+            credit_stmt = pg_insert(Credit).values(
+                movie_id=movie.id,
+                actor_id=actor.id,
+                character=credit_data.get("character"),
+                order=None,
+            ).on_conflict_do_nothing(index_elements=["movie_id", "actor_id"])
+            await db.execute(credit_stmt)
+    await db.commit()
 
 
 async def _resolve_movie_tmdb_id(title: str, tmdb: TMDBClient) -> int | None:
@@ -363,6 +430,7 @@ async def get_eligible_actors(
 @router.get("/sessions/{session_id}/eligible-movies")
 async def get_eligible_movies(
     session_id: int,
+    request: Request,
     actor_id: int | None = Query(default=None),
     sort: str | None = Query(default=None),
     all_movies: bool = Query(default=False),
@@ -390,6 +458,10 @@ async def get_eligible_movies(
     movies_map: dict[int, dict] = {}  # tmdb_id → movie dict
 
     if actor_id is not None:
+        # Ensure actor filmography is in DB (fetch from TMDB on demand if missing)
+        tmdb: TMDBClient = request.app.state.tmdb_client
+        await _ensure_actor_credits_in_db(actor_id, tmdb, db)
+
         # Specific actor filmography
         stmt = (
             select(Movie, Credit, Actor)
