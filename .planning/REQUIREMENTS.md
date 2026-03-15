@@ -11,8 +11,8 @@
 - [ ] **DATA-02**: System fetches actor metadata and filmography credits from TMDB API
 - [ ] **DATA-03**: System caches TMDB data in PostgreSQL to respect rate limits
 - [x] **DATA-04**: System cross-references Plex library to determine watched/unwatched state per movie
-- [ ] **DATA-05**: System receives Plex webhook events to update watch state on playback completion
-- [ ] **DATA-06**: User can manually mark a movie as watched (fallback without Plex Pass)
+- [x] **DATA-05**: System receives Plex webhook events to update watch state on playback completion
+- [x] **DATA-06**: User can manually mark a movie as watched (fallback without Plex Pass)
 
 ### Movie Game (GAME)
 
@@ -74,8 +74,8 @@
 | DATA-02 | Phase 2 | Pending |
 | DATA-03 | Phase 2 | Pending |
 | DATA-04 | Phase 2 | Complete |
-| DATA-05 | Phase 2 | Pending |
-| DATA-06 | Phase 2 | Pending |
+| DATA-05 | Phase 2 | Complete |
+| DATA-06 | Phase 2 | Complete |
 | GAME-01 | Phase 3 | Pending |
 | GAME-02 | Phase 3 | Pending |
 | GAME-03 | Phase 3 | Pending |

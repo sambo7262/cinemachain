@@ -10,7 +10,7 @@
 ## Phases
 
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
-- [ ] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational
+- [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [ ] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
@@ -45,7 +45,7 @@ Plans:
   3. Movies the user has watched in Plex are reflected as watched in the app after a Plex library sync
   4. A Plex playback completion event (webhook) automatically marks the corresponding movie as watched
   5. User can manually mark a movie as watched through the UI (fallback for non-Plex-Pass setups)
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 02-01-PLAN.md — Wave 0: test stubs for DATA-01 through DATA-06
@@ -87,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
-| 2. Data Foundation | 1/5 | In Progress | — |
+| 2. Data Foundation | 5/5 | Complete   | 2026-03-15 |
 | 3. Movie Game | 0/? | Not started | — |
 | 4. Query Mode | 0/? | Not started | — |
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-15T15:00:16.322Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-03-15T15:08:00Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 9
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,27 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 2 — Data Foundation (in progress)
-- **Plan:** 02-03 complete (TMDB Service + Routers)
-- **Status:** Phase 2 plans 01-03 complete; ready for 02-04
+- **Phase:** Phase 2 — Data Foundation (complete)
+- **Plan:** 02-05 complete (Integration — Plex Webhook, Manual Mark Watched, Wired Lifespan)
+- **Status:** Phase 2 all 5 plans complete; ready for Phase 3
 
 ## Progress
 
-`[████████░░] 78%` — Phase 2 of 4, plans 01-03/05 complete (7 of 9 total plans)
+`[██████████] 100%` — Phase 2 of 4 complete (9 of 9 total plans)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
-| 2. Data Foundation | In progress (02-01, 02-02, 02-03 done) |
+| 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Not started |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** POST /webhooks/plex uses Form(...) not Body(...) — Plex sends multipart/form-data; JSON body parameter would be rejected by FastAPI
+- **2026-03-15:** TMDBClient stored as app.state.tmdb_client in lifespan — single shared async instance with close() on shutdown to flush httpx connection pool
+- **2026-03-15:** Plex startup sync wrapped in try/except in lifespan — Plex unreachable is non-fatal; app starts regardless (per CONTEXT.md decisions)
+- **2026-03-15:** _extract_tmdb_id handles both new Guid list (tmdb://550) and legacy guid string (com.plexapp.agents.themoviedb://550?lang=en) GUID formats
 - **2026-03-15:** fetch_person added to TMDBClient — /person/id/movie_credits doesn't return actor metadata; separate /person/id call required for actor name and profile_path; method added for testability over accessing _client directly
 - **2026-03-15:** Movie stubs from actor filmography have genres=NULL — genre_ids integers from movie_credits endpoint resolved on-demand via GET /movies/{id}
 - **2026-03-15:** lazy="raise" on all ORM relationships — async SQLAlchemy cannot lazy-load; callers must use explicit selectinload/joinedload
@@ -89,6 +93,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T15:00:16.317Z
-Stopped at: Completed 02-03-PLAN.md
-Resume with: `/gsd:execute-phase 02-data-foundation` (next: 02-03 TMDB service)
+Last session: 2026-03-15T15:08:00Z
+Stopped at: Completed 02-05-PLAN.md
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 2 complete — next: Phase 3 Movie Game)
