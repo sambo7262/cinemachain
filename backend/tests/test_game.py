@@ -18,7 +18,7 @@ Wave 1 (Plan 03-02) implements the routes and game engine.
 These stubs define the RED phase — they must collect and fail, not pass.
 """
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,12 @@ from unittest.mock import AsyncMock
 @pytest.mark.asyncio
 async def test_create_session(client):
     """GAME-01: POST /game/sessions creates session from a watched movie, returns 201 with id and status='active'."""
-    pytest.fail("not implemented")
+    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "id" in data
+    assert data["status"] == "active"
+    assert data["current_movie_tmdb_id"] == 550
 
 
 @pytest.mark.asyncio
@@ -44,7 +49,12 @@ async def test_create_session_with_title_search(client):
 @pytest.mark.asyncio
 async def test_create_session_conflict(client):
     """GAME-03: POST /game/sessions when an active session already exists returns 409."""
-    pytest.fail("not implemented")
+    # Create a session first
+    resp1 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert resp1.status_code == 201
+    # Second creation should conflict
+    resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680})
+    assert resp2.status_code == 409
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +64,23 @@ async def test_create_session_conflict(client):
 @pytest.mark.asyncio
 async def test_get_active_session(client):
     """GAME-04: GET /game/sessions/active returns the current active session."""
-    pytest.fail("not implemented")
+    # Initially no active session
+    resp = await client.get("/game/sessions/active")
+    assert resp.status_code == 200
+    assert resp.json() is None
+
+    # Create one
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert create_resp.status_code == 201
+    session_id = create_resp.json()["id"]
+
+    # Now active session should be returned
+    resp2 = await client.get("/game/sessions/active")
+    assert resp2.status_code == 200
+    data = resp2.json()
+    assert data["id"] == session_id
+    assert data["status"] == "active"
+    assert "steps" in data
 
 
 # ---------------------------------------------------------------------------
@@ -150,19 +176,44 @@ async def test_request_movie_skip_radarr(client):
 @pytest.mark.asyncio
 async def test_pause_session(client):
     """POST /game/sessions/{id}/pause sets status='paused', returns 200."""
-    pytest.fail("not implemented")
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert create_resp.status_code == 201
+    session_id = create_resp.json()["id"]
+
+    resp = await client.post(f"/game/sessions/{session_id}/pause")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "paused"
 
 
 @pytest.mark.asyncio
 async def test_resume_session(client):
     """POST /game/sessions/{id}/resume sets status='active', returns 200."""
-    pytest.fail("not implemented")
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert create_resp.status_code == 201
+    session_id = create_resp.json()["id"]
+
+    # Pause first
+    await client.post(f"/game/sessions/{session_id}/pause")
+
+    # Resume
+    resp = await client.post(f"/game/sessions/{session_id}/resume")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "active"
+    # Resume must restore current_movie_tmdb_id to last step's movie
+    assert data["current_movie_tmdb_id"] == 550
 
 
 @pytest.mark.asyncio
 async def test_end_session(client):
     """POST /game/sessions/{id}/end sets status='ended', returns 200."""
-    pytest.fail("not implemented")
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    assert create_resp.status_code == 201
+    session_id = create_resp.json()["id"]
+
+    resp = await client.post(f"/game/sessions/{session_id}/end")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ended"
 
 
 # ---------------------------------------------------------------------------
@@ -172,4 +223,43 @@ async def test_end_session(client):
 @pytest.mark.asyncio
 async def test_import_csv(client):
     """POST /game/sessions/import-csv with valid CSV rows creates a session with pre-populated steps."""
-    pytest.fail("not implemented")
+    # Mock TMDB responses
+    mock_tmdb = MagicMock()
+    mock_tmdb._sem = AsyncMock()
+    mock_tmdb._sem.__aenter__ = AsyncMock(return_value=None)
+    mock_tmdb._sem.__aexit__ = AsyncMock(return_value=None)
+
+    movie_resp = MagicMock()
+    movie_resp.json.return_value = {
+        "results": [
+            {"id": 550, "title": "Fight Club", "vote_count": 25000},
+            {"id": 999, "title": "Fight Club 2", "vote_count": 100},
+        ]
+    }
+    actor_resp = MagicMock()
+    actor_resp.json.return_value = {
+        "results": [
+            {"id": 819, "name": "Edward Norton"},
+        ]
+    }
+
+    async def mock_get(path, params=None):
+        if "/search/movie" in path:
+            return movie_resp
+        return actor_resp
+
+    mock_tmdb._client = MagicMock()
+    mock_tmdb._client.get = mock_get
+
+    from app.main import app
+    app.state.tmdb_client = mock_tmdb
+
+    rows = [
+        {"movieName": "Fight Club", "actorName": "Edward Norton", "order": 0},
+    ]
+    resp = await client.post("/game/sessions/import-csv", json={"rows": rows})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["status"] == "active"
+    assert data["current_movie_tmdb_id"] == 550
+    assert len(data["steps"]) >= 1
