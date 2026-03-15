@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-08-PLAN.md (GameSession page with two-tab panel, ActorCard, ChainHistory)
-last_updated: "2026-03-15T17:53:00Z"
+stopped_at: Completed 03-06-PLAN.md (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
+last_updated: "2026-03-15T17:46:33.184Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # STATE.md — CinemaChain
@@ -25,22 +25,26 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-08 complete (GameSession page — two-tab game UI with ActorCard, ChainHistory, sort/filter, session advance banner)
+- **Plan:** 03-06 complete (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
 - **Status:** Executing
 
 ## Progress
 
-`[████████░░] 84%` — 16 of 19 total plans complete
+`[█████████░] 89%` — 17 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-01 through 03-05, 03-07, 03-08 done) |
+| 3. Movie Game | In progress (03-01 through 03-08 done; 03-06 game interaction endpoints complete) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** Python-side sort on eligible-movies result list — DB sort would require complex joins; filmography result sizes bounded (<200 movies)
+- **2026-03-15:** WatchEvent tmdb_id set fetched once per eligible-movies request — single SELECT, Python set for O(1) lookup; avoids N+1 EXISTS queries per movie
+- **2026-03-15:** request-movie records GameSessionStep before Radarr call — ensures DB consistency even if Radarr is slow or fails
+- **2026-03-15:** radarr_client accessed via request.app.state.radarr_client — matches tmdb_client pattern; wired in lifespan (plan 03-09)
 - **2026-03-15:** window.confirm used for movie selection confirmation in GameSession — no modal component available; plan permits this pattern as acceptable approach
 - **2026-03-15:** ChainHistory imports GameSessionStepDTO from api.ts (already exported) rather than redefining — avoids type duplication across components
 - **2026-03-15:** Watched movies wrapped in opacity-50 div rather than adding prop to MovieCard — keeps MovieCard selectable logic unchanged; two-layer approach is clean
@@ -110,6 +114,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T17:53:00Z
-Stopped at: Completed 03-08-PLAN.md (GameSession page with two-tab panel, ActorCard, ChainHistory)
+Last session: 2026-03-15T17:46:33.180Z
+Stopped at: Completed 03-06-PLAN.md (Game interaction endpoints — eligible-actors, eligible-movies, pick-actor, request-movie)
 Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-09)
