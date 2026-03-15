@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-07-PLAN.md (GameLobby page with three session-start modes and MovieCard component)
-last_updated: "2026-03-15T18:15:00.000Z"
+last_updated: "2026-03-15T17:38:44.724Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # STATE.md — CinemaChain
@@ -30,7 +30,7 @@ progress:
 
 ## Progress
 
-`[████████░░] 74%` — 14 of 19 total plans complete
+`[████████░░] 79%` — 15 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -41,6 +41,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-15:** import-csv route registered before /{session_id} to prevent FastAPI matching "import-csv" string as integer path param (would return 422)
+- **2026-03-15:** GameSession selectinload re-fetched after db.commit() — db.refresh() does not reload lazy="raise" relationships; separate select with options(selectinload) required
 - **2026-03-15:** Client-side CSV parsing uses FileReader + basic string split — PapaParse not needed for simple three-column Movie Name/Actor Name/Order format
 - **2026-03-15:** toast() in GameLobby implemented as alert() wrapper — sonner not installed; plan permitted this as acceptable fallback for lobby error cases
 - **2026-03-15:** MovieCard is the shared display primitive for lobby search, watched history, and game eligible-movies — single component handles all movie display contexts
