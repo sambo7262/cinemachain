@@ -5,12 +5,33 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Form
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.db import get_db
-from app.models import WatchEvent
+from app.models import GameSession, WatchEvent
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+
+async def _maybe_advance_session(tmdb_id: int, db: AsyncSession) -> None:
+    """Advance active game session when the session's current queued movie is watched.
+
+    CRITICAL: Only advances status='active' sessions — paused sessions are intentionally excluded.
+    """
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.status == "active")
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if session and session.current_movie_tmdb_id == tmdb_id:
+        session.status = "awaiting_continue"
+        await db.commit()
+        logger.info(
+            "Session %d awaiting_continue — tmdb_id=%d watched", session.id, tmdb_id
+        )
 
 
 def _extract_tmdb_id(metadata: dict) -> int | None:
@@ -79,4 +100,6 @@ async def plex_webhook(
     await db.commit()
 
     logger.info("Scrobble: tmdb_id=%d marked watched via plex_webhook", tmdb_id)
+
+    await _maybe_advance_session(tmdb_id, db)
     return {"status": "ok"}
