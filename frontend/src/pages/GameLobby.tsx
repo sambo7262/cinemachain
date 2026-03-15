@@ -20,7 +20,7 @@ export default function GameLobby() {
   const { data: activeSession } = useQuery({
     queryKey: ["activeSession"],
     queryFn: api.getActiveSession,
-    staleTime: 10_000,
+    staleTime: 0,
   })
 
   // Watched movies
@@ -106,8 +106,12 @@ export default function GameLobby() {
   // End session mutation
   const endMutation = useMutation({
     mutationFn: (sessionId: number) => api.endSession(sessionId),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["activeSession"] })
+    onSuccess: () => {
+      // Synchronously clear the cache so the banner disappears on this render cycle.
+      // Do NOT use refetchQueries or async onSuccess — those are subject to timing
+      // races with staleTime and React batch updates on NAS hardware.
+      queryClient.setQueryData(["activeSession"], null)
+      queryClient.invalidateQueries({ queryKey: ["activeSession"] })
     },
     onError: () => toast("Failed to end session."),
   })
