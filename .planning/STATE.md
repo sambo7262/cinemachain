@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-07-PLAN.md (GameLobby page with three session-start modes and MovieCard component)
-last_updated: "2026-03-15T17:38:44.724Z"
+stopped_at: Completed 03-08-PLAN.md (GameSession page with two-tab panel, ActorCard, ChainHistory)
+last_updated: "2026-03-15T17:53:00Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # STATE.md — CinemaChain
@@ -25,22 +25,25 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 3 — Movie Game (in progress)
-- **Plan:** 03-07 complete (GameLobby page — three-tab session start lobby with MovieCard component)
+- **Plan:** 03-08 complete (GameSession page — two-tab game UI with ActorCard, ChainHistory, sort/filter, session advance banner)
 - **Status:** Executing
 
 ## Progress
 
-`[████████░░] 79%` — 15 of 19 total plans complete
+`[████████░░] 84%` — 16 of 19 total plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress (03-01 through 03-04, 03-07 done) |
+| 3. Movie Game | In progress (03-01 through 03-05, 03-07, 03-08 done) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** window.confirm used for movie selection confirmation in GameSession — no modal component available; plan permits this pattern as acceptable approach
+- **2026-03-15:** ChainHistory imports GameSessionStepDTO from api.ts (already exported) rather than redefining — avoids type duplication across components
+- **2026-03-15:** Watched movies wrapped in opacity-50 div rather than adding prop to MovieCard — keeps MovieCard selectable logic unchanged; two-layer approach is clean
 - **2026-03-15:** import-csv route registered before /{session_id} to prevent FastAPI matching "import-csv" string as integer path param (would return 422)
 - **2026-03-15:** GameSession selectinload re-fetched after db.commit() — db.refresh() does not reload lazy="raise" relationships; separate select with options(selectinload) required
 - **2026-03-15:** Client-side CSV parsing uses FileReader + basic string split — PapaParse not needed for simple three-column Movie Name/Actor Name/Order format
@@ -107,6 +110,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T18:15:00Z
-Stopped at: Completed 03-07-PLAN.md (GameLobby page with three session-start modes and MovieCard component)
-Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-08)
+Last session: 2026-03-15T17:53:00Z
+Stopped at: Completed 03-08-PLAN.md (GameSession page with two-tab panel, ActorCard, ChainHistory)
+Resume with: `/gsd:execute-phase 03-movie-game` (Phase 3 in progress — next: 03-09)

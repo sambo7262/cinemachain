@@ -65,7 +65,7 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** 6/10 plans executed
+**Plans:** 7/10 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
@@ -100,7 +100,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 6/10 | In Progress|  |
+| 3. Movie Game | 7/10 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
