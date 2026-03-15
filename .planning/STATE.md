@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-17-PLAN.md
-last_updated: "2026-03-15T21:25:48.666Z"
+status: "03-18 partial pass — GAME-01 session start guidance confirmed; GAME-03 combined-view times out (async pre-fetch + pagination needed); flow redesign required: watched state gate, manual Mark as Watched, Radarr on session start; 03-19 must fix"
+stopped_at: Completed 03-18-PLAN.md
+last_updated: "2026-03-15T21:42:06.050Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-17 complete; live NAS verification required)
-- **Plan:** Completed 03-17; 03-18 verification required
-- **Status:** 03-17 complete — combined-view credits pre-fetch, isStartingMovie watch-first guidance, Radarr result notification; awaiting live NAS end-to-end verification
+- **Phase:** Phase 3 — Movie Game (in progress — 03-18 partial pass; 03-19 gap-closure required)
+- **Plan:** Completed 03-18; 03-19 required
+- **Status:** 03-18 partial pass — GAME-01 session start guidance confirmed; GAME-03 combined-view times out (async pre-fetch + pagination needed); flow redesign required: watched state gate, manual Mark as Watched, Radarr on session start; 03-19 must fix
 
 ## Progress
 
-`[██████████] 96%` — 26 of 27 planned plans complete (03-17 done; 03-18 live verification required)
+`[██████████] 96%` — 27 of 28 planned plans complete (03-18 done; 03-19 gap-closure required)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11 through 03-17 done; 03-18 live NAS verification required |
+| 3. Movie Game | In progress — 03-11 through 03-18 done; 03-19 gap-closure required (watched state gate, async pre-fetch, pagination) |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-18: GAME-01 session start guidance confirmed PASS in live NAS; GAME-03 combined-view times out — synchronous TMDB credits fetch for all cast members before returning results reliably exceeds NAS request timeout for large casts
+- **2026-03-15:** 03-18: Flow redesign: eligible actors/movies must be gated behind watched state; Radarr check fires at session start for starting movie; manual Mark as Watched button needed in GameSession UI; async background credits pre-fetch on session creation; eligible movies pagination (first N actors immediately, more on demand)
 - **2026-03-15:** 03-17: Combined-view branch now mirrors actor-scoped branch — added tmdb declaration and _ensure_actor_credits_in_db loop before filmography query in else branch; isStartingMovie derived from steps.length===1 && lastStep.actor_tmdb_id===null; radarrStatus captures requestResult.status for conditional user feedback; confirm dialog changed to neutral wording
 - **2026-03-15:** 03-16: Phase 3 not closed — session state machine flow defect found in live testing; correct flow is: movie search → select movie (session created, movie_selected_unwatched, NO actor prompt) → user watches → user picks actor → user picks next movie → Radarr queried only if movie not already in Radarr; 03-17 required
 - **2026-03-15:** 03-16: setQueryData end-session fix (03-14) confirmed working in live NAS — GAME-01 end-session sub-requirement passes; NavBar (03-15) confirmed on all pages
@@ -108,7 +110,7 @@ progress:
   3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
   4. Pause button: FIXED — pause/resume toggle working correctly in live app
 - **[CONFIRMED IN 03-16] GAME-01 end-session:** setQueryData(null) fix confirmed working — banner clears immediately in live NAS test
-- **[OPEN — 03-17 REQUIRED] GAME-01 session start + GAME-03 eligible movies:** Session state machine flow is wrong — UI prompts actor selection immediately on movie search, but correct flow starts with movie selection creating the session in movie_selected_unwatched state, NO actor prompt until after user watches the movie. Eligible Movies combined view also broken in this context. Radarr query timing also needs correction (should only fire on next-movie selection, and only if not already in Radarr).
+- **[OPEN — 03-19 REQUIRED] GAME-03 combined-view timeout + flow redesign:** Combined-view eligible movies fetch times out on NAS (synchronous TMDB credits for all cast). Flow redesign required: (1) Radarr check on session start for starting movie, (2) manual Mark as Watched button in GameSession, (3) eligible actors/movies gated behind watched state, (4) async background credits pre-fetch on session creation, (5) eligible movies pagination.
 - RT ratings source unresolved (no public API — TMDB proxy vs OMDb vs scraping TBD before Phase 3 UI)
 - pyarr currency risk: last release July 2023; verify against installed Radarr/Sonarr API version before writing integration code
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
@@ -136,6 +138,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T21:25:48.662Z
-Stopped at: Completed 03-17-PLAN.md
-Resume with: Write and execute 03-17 gap-closure plan to fix session state machine flow (movie selection creates session → watch → pick actor → pick next movie → Radarr query); also fix eligible movies combined view at session start and Radarr query timing/notification logic
+Last session: 2026-03-15T21:42:06.044Z
+Stopped at: Completed 03-18-PLAN.md
+Resume with: Write and execute 03-19 gap-closure plan: (1) Radarr check + notification on session start for starting movie; (2) manual Mark as Watched button in GameSession page; (3) gate eligible actors/movies tabs behind watched state with locked message; (4) async background credits pre-fetch on session creation (FastAPI BackgroundTasks); (5) eligible movies API pagination (first N actors immediately, cursor/page for more)

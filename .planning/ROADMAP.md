@@ -11,7 +11,7 @@
 
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
-- [ ] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-16 PARTIAL PASS 2026-03-15 — session state machine flow defect found; 03-17/03-18 gap-closure required)
+- [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-18 PARTIAL PASS 2026-03-15 — GAME-01 session start confirmed; GAME-03 combined-view times out; watched state gate + async pre-fetch + pagination required; 03-19 gap-closure required) (completed 2026-03-15)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -65,7 +65,7 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** 17/18 plans executed
+**Plans:** 18/18 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
@@ -85,7 +85,7 @@ Plans:
 - [ ] 03-15-PLAN.md — Wave 8 (gap-closure): Global NavBar + session state machine UI (7 states) + compact table layout
 - [~] 03-16-PLAN.md — Wave 9 (gap-closure): Final re-verification PARTIAL PASS — End Session + NavBar confirmed; session state machine flow defect found; 03-17 required
 - [ ] 03-17-PLAN.md — Wave 10 (gap-closure): Fix isStartingMovie state machine + combined-view _ensure_actor_credits_in_db + Radarr conditional notification
-- [ ] 03-18-PLAN.md — Wave 11 (gap-closure): Docker rebuild + human verify all 5 game-loop scenarios (GAME-01 through GAME-08)
+- [~] 03-18-PLAN.md — Wave 11 (gap-closure): Docker rebuild + human verify — PARTIAL PASS: Test 1 (GAME-01) pass; Test 2 (GAME-03) fail (combined-view timeout); Tests 3-5 blocked; 03-19 required
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -108,7 +108,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 17/18 | In Progress|  |
+| 3. Movie Game | 18/18 | Complete   | 2026-03-15 |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -162,4 +162,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — 03-17 + 03-18 gap-closure plans added; fix session state machine flow, combined-view credits, and Radarr notification; 03-18 is human verify checkpoint for Phase 3 closure*
+*Last updated: 2026-03-15 — 03-18 partial pass: GAME-01 session start confirmed; GAME-03 combined-view times out (async pre-fetch + pagination required); flow redesign: watched state gate on eligible actors/movies, Radarr on session start, manual Mark as Watched button; 03-19 gap-closure required*

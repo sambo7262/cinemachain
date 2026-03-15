@@ -76,14 +76,14 @@
 | DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Complete |
 | DATA-06 | Phase 2 | Complete |
-| GAME-01 | Phase 3 | Incomplete — session start state machine flow defect (03-17) |
+| GAME-01 | Phase 3 | Incomplete — watch-first guidance confirmed (03-18 PASS); watched state gate + Radarr-on-start required (03-19) |
 | GAME-02 | Phase 3 | Complete |
-| GAME-03 | Phase 3 | Incomplete — combined-view credits not populated on mount (03-17) |
-| GAME-04 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
-| GAME-05 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
-| GAME-06 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
-| GAME-07 | Phase 3 | Incomplete — blocked pending GAME-01 live verification |
-| GAME-08 | Phase 3 | Incomplete — Radarr result not surfaced to user (03-17) |
+| GAME-03 | Phase 3 | Incomplete — synchronous cast credits fetch times out on NAS; async pre-fetch + pagination required (03-19) |
+| GAME-04 | Phase 3 | Incomplete — blocked pending watched state gate (03-19) |
+| GAME-05 | Phase 3 | Incomplete — blocked pending GAME-03 fix (03-19) |
+| GAME-06 | Phase 3 | Incomplete — blocked pending GAME-03 fix (03-19) |
+| GAME-07 | Phase 3 | Incomplete — blocked pending GAME-03 fix (03-19) |
+| GAME-08 | Phase 3 | Incomplete — blocked pending watched state gate (03-19) |
 | QUERY-01 | Phase 4 | Pending |
 | QUERY-02 | Phase 4 | Pending |
 | QUERY-03 | Phase 4 | Pending |
@@ -103,4 +103,4 @@
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-15 after 03-16 partial pass — GAME-01, GAME-03, GAME-08 incomplete; GAME-04 through GAME-07 blocked pending GAME-01 live verification*
+*Last updated: 2026-03-15 after 03-18 partial pass — GAME-01 watch-first guidance confirmed; GAME-03 combined-view times out (async pre-fetch + pagination needed); GAME-04 through GAME-08 blocked pending 03-19 watched state gate + flow redesign*
