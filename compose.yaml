@@ -1,0 +1,87 @@
+# compose.yaml
+# Compose v2 — no top-level `version:` key (obsolete; causes warning in DSM Container Manager)
+#
+# SYNOLOGY CONSTRAINTS ADDRESSED:
+#   - PUID/PGID set on backend (DSM ACLs != Unix perms)
+#   - PostgreSQL host port 5433 (not 5432 — reserved on Synology DSM)
+#   - TS_USERSPACE=1 on Tailscale sidecar (no kernel TUN in DSM; numeric avoids DSM UI boolean mangling)
+#   - mem_limit on every container (prevent OOM kills on shared NAS RAM)
+#   - restart: unless-stopped (not always — avoids infinite restart loops masking real errors)
+#   - healthcheck-gated depends_on for PostgreSQL — pg_isready with start_period: 30s
+#   - Backend uses network_mode: service:tailscale (shares Tailscale network namespace)
+#   - All volumes use host bind-mounts to /volume1/docker/appdata/cinemachain/
+#     (visible in DSM File Station; survive Docker package reinstalls)
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: cinemachain-tailscale
+    hostname: cinemachain
+    restart: unless-stopped
+    mem_limit: 128m
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=1
+      - TS_SERVE_CONFIG=/config/ts-serve.json
+    volumes:
+      - /volume1/docker/appdata/cinemachain/tailscale:/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  backend:
+    build: ./backend
+    container_name: cinemachain-backend
+    restart: unless-stopped
+    mem_limit: 512m
+    network_mode: service:tailscale
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - DATABASE_URL=postgresql+asyncpg://cinema:${DB_PASSWORD}@postgres:5432/cinemachain
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - PLEX_URL=${PLEX_URL}
+      - RADARR_URL=${RADARR_URL}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - SONARR_URL=${SONARR_URL}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+    volumes:
+      - /volume1/docker/appdata/cinemachain/backend:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cinemachain-postgres
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      - POSTGRES_USER=cinema
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=cinemachain
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - /volume1/docker/appdata/cinemachain/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinema -d cinemachain"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build: ./frontend
+    container_name: cinemachain-frontend
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
