@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "03-20 partial pass — pagination (Test 5) and Mark as Watched button passed; Radarr notification not surfacing, Eligible Actors tab never populates, state machine reverts after Continue the chain, sorting ineffective, thumbnails too small. 03-21 gap-closure required. Two new user requirements: (1) remove Plex webhook entirely, (2) session home page after movie confirmation."
-stopped_at: Completed 03-21-PLAN.md
-last_updated: "2026-03-16T00:39:05.567Z"
+status: verifying
+stopped_at: Completed 03-22-PLAN.md
+last_updated: "2026-03-15T00:00:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 30
+  completed_plans: 32
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-21 backend gap-closure complete; Docker rebuild + frontend continue-chain wiring required)
-- **Plan:** Completed 03-21
-- **Status:** 03-21 complete — continue-chain endpoint added, Plex webhook removed. Frontend must call POST /game/sessions/{id}/continue-chain instead of resume_session for Continue the chain button. Docker rebuild required before NAS verification.
+- **Phase:** Phase 3 — Movie Game (in progress — 03-22 frontend gap-closure complete; Docker rebuild required for NAS verification)
+- **Plan:** Completed 03-22
+- **Status:** 03-22 complete — frontend wired to continueChain endpoint, Radarr fallback added, session homebase page implemented, thumbnails enlarged. Docker rebuild required before NAS verification.
 
 ## Progress
 
-`[█████████░] 94%` — 30 of 32 plans complete (03-21 backend gap-closure done; frontend wiring + Docker rebuild remain)
+`[██████████] 97%` — 31 of 32 plans complete (03-22 frontend gap-closure done; Docker rebuild + NAS verification remain)
 
 | Phase | Status |
 |-------|--------|
@@ -41,6 +41,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-22: continueChain must be called instead of resumeSession in handleContinue — resumeSession resets current_movie_watched=False causing state machine cycling defect (users reverted to Mark as Watched state)
+- **2026-03-15:** 03-22: Radarr status fallback reads session.radarr_status from first poll response via useEffect with useRef guard — resolves confirmed NAS location.state delivery failure
+- **2026-03-15:** 03-22: queryClient.setQueryData used in handleContinue to synchronously inject continueChain response — avoids stale poll cycle before next 5s refetch
 - **2026-03-15:** 03-21: continue-chain endpoint is distinct from resume_session — each state machine edge has its own endpoint with correct side-effect semantics (awaiting_continue->active preserves current_movie_watched=True, paused->active resets it)
 - **2026-03-15:** 03-21: Plex webhook removed entirely — all watched events now manual via Mark as Watched; sync_on_startup also removed to eliminate Plex startup dependency
 - **2026-03-15:** 03-20 partial pass: Radarr notification not surfacing from location.state; Eligible Actors tab completely empty (root cause unknown); state machine cycles back to Mark as Watched after Continue the chain; sorting ineffective; thumbnails too small
@@ -152,6 +155,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T00:39:05.563Z
-Stopped at: Completed 03-21-PLAN.md
-Resume with: Write and execute 03-19 gap-closure plan: (1) Radarr check + notification on session start for starting movie; (2) manual Mark as Watched button in GameSession page; (3) gate eligible actors/movies tabs behind watched state with locked message; (4) async background credits pre-fetch on session creation (FastAPI BackgroundTasks); (5) eligible movies API pagination (first N actors immediately, cursor/page for more)
+Last session: 2026-03-15T00:00:00.000Z
+Stopped at: Completed 03-22-PLAN.md
+Resume with: Docker rebuild (make rebuild) and push updated images to NAS, then run NAS verification for all 03-20 partial-pass defects: (1) Continue the chain stays in actor-selection mode with Eligible Actors populated, (2) Radarr notification surfaces on session page, (3) session homebase appears after movie confirmation, (4) thumbnails visibly larger
