@@ -1,7 +1,7 @@
 """
 GAME-01: POST /game/sessions creates a new active game session.
 GAME-02: POST /game/sessions with movie title (not just watched) creates a session.
-GAME-03: POST /game/sessions when active session exists returns 409.
+GAME-03: POST /game/sessions when active session already exists with same name returns 409.
 GAME-04: GET /game/sessions/active returns the current active session.
 GAME-05: GET /game/sessions/{id}/eligible-actors returns actors from current movie, excluding already-picked ones.
 GAME-06: GET /game/sessions/{id}/eligible-movies returns unwatched filmography for a given actor.
@@ -28,7 +28,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 @pytest.mark.asyncio
 async def test_create_session(client):
     """GAME-01: POST /game/sessions creates session from a watched movie, returns 201 with id and status='active'."""
-    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Test Session GAME-01"})
     assert resp.status_code == 201
     data = resp.json()
     assert "id" in data
@@ -43,18 +43,19 @@ async def test_create_session_with_title_search(client):
 
 
 # ---------------------------------------------------------------------------
-# GAME-03: Conflict when session already active
+# GAME-03: Conflict when session name already in use
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_create_session_conflict(client):
-    """GAME-03: POST /game/sessions when an active session already exists returns 409."""
-    # Create a session first
-    resp1 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    """POST /game/sessions with duplicate name among active sessions returns 409."""
+    resp1 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Conflict Test"})
     assert resp1.status_code == 201
-    # Second creation should conflict
-    resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680})
+    resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680, "name": "Conflict Test"})
     assert resp2.status_code == 409
+    # Different name should succeed
+    resp3 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680, "name": "Conflict Test 2"})
+    assert resp3.status_code == 201
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +71,7 @@ async def test_get_active_session(client):
     assert resp.json() is None
 
     # Create one
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Active Session Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -113,7 +114,7 @@ async def test_eligible_actors_excludes_picked(client):
             await session.flush()
             session.add(Credit(movie_id=movie.id, actor_id=actor1.id, character="Narrator"))
             session.add(Credit(movie_id=movie.id, actor_id=actor2.id, character="Tyler Durden"))
-            gs = GameSession(status="active", current_movie_tmdb_id=550)
+            gs = GameSession(status="active", current_movie_tmdb_id=550, name="Eligible Actors Test")
             session.add(gs)
             await session.flush()
             # Actor 101 already picked in step
@@ -133,7 +134,7 @@ async def test_eligible_actors_excludes_picked(client):
 
     # Use the real test DB approach — seed via direct API and check exclusion
     # Create session at movie 550
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Eligible Actors Excl Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -153,7 +154,7 @@ async def test_eligible_actors_excludes_picked(client):
 async def test_eligible_actors_empty_when_all_picked(client):
     """GAME-05: GET /game/sessions/{id}/eligible-actors returns empty list when all cast members have been picked."""
     # Create session at movie 9999 (no credits in test DB)
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 9999})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 9999, "name": "Eligible Actors Empty Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -169,7 +170,7 @@ async def test_eligible_actors_empty_when_all_picked(client):
 @pytest.mark.asyncio
 async def test_eligible_movies(client):
     """GAME-06: GET /game/sessions/{id}/eligible-movies returns the actor's unwatched filmography."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Eligible Movies Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -191,7 +192,7 @@ async def test_eligible_movies(client):
 @pytest.mark.asyncio
 async def test_eligible_movies_combined_view(client):
     """GAME-06: GET /game/sessions/{id}/eligible-movies without an actor param returns eligible movies across all current eligible actors."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Eligible Movies Combined Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -212,7 +213,7 @@ async def test_eligible_movies_combined_view(client):
 @pytest.mark.asyncio
 async def test_pick_actor_persisted(client):
     """GAME-07: POST /game/sessions/{id}/pick-actor records a GameSessionStep and returns the updated session."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Pick Actor Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
     initial_step_count = len(create_resp.json()["steps"])
@@ -236,7 +237,7 @@ async def test_pick_actor_persisted(client):
 @pytest.mark.asyncio
 async def test_pick_actor_already_picked(client):
     """GAME-07: POST /game/sessions/{id}/pick-actor with an already-picked actor returns 409."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Pick Actor Already Picked Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -247,7 +248,7 @@ async def test_pick_actor_already_picked(client):
     )
     assert resp1.status_code == 200
 
-    # Pick same actor again → 409
+    # Pick same actor again -> 409
     resp2 = await client.post(
         f"/game/sessions/{session_id}/pick-actor",
         json={"actor_tmdb_id": 819, "actor_name": "Edward Norton"},
@@ -262,7 +263,7 @@ async def test_pick_actor_already_picked(client):
 @pytest.mark.asyncio
 async def test_sort_movies(client):
     """GAME-06: eligible-movies with sort=rating returns movies in descending vote_average order."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Sort Movies Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -298,7 +299,7 @@ async def test_sort_movies(client):
 @pytest.mark.asyncio
 async def test_all_movies_toggle(client):
     """GAME-06: eligible-movies with all_movies=true returns watched movies with watched=True flag; watched movies have selectable=False."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "All Movies Toggle Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -321,7 +322,7 @@ async def test_all_movies_toggle(client):
 @pytest.mark.asyncio
 async def test_watched_not_selectable(client):
     """GAME-06: A watched movie appearing in eligible-movies has selectable=False."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Watched Not Selectable Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -353,7 +354,7 @@ async def test_request_movie_radarr(client):
     mock_radarr.add_movie = AsyncMock(return_value={"id": 42, "title": "Pulp Fiction", "status": "queued"})
     app.state.radarr_client = mock_radarr
 
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Request Movie Radarr Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -382,7 +383,7 @@ async def test_request_movie_skip_radarr(client):
     mock_radarr.add_movie = AsyncMock()
     app.state.radarr_client = mock_radarr
 
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Request Movie Skip Radarr Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -406,7 +407,7 @@ async def test_request_movie_skip_radarr(client):
 @pytest.mark.asyncio
 async def test_pause_session(client):
     """POST /game/sessions/{id}/pause sets status='paused', returns 200."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Pause Session Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -418,7 +419,7 @@ async def test_pause_session(client):
 @pytest.mark.asyncio
 async def test_resume_session(client):
     """POST /game/sessions/{id}/resume sets status='active', returns 200."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Resume Session Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -437,7 +438,7 @@ async def test_resume_session(client):
 @pytest.mark.asyncio
 async def test_end_session(client):
     """POST /game/sessions/{id}/end sets status='ended', returns 200."""
-    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550})
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "End Session Test"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["id"]
 
@@ -487,7 +488,7 @@ async def test_import_csv(client):
     rows = [
         {"movieName": "Fight Club", "actorName": "Edward Norton", "order": 0},
     ]
-    resp = await client.post("/game/sessions/import-csv", json={"rows": rows})
+    resp = await client.post("/game/sessions/import-csv", json={"rows": rows, "name": "CSV Import Test"})
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "active"
@@ -517,7 +518,7 @@ async def test_session_name(client):
     resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "MyChain"})
     assert resp.status_code == 201
     assert resp.json()["name"] == "MyChain"
-    # Same name → 409
+    # Same name -> 409
     resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680, "name": "MyChain"})
     assert resp2.status_code == 409
 

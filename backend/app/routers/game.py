@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import io
+import csv
+from datetime import datetime as _datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -28,12 +32,14 @@ class StepResponse(BaseModel):
     movie_title: str | None
     actor_tmdb_id: int | None
     actor_name: str | None
+    watched_at: _datetime | None = None   # NEW — joined from WatchEvent at query time
 
     model_config = {"from_attributes": True}
 
 
 class GameSessionResponse(BaseModel):
     id: int
+    name: str = ""                         # NEW
     status: str
     current_movie_tmdb_id: int
     current_movie_watched: bool = False
@@ -49,6 +55,7 @@ class GameSessionResponse(BaseModel):
 
 class CreateSessionRequest(BaseModel):
     start_movie_tmdb_id: int
+    name: str                              # NEW — required
 
 
 class CSVRow(BaseModel):
@@ -59,6 +66,7 @@ class CSVRow(BaseModel):
 
 class ImportCSVRequest(BaseModel):
     rows: list[CSVRow]
+    name: str = "Imported Chain"           # NEW — optional with default
 
 
 class PickActorRequest(BaseModel):
@@ -83,6 +91,49 @@ async def _get_single_active_session(db: AsyncSession) -> GameSession | None:
         .options(selectinload(GameSession.steps))
     )
     return result.scalar_one_or_none()
+
+
+async def _enrich_steps_watched_at(
+    steps: list[GameSessionStep], db: AsyncSession
+) -> dict[int, _datetime]:
+    """Return mapping of movie_tmdb_id -> watched_at for movies in the given steps."""
+    tmdb_ids = [s.movie_tmdb_id for s in steps]
+    if not tmdb_ids:
+        return {}
+    result = await db.execute(
+        select(WatchEvent.tmdb_id, WatchEvent.watched_at)
+        .where(WatchEvent.tmdb_id.in_(tmdb_ids))
+    )
+    return {row.tmdb_id: row.watched_at for row in result.all()}
+
+
+def _build_session_response(
+    session: GameSession,
+    watched_at_map: dict[int, _datetime] | None = None,
+    radarr_status: str | None = None,
+) -> GameSessionResponse:
+    """Build GameSessionResponse with watched_at enrichment on each step."""
+    steps = []
+    for s in session.steps:
+        wa = (watched_at_map or {}).get(s.movie_tmdb_id)
+        steps.append(StepResponse(
+            step_order=s.step_order,
+            movie_tmdb_id=s.movie_tmdb_id,
+            movie_title=s.movie_title,
+            actor_tmdb_id=s.actor_tmdb_id,
+            actor_name=s.actor_name,
+            watched_at=wa,
+        ))
+    resp = GameSessionResponse(
+        id=session.id,
+        name=session.name,
+        status=session.status,
+        current_movie_tmdb_id=session.current_movie_tmdb_id,
+        current_movie_watched=session.current_movie_watched,
+        steps=steps,
+        radarr_status=radarr_status,
+    )
+    return resp
 
 
 async def _ensure_actor_credits_in_db(
@@ -203,9 +254,14 @@ async def import_csv_session(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a session with pre-populated steps from CSV rows (resolves names via TMDB)."""
-    existing = await _get_single_active_session(db)
-    if existing:
-        raise HTTPException(status_code=409, detail="Active session already exists")
+    # Check name uniqueness among active sessions
+    name_check = await db.execute(
+        select(GameSession)
+        .where(GameSession.name == body.name)
+        .where(GameSession.status.not_in(["archived", "ended"]))
+    )
+    if name_check.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Session name already in use")
 
     tmdb: TMDBClient = request.app.state.tmdb_client
 
@@ -229,6 +285,7 @@ async def import_csv_session(
     session = GameSession(
         status="active",
         current_movie_tmdb_id=first_movie_id,
+        name=body.name,
     )
     db.add(session)
     await db.flush()
@@ -254,7 +311,8 @@ async def import_csv_session(
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 @router.post("/sessions", status_code=201, response_model=GameSessionResponse)
@@ -264,10 +322,15 @@ async def create_session(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new active game session. Returns 409 if an active/paused session already exists."""
-    existing = await _get_single_active_session(db)
-    if existing:
-        raise HTTPException(status_code=409, detail="Active session already exists")
+    """Create a new active game session. Returns 409 if session name already in use."""
+    # Check name uniqueness among active sessions (partial unique index enforces at DB level too)
+    name_check = await db.execute(
+        select(GameSession)
+        .where(GameSession.name == body.name)
+        .where(GameSession.status.not_in(["archived", "ended"]))
+    )
+    if name_check.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Session name already in use")
 
     # Look up movie title from DB if available
     movie_result = await db.execute(
@@ -279,6 +342,7 @@ async def create_session(
     session = GameSession(
         status="active",
         current_movie_tmdb_id=body.start_movie_tmdb_id,
+        name=body.name,
     )
     db.add(session)
     await db.flush()
@@ -317,9 +381,45 @@ async def create_session(
     tmdb: TMDBClient = request.app.state.tmdb_client
     background_tasks.add_task(_prefetch_credits_background, body.start_movie_tmdb_id, tmdb)
 
-    response = GameSessionResponse.model_validate(session)
-    response.radarr_status = radarr_status
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    response = _build_session_response(session, wa_map, radarr_status)
     return response
+
+
+@router.get("/sessions", response_model=list[GameSessionResponse])
+async def list_sessions(
+    include_archived: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all active (non-ended, non-archived) sessions. Pass include_archived=true for all."""
+    stmt = select(GameSession).options(selectinload(GameSession.steps))
+    if include_archived:
+        stmt = stmt.where(GameSession.status != "ended")
+    else:
+        stmt = stmt.where(GameSession.status.not_in(["ended", "archived"]))
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
+    out = []
+    for s in sessions:
+        wa_map = await _enrich_steps_watched_at(s.steps, db)
+        out.append(_build_session_response(s, wa_map))
+    return out
+
+
+@router.get("/sessions/archived", response_model=list[GameSessionResponse])
+async def list_archived_sessions(db: AsyncSession = Depends(get_db)):
+    """Return all sessions with status='archived'."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.status == "archived")
+        .options(selectinload(GameSession.steps))
+    )
+    sessions = result.scalars().all()
+    out = []
+    for s in sessions:
+        wa_map = await _enrich_steps_watched_at(s.steps, db)
+        out.append(_build_session_response(s, wa_map))
+    return out
 
 
 @router.get("/sessions/active", response_model=GameSessionResponse | None)
@@ -328,7 +428,37 @@ async def get_active_session(db: AsyncSession = Depends(get_db)):
     session = await _get_single_active_session(db)
     if session is None:
         return None
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
+
+
+@router.get("/sessions/{session_id}/export-csv")
+async def export_session_csv(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Export chain history as CSV with columns: order,movie_name,actor_name."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["order", "movie_name", "actor_name"])
+    for step in sorted(session.steps, key=lambda s: s.step_order):
+        writer.writerow([step.step_order, step.movie_title or "", ""])
+        if step.actor_name:
+            writer.writerow([step.step_order, "", step.actor_name])
+
+    output.seek(0)
+    filename = f"chain-{session.name or session.id}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/sessions/{session_id}/pause", response_model=GameSessionResponse)
@@ -352,7 +482,8 @@ async def pause_session(session_id: int, db: AsyncSession = Depends(get_db)):
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 @router.post("/sessions/{session_id}/resume", response_model=GameSessionResponse)
@@ -380,7 +511,8 @@ async def resume_session(session_id: int, db: AsyncSession = Depends(get_db)):
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 @router.post("/sessions/{session_id}/end", response_model=GameSessionResponse)
@@ -403,7 +535,31 @@ async def end_session(session_id: int, db: AsyncSession = Depends(get_db)):
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
+
+
+@router.post("/sessions/{session_id}/archive", response_model=GameSessionResponse)
+async def archive_session(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Soft-archive a session: sets status='archived', records archived_at."""
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.status = "archived"
+    session.archived_at = _datetime.utcnow()
+    await db.commit()
+    result = await db.execute(
+        select(GameSession).where(GameSession.id == session.id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 @router.post("/sessions/{session_id}/mark-current-watched", response_model=GameSessionResponse)
@@ -414,8 +570,6 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     and sets session status to 'awaiting_continue' so the UI shows the Continue prompt.
     Only operates on active sessions.
     """
-    from datetime import datetime as _datetime
-
     result = await db.execute(
         select(GameSession)
         .where(GameSession.id == session_id)
@@ -424,6 +578,8 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.status == "archived":
+        raise HTTPException(status_code=422, detail="Session is archived")
     if session.status not in ("active",):
         raise HTTPException(status_code=422, detail="Can only mark watched on an active session")
 
@@ -450,7 +606,8 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 @router.post("/sessions/{session_id}/continue-chain", response_model=GameSessionResponse)
@@ -473,6 +630,8 @@ async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.status == "archived":
+        raise HTTPException(status_code=422, detail="Session is archived")
     if session.status != "awaiting_continue":
         raise HTTPException(
             status_code=422,
@@ -489,7 +648,8 @@ async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +691,9 @@ async def get_eligible_actors(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    if session.status == "archived":
+        raise HTTPException(status_code=422, detail="Session is archived")
+
     if not session.current_movie_watched:
         raise HTTPException(
             status_code=423,
@@ -540,7 +703,7 @@ async def get_eligible_actors(
     # Collect already-picked actor tmdb_ids from steps
     picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
 
-    # SQL join: Credit → Actor + Movie, filter by current movie
+    # SQL join: Credit -> Actor + Movie, filter by current movie
     stmt = (
         select(Actor, Credit)
         .join(Credit, Credit.actor_id == Actor.id)
@@ -562,7 +725,7 @@ async def get_eligible_actors(
 
     # On-demand fallback: if the background pre-fetch has not completed yet,
     # synchronously fetch the current movie's cast and populate credits so the
-    # query returns the correct result. Mirrors the combined-view branch (lines ~651-653).
+    # query returns the correct result. Mirrors the combined-view branch.
     if not actors:
         tmdb: TMDBClient = request.app.state.tmdb_client
         try:
@@ -629,7 +792,7 @@ async def get_eligible_movies(
     watched_result = await db.execute(select(WatchEvent.tmdb_id))
     watched_ids = {row[0] for row in watched_result.all()}
 
-    movies_map: dict[int, dict] = {}  # tmdb_id → movie dict
+    movies_map: dict[int, dict] = {}  # tmdb_id -> movie dict
 
     if actor_id is not None:
         # Ensure actor filmography is in DB (fetch from TMDB on demand if missing)
@@ -753,6 +916,9 @@ async def pick_actor(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    if session.status == "archived":
+        raise HTTPException(status_code=422, detail="Session is archived")
+
     picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
     if body.actor_tmdb_id in picked_ids:
         raise HTTPException(status_code=409, detail="Actor already picked in this session")
@@ -775,7 +941,8 @@ async def pick_actor(
         .options(selectinload(GameSession.steps))
     )
     session = result.scalar_one()
-    return GameSessionResponse.model_validate(session)
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(session, wa_map)
 
 
 # ---------------------------------------------------------------------------
@@ -799,6 +966,9 @@ async def request_movie(
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.status == "archived":
+        raise HTTPException(status_code=422, detail="Session is archived")
 
     # Validate: only unwatched movies can be requested
     watched_result = await db.execute(
@@ -843,7 +1013,8 @@ async def request_movie(
     radarr: RadarrClient = request.app.state.radarr_client
     radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
 
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
     return {
         "status": radarr_result["status"],
-        "session": GameSessionResponse.model_validate(session),
+        "session": _build_session_response(session, wa_map),
     }
