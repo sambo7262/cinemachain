@@ -518,6 +518,7 @@ async def _request_radarr(tmdb_id: int, radarr: RadarrClient) -> dict:
 @router.get("/sessions/{session_id}/eligible-actors")
 async def get_eligible_actors(
     session_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Return actors from the session's current movie, excluding already-picked actors."""
@@ -558,6 +559,33 @@ async def get_eligible_actors(
             "profile_path": actor.profile_path,
             "character": credit.character,
         })
+
+    # On-demand fallback: if the background pre-fetch has not completed yet,
+    # synchronously fetch the current movie's cast and populate credits so the
+    # query returns the correct result. Mirrors the combined-view branch (lines ~651-653).
+    if not actors:
+        tmdb: TMDBClient = request.app.state.tmdb_client
+        try:
+            r = await tmdb._client.get(f"/movie/{session.current_movie_tmdb_id}/credits")
+            r.raise_for_status()
+            cast = r.json().get("cast", [])[:20]
+            for member in cast:
+                aid = member.get("id")
+                if aid:
+                    await _ensure_actor_credits_in_db(aid, tmdb, db)
+        except Exception:
+            pass  # Degrade gracefully — return empty list if TMDB unavailable
+
+        # Re-run the same query now that credits may be populated
+        rows2 = await db.execute(stmt)
+        for actor, credit in rows2.all():
+            actors.append({
+                "tmdb_id": actor.tmdb_id,
+                "name": actor.name,
+                "profile_path": actor.profile_path,
+                "character": credit.character,
+            })
+
     return actors
 
 
@@ -759,6 +787,7 @@ async def request_movie(
     session_id: int,
     body: RequestMovieRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Queue a movie via Radarr and advance the session's current movie."""
@@ -797,6 +826,10 @@ async def request_movie(
     session.current_movie_tmdb_id = body.movie_tmdb_id
     session.current_movie_watched = False
     await db.commit()
+
+    # Spawn background credits pre-fetch for the new movie's cast
+    tmdb: TMDBClient = request.app.state.tmdb_client
+    background_tasks.add_task(_prefetch_credits_background, body.movie_tmdb_id, tmdb)
 
     # Re-fetch with steps loaded
     result = await db.execute(
