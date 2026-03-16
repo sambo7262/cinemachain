@@ -12,6 +12,7 @@
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
+- [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -98,6 +99,22 @@ Plans:
 - [ ] 03-28-PLAN.md — Wave 20 (gap-closure): Backend fix — BackgroundTasks pre-fetch in request_movie + on-demand fallback in get_eligible_actors
 - [x] 03-29-PLAN.md — Wave 21 (gap-closure): Docker rebuild + NAS deploy + full game loop verification (Step 6 GAME-04 close-out)
 
+### Phase 03.1: UI improvements and multi-session support (INSERTED)
+
+**Goal:** Multiple game sessions can run concurrently, each identified by a unique name, with full session management (archive, browse archived), a readable chain history table, TMDB ID display bugs eliminated, and CSV export/import working reliably.
+**Depends on:** Phase 3
+**Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08
+**Plans:** 7 plans
+
+Plans:
+- [ ] 03.1-01-PLAN.md — Wave 1: Test stubs for UI-01 through UI-08 (test_game.py additions)
+- [ ] 03.1-02-PLAN.md — Wave 2: Backend — Alembic migration 0004, ORM updates, multi-session gate removal, session naming, archive endpoint, list/archived endpoints, export-csv, watched_at enrichment
+- [ ] 03.1-03-PLAN.md — Wave 3: Frontend data layer — api.ts DTO expansion, new API functions (listSessions, listArchivedSessions, archiveSession, exportCsv)
+- [ ] 03.1-04-PLAN.md — Wave 4: GameLobby rewrite — session grid, name-required creation form, CSV import validation UI
+- [ ] 03.1-05-PLAN.md — Wave 4: GameSession + ChainHistory — vertical chain table, TMDB ID fix, CSV export button
+- [ ] 03.1-06-PLAN.md — Wave 5: ArchivedSessions page + NavBar update + App.tsx route
+- [ ] 03.1-07-PLAN.md — Wave 6: Docker rebuild + NAS deploy + migration 0004 + human verify checkpoint
+
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
 **Depends on:** Phase 2
@@ -120,6 +137,7 @@ Plans:
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
+| 03.1. UI + Multi-Session | 0/7 | Not started | — |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -146,6 +164,14 @@ Plans:
 | GAME-06 | Phase 3 |
 | GAME-07 | Phase 3 |
 | GAME-08 | Phase 3 |
+| UI-01 | Phase 03.1 |
+| UI-02 | Phase 03.1 |
+| UI-03 | Phase 03.1 |
+| UI-04 | Phase 03.1 |
+| UI-05 | Phase 03.1 |
+| UI-06 | Phase 03.1 |
+| UI-07 | Phase 03.1 |
+| UI-08 | Phase 03.1 |
 | QUERY-01 | Phase 4 |
 | QUERY-02 | Phase 4 |
 | QUERY-03 | Phase 4 |
@@ -154,7 +180,7 @@ Plans:
 | QUERY-06 | Phase 4 |
 | QUERY-07 | Phase 4 |
 
-**Total mapped:** 25/25
+**Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements
 
 ---
 
@@ -176,7 +202,10 @@ Plans:
 | Session Home Page as default hub, view state replacing showSessionHome (03-24) | 03-23 live test: showSessionHome defaulting to false causes Tab View to appear on every load; two-view model (home|tabs) with home as default is the correct architecture |
 | request_movie must reset current_movie_watched=False (03-26) | 03-25 live test: after continue-chain preserves current_movie_watched=True, request_movie must reset it to False so Session Home Page condition (active + !current_movie_watched) is met for the 2nd movie |
 | get_eligible_actors needs BackgroundTasks pre-fetch + on-demand fallback (03-28) | 03-27 live test: eligible-actors returns intersection of all chain movies' casts because request_movie never triggered a credit pre-fetch for the new movie; fix: (1) add background_tasks.add_task in request_movie, (2) add synchronous TMDB fallback in get_eligible_actors when DB returns empty |
+| Multi-session gate removed in Phase 03.1 | Original single-session gate was for Plex webhook matching; Plex webhook was removed in 03-21; all interactions are now manual; no reason to restrict to one session |
+| SessionStatus.archived as new enum value, not boolean column | status is String(20) not PostgreSQL ENUM; adding "archived" requires no schema change to the column; partial unique index on name enforces name uniqueness among active sessions only |
+| NavBar Sessions link → "/" always in Phase 03.1 | Multi-session world has no single "the active session"; NavBar polls removed; home page shows all sessions |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — 03-29 PASS: full 6-step game loop verified on live NAS; GAME-04 resolved; Phase 3 complete; Phase 4 (Query Mode) ready to start*
+*Last updated: 2026-03-15 — Phase 03.1 planned: 7 plans covering multi-session support, session naming, archive, chain history table, TMDB ID fix, CSV export/import validation*
