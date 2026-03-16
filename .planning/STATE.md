@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: 03-25 PARTIAL PASS — Steps 2-5 verified on NAS; Step 6 fails (request_movie does not reset current_movie_watched=False); 03-26 required to fix and close game loop
-last_updated: "2026-03-15T00:00:00Z"
+stopped_at: "Completed 03-movie-game-03-26-PLAN.md — request_movie resets current_movie_watched=False, game loop state machine closed"
+last_updated: "2026-03-15T00:10:00Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 34
-  completed_plans: 33
+  total_plans: 36
+  completed_plans: 36
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-25 partial pass; 03-26 fix + deploy required to close game loop)
-- **Plan:** Completed 03-25 (partial pass)
-- **Status:** Steps 2-5 verified on live NAS; Step 6 (2nd movie Mark as Watched) blocked by request_movie not resetting current_movie_watched=False; 03-26 must fix game.py and close the loop
+- **Phase:** Phase 3 — Movie Game (03-26 complete — game loop state machine closed; deploy + full verification required)
+- **Plan:** Completed 03-26
+- **Status:** Fix applied — request_movie now resets current_movie_watched=False; Docker rebuild and NAS deploy required to activate; full game loop end-to-end verification pending
 
 ## Progress
 
-`[██████████] 97%` — 33 of 34 plans complete (03-25 partial pass documented; 03-26 fix + verify remaining)
+`[██████████] 100%` — 36 of 36 plans complete (03-26 fix applied; deploy + verify remaining)
 
 | Phase | Status |
 |-------|--------|
@@ -41,6 +41,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-26: request_movie resets current_movie_watched=False after updating current_movie_tmdb_id and before db.commit() — closes game loop state machine so Session Home Page condition (active + !current_movie_watched) is met for 2nd movie
 - **2026-03-15:** 03-25: PARTIAL PASS — Steps 2-5 verified on live NAS; Step 6 (2nd movie) blocked by request_movie not resetting current_movie_watched=False; 03-26 required to close game loop
 - **2026-03-15:** 03-25: request_movie root cause — endpoint advances current_movie_tmdb_id but leaves current_movie_watched=True (from first movie Mark as Watched); home page condition (active + !current_movie_watched) never met for 2nd movie; fix: add session.current_movie_watched = False in game.py request_movie after creating new step
 - **2026-03-15:** 03-25: UI refinements deferred to a later iteration after core user journey is solidified — captured in deferred-items.md
@@ -121,11 +122,9 @@ progress:
 
 ## Blockers / Concerns
 
-- **[ACTIVE — 03-26 REQUIRED] request_movie does not reset current_movie_watched=False:**
-  - After selecting the 2nd movie, current_movie_watched remains True from first movie's Mark as Watched
-  - Session Home Page condition (active + !current_movie_watched) never met — Mark as Watched button absent for 2nd movie
-  - Fix: set session.current_movie_watched = False in game.py request_movie endpoint after updating current_movie_tmdb_id and creating new step
-  - Docker rebuild + NAS deploy required after fix; full game loop must be verified end-to-end in 03-26
+- **[RESOLVED — 03-26] request_movie does not reset current_movie_watched=False:**
+  - Fix applied in d6003d9 — session.current_movie_watched = False added at line 798 in request_movie endpoint
+  - Docker rebuild and NAS deploy required to activate fix; full game loop end-to-end verification pending
 - **[RESOLVED — 03-25] 03-24 frontend changes not yet deployed to NAS:**
   - Docker rebuild completed; NAS updated; Steps 2-5 verified passing
 - **[RESOLVED — 03-23] Root state machine cycling defect:** continue-chain endpoint confirmed working; Eligible Actors populates after Continue the chain; no reversion to Mark as Watched
@@ -164,6 +163,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T00:00:00Z
-Stopped at: 03-25 PARTIAL PASS — Steps 2-5 verified on NAS; Step 6 blocked (request_movie does not reset current_movie_watched=False)
-Resume with: Execute 03-26-PLAN.md — fix request_movie in game.py to reset current_movie_watched=False, rebuild Docker images, push, deploy to NAS, verify full game loop including GAME-04 actor dedup.
+Last session: 2026-03-15T00:10:00Z
+Stopped at: Completed 03-26-PLAN.md — request_movie resets current_movie_watched=False, game loop state machine closed
+Resume with: Rebuild Docker images (make rebuild), push to registry, deploy to NAS, verify full game loop end-to-end (GAME-04 actor dedup, GAME-05 session continuation).
