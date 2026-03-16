@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: 03-26 fix live and confirmed (2nd movie Mark as Watched working); GAME-04 defect documented — get_eligible_actors intersects all chain movies' casts instead of subtracting picked actors from current movie's cast; 03-28 gap-closure required
-stopped_at: Completed 03-28-PLAN.md — GAME-04 eligible-actors fix applied in game.py; Docker rebuild + NAS deploy + Step 6 verify pending via 03-29
-last_updated: "2026-03-16T02:44:02.172Z"
+status: Phase 3 complete — all 6 game loop steps PASS on live NAS; Phase 4 (Query Mode) ready to start
+stopped_at: Completed 03-29-PLAN.md — Phase 3 complete; Phase 4 (Query Mode) ready to start
+last_updated: "2026-03-16T03:14:53.347Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 38
-  completed_plans: 37
+  completed_plans: 38
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,24 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (03-28 fix applied — GAME-04 eligible-actors bug fixed in game.py; Docker rebuild + NAS deploy + live re-verify required via 03-29)
-- **Plan:** Completed 03-28
-- **Status:** GAME-04 fix in game.py: request_movie now fires BackgroundTasks pre-fetch for new movie; get_eligible_actors has on-demand fallback when DB is empty; Docker rebuild required before live verification
+- **Phase:** Phase 4 — Query Mode (Phase 3 complete; ready to start Phase 4 planning)
+- **Plan:** Completed 03-29
+- **Status:** Phase 3 COMPLETE — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved in production; Phase 4 (Query Mode) is next
 
 ## Progress
 
-`[██████████] 97%` — 37 of 38 plans complete (03-28 fix applied; 03-29 Docker rebuild + NAS deploy + live verify pending)
+`[██████████] 100%` — 38 of 38 plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-28 fix applied (GAME-04 eligible-actors bug closed in game.py); 03-29 Docker rebuild + live re-verify required before Phase 3 closes |
-| 4. Query Mode | Not started |
+| 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
+| 4. Query Mode | Not started — ready to begin |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-29: Full 6-step game loop PASS on live NAS — Phase 3 declared complete; all GAME-01 through GAME-08 requirements satisfied in production; Phase 4 (Query Mode) ready to start
 - **2026-03-16:** 03-28: GAME-04 fix applied — request_movie fires BackgroundTasks pre-fetch for new movie cast; get_eligible_actors has on-demand TMDB fallback (top 20 cast) when DB returns empty; both changes in game.py only; Docker rebuild + NAS deploy + Step 6 re-verify required via 03-29
 - **2026-03-16:** 03-28: on-demand fallback re-runs original SQL stmt (same current_movie_tmdb_id filter + picked_ids exclusion) after populating credits — avoids code duplication; degrades gracefully if TMDB unavailable
 - **2026-03-15:** 03-27: PARTIAL PASS — Steps 1-5 verified on live NAS (deploy, fresh session, first movie flow, 2nd movie Mark as Watched button confirmed); Step 6 blocked by GAME-04 eligible-actors intersection bug; 03-28 required to close Phase 3
@@ -126,9 +127,9 @@ progress:
 
 ## Blockers / Concerns
 
-- **[FIXED in 03-28 — DEPLOY REQUIRED] GAME-04 eligible-actors intersection bug:**
-  - Fix applied in 2d0381c: request_movie fires BackgroundTasks pre-fetch; get_eligible_actors has on-demand fallback when DB empty
-  - Docker rebuild + NAS deploy + live re-verify Step 6 required via 03-29
+- **[RESOLVED — 03-29] GAME-04 eligible-actors intersection bug:**
+  - Fix confirmed PASS in live NAS Step 6 verification (2026-03-15)
+  - Eligible Actors for Deadpool and Wolverine shows full cast minus Ryan Reynolds; Phase 3 complete
 - **[RESOLVED — 03-27] 03-26 fix deployed and confirmed:**
   - request_movie current_movie_watched=False reset is live; 2nd movie Mark as Watched button confirmed working in production
 - **[RESOLVED — 03-26] request_movie does not reset current_movie_watched=False:**
@@ -172,6 +173,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T02:29:37.489Z
-Stopped at: Completed 03-28-PLAN.md — GAME-04 eligible-actors fix applied in game.py; Docker rebuild + NAS deploy + Step 6 live re-verify pending via 03-29
-Resume with: Execute 03-29 (Docker rebuild, push to registry, deploy to NAS, verify full game loop Step 6 — Eligible Actors tab shows correct cast for new movie).
+Last session: 2026-03-16T03:14:53.341Z
+Stopped at: Completed 03-29-PLAN.md — Phase 3 complete; Phase 4 (Query Mode) ready to start
+Resume with: Begin Phase 4 (Query Mode) — run plan-phase to generate Phase 4 plans covering QUERY-01 through QUERY-07.
