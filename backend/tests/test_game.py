@@ -493,3 +493,119 @@ async def test_import_csv(client):
     assert data["status"] == "active"
     assert data["current_movie_tmdb_id"] == 550
     assert len(data["steps"]) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Phase 03.1 — UI Improvements and Multi-Session Support
+# ---------------------------------------------------------------------------
+
+# UI-01: Multiple sessions can be created without 409
+@pytest.mark.asyncio
+async def test_multi_session(client):
+    """UI-01: POST /game/sessions twice without ending first session returns 201 both times."""
+    resp1 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Session A"})
+    assert resp1.status_code == 201
+    resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680, "name": "Session B"})
+    assert resp2.status_code == 201
+    assert resp1.json()["id"] != resp2.json()["id"]
+
+
+# UI-02: Session name required; uniqueness enforced among active sessions
+@pytest.mark.asyncio
+async def test_session_name(client):
+    """UI-02: Session name is returned in response; duplicate name among active sessions returns 409."""
+    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "MyChain"})
+    assert resp.status_code == 201
+    assert resp.json()["name"] == "MyChain"
+    # Same name → 409
+    resp2 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 680, "name": "MyChain"})
+    assert resp2.status_code == 409
+
+
+# UI-03: Archive endpoint sets status=archived; mutating endpoints return 422 on archived session
+@pytest.mark.asyncio
+async def test_archive_session(client):
+    """UI-03: POST /game/sessions/{id}/archive sets status='archived'; pick-actor returns 422."""
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "ToArchive"})
+    assert create_resp.status_code == 201
+    sid = create_resp.json()["id"]
+    archive_resp = await client.post(f"/game/sessions/{sid}/archive")
+    assert archive_resp.status_code == 200
+    assert archive_resp.json()["status"] == "archived"
+    # Mutating action on archived session must return 422
+    pick_resp = await client.post(
+        f"/game/sessions/{sid}/pick-actor",
+        json={"actor_tmdb_id": 123, "actor_name": "Test Actor"},
+    )
+    assert pick_resp.status_code == 422
+
+
+# UI-04: GET /game/sessions returns list of active sessions only (no archived, no ended)
+@pytest.mark.asyncio
+async def test_list_sessions(client):
+    """UI-04: GET /game/sessions returns list of active sessions; archived sessions excluded."""
+    resp1 = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Active1"})
+    assert resp1.status_code == 201
+    sid = resp1.json()["id"]
+    # Archive it
+    await client.post(f"/game/sessions/{sid}/archive")
+    # List should not include archived
+    list_resp = await client.get("/game/sessions")
+    assert list_resp.status_code == 200
+    ids = [s["id"] for s in list_resp.json()]
+    assert sid not in ids
+
+
+# UI-05: GET /game/sessions/archived returns only archived sessions
+@pytest.mark.asyncio
+async def test_archived_sessions(client):
+    """UI-05: GET /game/sessions/archived returns only sessions with status='archived'."""
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "ArchiveMe"})
+    assert create_resp.status_code == 201
+    sid = create_resp.json()["id"]
+    await client.post(f"/game/sessions/{sid}/archive")
+    archived_resp = await client.get("/game/sessions/archived")
+    assert archived_resp.status_code == 200
+    ids = [s["id"] for s in archived_resp.json()]
+    assert sid in ids
+
+
+# UI-06: CSV export returns valid CSV with order/movie_name/actor_name columns
+@pytest.mark.asyncio
+async def test_export_csv(client):
+    """UI-06: GET /game/sessions/{id}/export-csv returns text/csv with correct headers."""
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "ExportTest"})
+    assert create_resp.status_code == 201
+    sid = create_resp.json()["id"]
+    export_resp = await client.get(f"/game/sessions/{sid}/export-csv")
+    assert export_resp.status_code == 200
+    assert "text/csv" in export_resp.headers.get("content-type", "")
+    text = export_resp.text
+    first_line = text.strip().split("\n")[0]
+    assert "order" in first_line
+    assert "movie_name" in first_line
+    assert "actor_name" in first_line
+
+
+# UI-07: StepResponse includes watched_at field sourced from WatchEvent
+@pytest.mark.asyncio
+async def test_watched_at(client):
+    """UI-07: Session steps include watched_at field (may be null for unwatched movies)."""
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "WatchedAtTest"})
+    assert create_resp.status_code == 201
+    data = create_resp.json()
+    assert "steps" in data
+    assert len(data["steps"]) > 0
+    step = data["steps"][0]
+    assert "watched_at" in step  # field must exist (may be null)
+
+
+# UI-08: GameSessionResponse includes name field
+@pytest.mark.asyncio
+async def test_session_response_name(client):
+    """UI-08: GameSessionResponse includes name field matching what was passed at creation."""
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "NamedSession"})
+    assert create_resp.status_code == 201
+    data = create_resp.json()
+    assert "name" in data
+    assert data["name"] == "NamedSession"
