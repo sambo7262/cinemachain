@@ -39,7 +39,7 @@ export default function GameSession() {
   // Session polling — stops when awaiting_continue
   const { data: session } = useQuery({
     queryKey: ["session", sid],
-    queryFn: api.getActiveSession,
+    queryFn: () => api.getSession(sid),    // fetch by ID, not active session
     refetchInterval: (query) =>
       query.state.data?.status === "awaiting_continue" ? false : 5000,
     enabled: !!sid,
@@ -147,23 +147,6 @@ export default function GameSession() {
     }
   }
 
-  // Pause session
-  const pauseMutation = useMutation({
-    mutationFn: () => api.pauseSession(sid),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session", sid] })
-    },
-  })
-
-  // Resume session from header (distinct from handleContinue which handles awaiting_continue)
-  const resumeMutation = useMutation({
-    mutationFn: () => api.resumeSession(sid),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session", sid] })
-      queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
-    },
-  })
-
   // Mark current movie as watched (manual fallback)
   const markWatchedMutation = useMutation({
     mutationFn: () => api.markCurrentWatched(sid),
@@ -172,12 +155,6 @@ export default function GameSession() {
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleMovies", sid] })
     },
-  })
-
-  // End session
-  const endMutation = useMutation({
-    mutationFn: () => api.endSession(sid),
-    onSuccess: () => navigate("/"),
   })
 
   // Continue the chain after watched confirmation.
@@ -194,11 +171,14 @@ export default function GameSession() {
     })
   }
 
-  // Current movie title from steps
+  // Current movie title — prefer backend-resolved title, fall back to step derivation
   const currentMovieTitle =
-    session?.steps.find(
+    session?.current_movie_title           // prefer backend-resolved title (BUG-1 fix)
+    ?? session?.steps.find(
       (s) => s.movie_tmdb_id === session.current_movie_tmdb_id
-    )?.movie_title ?? session?.steps[session.steps.length - 1]?.movie_title ?? "(untitled)"
+    )?.movie_title
+    ?? session?.steps[session.steps.length - 1]?.movie_title
+    ?? "(untitled)"
 
   // Derive UI state from session.status + steps shape
   const lastStep = session?.steps.length
@@ -239,33 +219,6 @@ export default function GameSession() {
           >
             Export CSV
           </Button>
-          {session?.status === "paused" ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => resumeMutation.mutate()}
-              disabled={resumeMutation.isPending}
-            >
-              {resumeMutation.isPending ? "Resuming..." : "Resume"}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pauseMutation.mutate()}
-              disabled={pauseMutation.isPending || session?.status !== "active"}
-            >
-              {pauseMutation.isPending ? "Pausing..." : "Pause"}
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => endMutation.mutate()}
-            disabled={endMutation.isPending}
-          >
-            End Session
-          </Button>
         </div>
       </header>
 
@@ -278,17 +231,6 @@ export default function GameSession() {
         {/* Session state panel — shows context-appropriate guidance */}
         {session && (
           <div className="rounded-lg border border-border px-4 py-3 text-sm">
-            {session.status === "paused" && (
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">
-                  Session paused. Resume when you're ready to continue the chain.
-                </p>
-                <Button size="sm" onClick={() => resumeMutation.mutate()} disabled={resumeMutation.isPending}>
-                  {resumeMutation.isPending ? "Resuming..." : "Resume"}
-                </Button>
-              </div>
-            )}
-
             {isStartingMovie && !isWatched && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
