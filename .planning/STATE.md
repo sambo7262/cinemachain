@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-19-PLAN.md
-last_updated: "2026-03-15T22:01:12.623Z"
+stopped_at: Completed 03-20-PLAN.md (partial pass — 03-21 gap-closure required)
+last_updated: "2026-03-15T23:48:01.550Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 29
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-19 backend gap-closure complete; frontend UI + Docker rebuild required)
-- **Plan:** Completed 03-19
-- **Status:** 03-19 complete — backend: watched gate (HTTP 423), mark-current-watched endpoint, Radarr-on-start, async credits pre-fetch (BackgroundTasks), eligible-movies pagination. Frontend UI updates (Mark as Watched button, gate locked state) and Docker rebuild + migration deploy required before final verification pass.
+- **Phase:** Phase 3 — Movie Game (in progress — 03-20 frontend gap-closure PARTIAL PASS; 03-21 gap-closure required)
+- **Plan:** Completed 03-20 (partial pass)
+- **Status:** 03-20 partial pass — pagination (Test 5) and Mark as Watched button passed; Radarr notification not surfacing, Eligible Actors tab never populates, state machine reverts after Continue the chain, sorting ineffective, thumbnails too small. 03-21 gap-closure required. Two new user requirements: (1) remove Plex webhook entirely, (2) session home page after movie confirmation.
 
 ## Progress
 
-`[██████████] 97%` — 28 of 29 planned plans complete (03-19 backend gap-closure done; frontend + deployment required)
+`[██████████] 100%` — 29 of 29 planned plans complete (03-20 partial pass — 03-21 gap plan needed to close Phase 3)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11 through 03-19 done; frontend UI gap-closure + Docker rebuild required |
+| 3. Movie Game | In progress — 03-11 through 03-20 done (partial); 03-21 gap-closure required before Phase 3 closes |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-20 partial pass: Radarr notification not surfacing from location.state; Eligible Actors tab completely empty (root cause unknown); state machine cycles back to Mark as Watched after Continue the chain; sorting ineffective; thumbnails too small
+- **2026-03-15:** 03-20 new requirements: remove Plex webhook entirely (all watched events manual via Mark as Watched button); add session home page after movie confirmation showing current + previous movie in chain
 - **2026-03-15:** 03-19: HTTP 423 Locked used as watched gate on eligible endpoints; background pre-fetch uses _bg_session_factory (async_sessionmaker(engine)) with errors swallowed; Radarr check fires synchronously at create_session; current_movie_watched reset to False in resume_session; mark_current_watched duplicates _maybe_advance_session logic inline to avoid circular import
 - **2026-03-15:** 03-19: eligible-movies returns paginated envelope {items, total, page, page_size, has_more}; default page_size=20; plex.py _maybe_advance_session now also sets current_movie_watched=True
 - **2026-03-15:** 03-18: GAME-01 session start guidance confirmed PASS in live NAS; GAME-03 combined-view times out — synchronous TMDB credits fetch for all cast members before returning results reliably exceeds NAS request timeout for large casts
@@ -107,6 +109,14 @@ progress:
 
 ## Blockers / Concerns
 
+- **[ACTIVE — 03-21 REQUIRED] 03-20 partial pass failures:**
+  1. Radarr notification (GAME-08): `location.state?.radarr_status` not surfacing in UI — frontend not reading it correctly
+  2. Eligible Actors tab: complete data failure — tab never populates; root cause unknown (backend 423 gate still active? query disabled incorrectly?)
+  3. State machine reversion: clicking Continue the chain reverts UI back to Mark as Watched state instead of staying in actor-selection mode
+  4. Sorting (GAME-05): not effective — not all results populated across tabs
+  5. Thumbnail size: Eligible Movies thumbnails too small, need to be bigger
+  6. New requirement: remove Plex webhook integration entirely
+  7. New requirement: session home page after movie confirmation (shows current + previous movie)
 - **[RESOLVED] 03-10 defects 1, 3, 4 fixed by 03-11/03-12:**
   1. Routing: FIXED — Docker `--no-cache` rebuild resolved Phase 1 placeholder at `/`
   3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
@@ -140,6 +150,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T22:01:12.616Z
-Stopped at: Completed 03-19-PLAN.md
+Last session: 2026-03-15T23:48:01.546Z
+Stopped at: Completed 03-20-PLAN.md (partial pass — 03-21 gap-closure required)
 Resume with: Write and execute 03-19 gap-closure plan: (1) Radarr check + notification on session start for starting movie; (2) manual Mark as Watched button in GameSession page; (3) gate eligible actors/movies tabs behind watched state with locked message; (4) async background credits pre-fetch on session creation (FastAPI BackgroundTasks); (5) eligible movies API pagination (first N actors immediately, cursor/page for more)
