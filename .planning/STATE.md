@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03.1-05-PLAN.md — ChainHistory rewritten as vertical table, GameSession TMDB ID fix, session name header, CSV export button
-last_updated: "2026-03-16T04:22:09.361Z"
+stopped_at: Completed 03.1-06-PLAN.md — ArchivedSessions page, NavBar updated (Sessions->"/", Archived->"/archived"), getActiveSession poll removed, /archived route registered
+last_updated: "2026-03-16T04:25:23.111Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 45
-  completed_plans: 43
+  completed_plans: 44
 ---
 
 # STATE.md — CinemaChain
@@ -25,8 +25,8 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (in progress)
-- **Plan:** Completed 03.1-05 (ChainHistory vertical table, GameSession TMDB ID fix, session name header, CSV export button)
-- **Status:** In progress — ready for 03.1-06
+- **Plan:** Completed 03.1-06 (ArchivedSessions page, NavBar Archived link, /archived route, getActiveSession poll removed)
+- **Status:** In progress — ready for 03.1-07 (final plan)
 
 ## Progress
 
@@ -37,11 +37,14 @@ progress:
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 3.1. UI Improvements and Multi-Session Support | In Progress — 5 of 7 plans done (03.1-05 ChainHistory + GameSession improvements complete) |
+| 3.1. UI Improvements and Multi-Session Support | In Progress — 6 of 7 plans done (03.1-06 ArchivedSessions page + NavBar Archived link complete) |
 | 4. Query Mode | Not started — waiting on Phase 03.1 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.1-06: NavBar Sessions link routes to "/" always — multi-session world has no single active session; isSessionsActive covers "/" and "/game/*" via useLocation
+- **2026-03-16:** 03.1-06: getActiveSession poll removed from NavBar — eliminates single-session assumption; useQuery/api imports removed entirely
+- **2026-03-16:** 03.1-06: ArchivedSessions staleTime 30000 — archived data immutable; View button navigates to /game/:id for read-only viewing via GameSession
 - **2026-03-15:** 03.1-05: currentMovieTitle fallback chain: find by movie_tmdb_id -> last step title -> (untitled); avoids TMDB ID leaking into UI
 - **2026-03-15:** 03.1-05: ChainHistory actor thumbnail uses initials placeholder — step DTO does not carry profile_path; bg-muted circle with initials matches existing eligible actors table pattern
 - **2026-03-15:** 03.1-05: Export CSV button placed before Pause/Resume in GameSession header actions — consistent left-to-right: export, pause, end
@@ -188,6 +191,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:22:09.355Z
-Stopped at: Completed 03.1-05-PLAN.md — ChainHistory rewritten as vertical table, GameSession TMDB ID fix, session name header, CSV export button
-Resume with: Begin Phase 4 (Query Mode) — run plan-phase to generate Phase 4 plans covering QUERY-01 through QUERY-07.
+Last session: 2026-03-16T04:24:10Z
+Stopped at: Completed 03.1-06-PLAN.md — ArchivedSessions page, NavBar updated, /archived route registered
+Resume with: Execute 03.1-07 (final Phase 03.1 plan), then begin Phase 4 (Query Mode).
