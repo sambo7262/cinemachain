@@ -198,7 +198,7 @@ export default function GameSession() {
   const currentMovieTitle =
     session?.steps.find(
       (s) => s.movie_tmdb_id === session.current_movie_tmdb_id
-    )?.movie_title ?? `Movie ${session?.current_movie_tmdb_id ?? ""}`
+    )?.movie_title ?? session?.steps[session.steps.length - 1]?.movie_title ?? "(untitled)"
 
   // Derive UI state from session.status + steps shape
   const lastStep = session?.steps.length
@@ -222,10 +222,23 @@ export default function GameSession() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border px-6 py-3 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Now playing: <span className="font-semibold text-foreground">{currentMovieTitle}</span>
-        </p>
+        <div className="flex flex-col gap-0">
+          {session?.name && (
+            <p className="text-base font-semibold text-foreground">{session.name}</p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Now playing: <span className="font-medium text-foreground">{currentMovieTitle}</span>
+          </p>
+        </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => api.exportCsv(sid, session?.name ?? String(sid))}
+            disabled={!session}
+          >
+            Export CSV
+          </Button>
           {session?.status === "paused" ? (
             <Button
               variant="outline"
@@ -340,7 +353,7 @@ export default function GameSession() {
               <div className="flex flex-col gap-1">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Now in queue</p>
                 <p className="text-lg font-bold text-foreground">
-                  {currentStep?.movie_title ?? `Movie ${session.current_movie_tmdb_id}`}
+                  {currentStep?.movie_title ?? "(untitled)"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {isStartingMovie
