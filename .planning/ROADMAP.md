@@ -104,7 +104,7 @@ Plans:
 **Goal:** Multiple game sessions can run concurrently, each identified by a unique name, with full session management (archive, browse archived), a readable chain history table, TMDB ID display bugs eliminated, and CSV export/import working reliably.
 **Depends on:** Phase 3
 **Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08
-**Plans:** 5/7 plans executed
+**Plans:** 7/9 plans executed
 
 Plans:
 - [ ] 03.1-01-PLAN.md — Wave 1: Test stubs for UI-01 through UI-08 (test_game.py additions)
@@ -114,6 +114,8 @@ Plans:
 - [ ] 03.1-05-PLAN.md — Wave 4: GameSession + ChainHistory — vertical chain table, TMDB ID fix, CSV export button
 - [ ] 03.1-06-PLAN.md — Wave 5: ArchivedSessions page + NavBar update + App.tsx route
 - [ ] 03.1-07-PLAN.md — Wave 6: Docker rebuild + NAS deploy + migration 0004 + human verify checkpoint
+- [ ] 03.1-08-PLAN.md — Wave 5 (gap-closure): Backend — GET /sessions/{id} endpoint, current_movie_title in response, _enrich_steps_watched_at GROUP BY dedup
+- [ ] 03.1-09-PLAN.md — Wave 6 (gap-closure): Frontend — GameSession fetch-by-ID, remove pause/resume/end buttons, movie badge on session cards, standalone Import Chain card
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -137,7 +139,7 @@ Plans:
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
-| 03.1. UI + Multi-Session | 5/7 | In Progress|  |
+| 03.1. UI + Multi-Session | 7/9 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -205,7 +207,9 @@ Plans:
 | Multi-session gate removed in Phase 03.1 | Original single-session gate was for Plex webhook matching; Plex webhook was removed in 03-21; all interactions are now manual; no reason to restrict to one session |
 | SessionStatus.archived as new enum value, not boolean column | status is String(20) not PostgreSQL ENUM; adding "archived" requires no schema change to the column; partial unique index on name enforces name uniqueness among active sessions only |
 | NavBar Sessions link → "/" always in Phase 03.1 | Multi-session world has no single "the active session"; NavBar polls removed; home page shows all sessions |
+| GameSession fetches by session ID not getActiveSession (03.1-09) | Live NAS testing: second session showed no buttons because getActiveSession always returned session 1; fix: use api.getSession(sid) with React Router :sessionId param |
+| Pause/resume removed from UI entirely (03.1-09) | Live NAS testing confirmed R1: pause/resume adds complexity without user value; archive is the session lifecycle end-point; removal simplifies GameSession.tsx significantly |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — Phase 03.1 planned: 7 plans covering multi-session support, session naming, archive, chain history table, TMDB ID fix, CSV export/import validation*
+*Last updated: 2026-03-16 — Phase 03.1 gap-closure: 2 new plans (03.1-08, 03.1-09) closing 5 bugs and 3 new requirements from live NAS VERIFICATION.md*
