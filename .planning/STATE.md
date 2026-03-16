@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-23-PLAN.md (partial pass — 03-24 gap-closure required)
-last_updated: "2026-03-16T00:57:36.804Z"
+stopped_at: Completed 03-24-PLAN.md — view state refactor and NavBar routing; 03-25 Docker rebuild and NAS verification required
+last_updated: "2026-03-16T01:15:00Z"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 32
-  completed_plans: 32
+  completed_phases: 2
+  total_plans: 34
+  completed_plans: 33
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-23 NAS deploy partial pass; 03-24 UX gap-closure required)
-- **Plan:** Completed 03-23 (partial pass)
-- **Status:** 03-23 partial pass — root state machine cycling defect confirmed fixed; session home page UX architecture requires 03-24 gap-closure (Mark as Watched button on home page, Back button from tab view, NavBar routing to home page)
+- **Phase:** Phase 3 — Movie Game (in progress — 03-24 UX gap-closure complete; 03-25 Docker rebuild and NAS verification required)
+- **Plan:** Completed 03-24
+- **Status:** 03-24 complete — view state refactor done, NavBar routing to active session done; 03-25 Docker rebuild and NAS verification of full game loop (GAME-04 through GAME-08) required before Phase 3 closes
 
 ## Progress
 
-`[██████████] 100%` — 32 of 32 plans complete (03-23 partial pass documented; 03-24 gap-closure plan required)
+`[██████████] 97%` — 33 of 34 plans complete (03-24 gap-closure done; 03-25 Docker rebuild and NAS verification remaining)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-23 partial pass; 03-24 session home page UX gap-closure required before Phase 3 closes |
+| 3. Movie Game | In progress — 03-24 UX gap-closure complete; 03-25 Docker rebuild + NAS verification required before Phase 3 closes |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03-24: view: 'home' | 'tabs' enum state replaces showSessionHome boolean — Session Home Page is permanent default hub; Continue the chain button on home hub; Back button from Tab View; Tabs only render when view === 'tabs'
+- **2026-03-16:** 03-24: NavBar queries getActiveSession independently with queryKey ['activeSession'] and polls every 10s — routes Sessions link to /game/{id} when session is active, '/' otherwise
 - **2026-03-15:** 03-23: PARTIAL PASS — root state machine cycling defect confirmed fixed (continue-chain no longer reverts UI); UX gap remaining: session home page lacks Mark as Watched button, no Back button from tab view to home page, NavBar does not consistently land on session home page hub
 - **2026-03-15:** 03-23: Two-view session UX architecture confirmed — Session Home Page (permanent hub: current+previous movie, Mark as Watched, Continue the chain) is architecturally distinct from Tab View (Eligible Actors/Movies with Back button); NavBar Sessions always routes to home page
 - **2026-03-15:** 03-22: continueChain must be called instead of resumeSession in handleContinue — resumeSession resets current_movie_watched=False causing state machine cycling defect (users reverted to Mark as Watched state)
@@ -116,11 +118,10 @@ progress:
 
 ## Blockers / Concerns
 
-- **[ACTIVE — 03-24 REQUIRED] 03-23 partial pass failures:**
-  1. Session home page missing "Mark as Watched" button — home page renders but primary action absent
-  2. No navigation path from Tab View back to Session Home Page — Back button required
-  3. NavBar Sessions link does not reliably land on session home page hub
-  4. Tests 3/4 (actor dedup, sort, GAME-04 through GAME-07) blocked pending full game loop UX working
+- **[ACTIVE — 03-25 REQUIRED] 03-24 frontend changes not yet deployed to NAS:**
+  - Docker rebuild required to pick up view state refactor and NavBar routing changes
+  - Full game loop verification (GAME-04 through GAME-08) pending NAS deploy
+  - Actor dedup, sort, and full chain traversal cannot be verified until 03-25 deploys these frontend changes
 - **[RESOLVED — 03-23] Root state machine cycling defect:** continue-chain endpoint confirmed working; Eligible Actors populates after Continue the chain; no reversion to Mark as Watched
 - **[RESOLVED — 03-23] Plex webhook:** returns 404 as expected
 - **[RESOLVED — 03-23] Thumbnail size:** visibly larger in Eligible Movies tab
@@ -157,6 +158,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T00:57:36.800Z
-Stopped at: Completed 03-23-PLAN.md (partial pass — 03-24 gap-closure required)
-Resume with: Write 03-24-PLAN.md to fix session home page UX: (1) Mark as Watched button on home page when active+!watched, (2) Back button from Tab View to home page, (3) NavBar Sessions always routes to session home page hub, (4) after movie confirmation navigate to home page. Then rebuild Docker images, deploy to NAS, and verify full game loop (actor dedup, sort, GAME-04 through GAME-07).
+Last session: 2026-03-16T01:15:00Z
+Stopped at: Completed 03-24-PLAN.md — view state refactor and NavBar routing (frontend-only; Docker rebuild pending)
+Resume with: Execute 03-25-PLAN.md — rebuild Docker images, push to registry, deploy to NAS, and verify full game loop (GAME-04 through GAME-08).
