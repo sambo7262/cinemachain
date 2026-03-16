@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import GameLobby from "./pages/GameLobby"
 import GameSession from "./pages/GameSession"
+import ArchivedSessions from "./pages/ArchivedSessions"
 import { NavBar } from "./components/NavBar"
 
 export default function App() {
@@ -10,6 +11,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<GameLobby />} />
         <Route path="/game/:sessionId" element={<GameSession />} />
+        <Route path="/archived" element={<ArchivedSessions />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
