@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03.1-03-PLAN.md — api.ts expanded with multi-session DTOs and functions
-last_updated: "2026-03-16T04:15:21.441Z"
+stopped_at: Completed 03.1-04-PLAN.md — GameLobby rewritten as multi-session home page with session grid, name-required form, and CSV validation
+last_updated: "2026-03-16T04:18:54.534Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 45
-  completed_plans: 41
+  completed_plans: 42
 ---
 
 # STATE.md — CinemaChain
@@ -25,23 +25,26 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (in progress)
-- **Plan:** Completed 03.1-03 (Frontend api.ts contract — expanded DTOs + new multi-session API functions)
-- **Status:** In progress — ready for 03.1-04
+- **Plan:** Completed 03.1-04 (GameLobby rewritten as multi-session home page with session grid, name-required form, CSV validation)
+- **Status:** In progress — ready for 03.1-05
 
 ## Progress
 
-`[█████████░] 91%` — 41 of 45 plans complete
+`[█████████░] 93%` — 42 of 45 plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 3.1. UI Improvements and Multi-Session Support | In Progress — 3 of 7 plans done (03.1-03 api.ts contract complete) |
+| 3.1. UI Improvements and Multi-Session Support | In Progress — 4 of 7 plans done (03.1-04 GameLobby home page complete) |
 | 4. Query Mode | Not started — waiting on Phase 03.1 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.1-04: view: 'grid' | 'form' enum state drives GameLobby home page — grid is default; form expands inline on '+ Start a new session' click; no modal needed
+- **2026-03-16:** 03.1-04: activeSessions (plural) queryKey used for session list in GameLobby — avoids cache collision with per-session 'session' key in GameSession.tsx
+- **2026-03-16:** 03.1-04: isNameValid gates movie-selection tabs via opacity-50 + pointer-events-none CSS; ParsedRow.isValid flag carries per-row sequence validity; currentMovieForSession helper resolves title from steps with fallback
 - **2026-03-16:** 03.1-03: exportCsv is void fire-and-forget using fetch+blob — cannot use apiFetch JSON wrapper for CSV blob download; getActiveSession kept intact for GameSession.tsx polling
 - **2026-03-16:** 03.1-02: name required on CreateSessionRequest; partial unique index uq_game_sessions_name_active allows name reuse after archive/end; _build_session_response centralizes response construction with watched_at enrichment
 - **2026-03-16:** 03.1-02: radarr_quality_profile setting (default "HD+") selects quality profile by name with fallback to first profile + warning if named profile not found
@@ -182,6 +185,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:15:21.435Z
-Stopped at: Completed 03.1-03-PLAN.md — api.ts expanded with multi-session DTOs and functions
+Last session: 2026-03-16T04:18:54.530Z
+Stopped at: Completed 03.1-04-PLAN.md — GameLobby rewritten as multi-session home page with session grid, name-required form, and CSV validation
 Resume with: Begin Phase 4 (Query Mode) — run plan-phase to generate Phase 4 plans covering QUERY-01 through QUERY-07.

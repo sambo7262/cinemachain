@@ -104,7 +104,7 @@ Plans:
 **Goal:** Multiple game sessions can run concurrently, each identified by a unique name, with full session management (archive, browse archived), a readable chain history table, TMDB ID display bugs eliminated, and CSV export/import working reliably.
 **Depends on:** Phase 3
 **Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08
-**Plans:** 3/7 plans executed
+**Plans:** 4/7 plans executed
 
 Plans:
 - [ ] 03.1-01-PLAN.md — Wave 1: Test stubs for UI-01 through UI-08 (test_game.py additions)
@@ -137,7 +137,7 @@ Plans:
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
-| 03.1. UI + Multi-Session | 3/7 | In Progress|  |
+| 03.1. UI + Multi-Session | 4/7 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
