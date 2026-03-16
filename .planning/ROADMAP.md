@@ -11,7 +11,7 @@
 
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
-- [~] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-25 PARTIAL PASS 2026-03-15 — Steps 2-5 verified on NAS; Step 6 blocked by request_movie not resetting current_movie_watched=False; 03-26 fix + verify required)
+- [~] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-25 PARTIAL PASS 2026-03-15 — Steps 2-5 verified on NAS; Step 6 blocked by request_movie not resetting current_movie_watched=False; 03-26 fix + 03-27 verify planned)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -65,7 +65,7 @@ Plans:
   4. An actor selected in this session cannot appear again in the Eligible Actors panel for the remainder of that session
   5. User can sort Eligible Movies by genre, TMDB rating, or aggregated rating; toggle between unwatched-only and all movies (with watched badges); only unwatched movies are selectable
   6. Selecting an unwatched movie triggers a Radarr download request and advances the session to that movie
-**Plans:** 24/25 plans executed
+**Plans:** 25/27 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Wave 0: test stubs for GAME-01 through GAME-08 (test_game.py + test_radarr.py)
@@ -93,7 +93,8 @@ Plans:
 - [~] 03-23-PLAN.md — Wave 15 (gap-closure): Docker rebuild + NAS deploy + PARTIAL PASS — root state machine defect fixed; session home page UX gaps (Mark as Watched button, Back button, NavBar routing) require 03-24
 - [ ] 03-24-PLAN.md — Wave 16 (gap-closure): Frontend — view state refactor (home|tabs), Session Home Page as default hub, Back button in Tab View, NavBar active session routing
 - [~] 03-25-PLAN.md — Wave 17 (gap-closure): Docker rebuild + NAS deploy + PARTIAL PASS — Steps 2-5 verified (session home page, NavBar, Mark as Watched, Continue/Back); Step 6 fails (request_movie does not reset current_movie_watched=False); 03-26 required
-- [ ] 03-26-PLAN.md — Wave 18 (gap-closure): Backend fix — set current_movie_watched=False in request_movie; Docker rebuild + NAS deploy + full game loop verification (GAME-04 through GAME-08)
+- [ ] 03-26-PLAN.md — Wave 18 (gap-closure): Backend fix — set current_movie_watched=False in request_movie after advancing current_movie_tmdb_id
+- [ ] 03-27-PLAN.md — Wave 19 (gap-closure): Docker rebuild + NAS deploy + full game loop verification (all steps including 2nd movie Mark as Watched)
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -116,7 +117,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 1/4 | In Progress|  |
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 24/25 | In Progress|  |
+| 3. Movie Game | 25/27 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -171,7 +172,8 @@ Plans:
 | Plex webhook removed in 03-21 (new requirement) | 03-20 live NAS testing: Plex webhook unreliable; all watched events manual via Mark as Watched button; plex.py deleted, main.py updated |
 | continue-chain endpoint separate from resume (03-21) | resume_session (paused->active) must reset current_movie_watched=False for new movie iteration; continue-chain (awaiting_continue->active) must preserve current_movie_watched=True so eligible tabs remain unlocked |
 | Session Home Page as default hub, view state replacing showSessionHome (03-24) | 03-23 live test: showSessionHome defaulting to false causes Tab View to appear on every load; two-view model (home|tabs) with home as default is the correct architecture |
+| request_movie must reset current_movie_watched=False (03-26) | 03-25 live test: after continue-chain preserves current_movie_watched=True, request_movie must reset it to False so Session Home Page condition (active + !current_movie_watched) is met for the 2nd movie |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-15 — 03-25 partial pass: Steps 2-5 verified; Step 6 blocked (request_movie must reset current_movie_watched=False); 03-26 fix + verify planned*
+*Last updated: 2026-03-15 — 03-25 partial pass: Steps 2-5 verified; Step 6 blocked; 03-26 (backend fix) + 03-27 (Docker rebuild + full verify) planned*
