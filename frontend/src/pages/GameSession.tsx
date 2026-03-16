@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
@@ -33,6 +33,8 @@ export default function GameSession() {
   const [radarrStatus, setRadarrStatus] = useState<string | null>(
     (location.state as { radarr_status?: string } | null)?.radarr_status ?? null
   )
+  const [showSessionHome, setShowSessionHome] = useState(false)
+  const radarrFallbackFiredRef = useRef(false)
 
   // Session polling — stops when awaiting_continue
   const { data: session } = useQuery({
@@ -45,6 +47,26 @@ export default function GameSession() {
 
   // Derive watched state from session
   const isWatched: boolean = session?.current_movie_watched ?? false
+
+  // Radarr start notification fallback: if location.state failed to deliver the status
+  // (confirmed unreliable on NAS hardware), read it from the first successful session poll.
+  // Fires at most once per mount (radarrFallbackFiredRef prevents repeat).
+  useEffect(() => {
+    if (
+      session?.radarr_status &&
+      !radarrStatus &&
+      !radarrFallbackFiredRef.current
+    ) {
+      radarrFallbackFiredRef.current = true
+      setRadarrStatus(
+        session.radarr_status === "already_in_radarr"
+          ? "Already in your library — waiting for watched event."
+          : session.radarr_status === "queued"
+          ? "Added to Radarr queue."
+          : session.radarr_status
+      )
+    }
+  }, [session?.radarr_status])
 
   // Eligible actors for the current movie
   const { data: eligibleActors = [] } = useQuery({
@@ -101,6 +123,7 @@ export default function GameSession() {
       } else if (requestResult?.status === "queued") {
         setRadarrStatus("Added to Radarr queue.")
       }
+      setShowSessionHome(true)
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       setMoviesPage(1)
@@ -149,13 +172,17 @@ export default function GameSession() {
     onSuccess: () => navigate("/"),
   })
 
-  // Continue the chain after watched confirmation
+  // Continue the chain after watched confirmation.
+  // CRITICAL: must call continueChain (not resumeSession) — continueChain preserves
+  // current_movie_watched=True so eligible tabs remain unlocked.
   const handleContinue = () => {
-    api.resumeSession(sid).then(() => {
+    api.continueChain(sid).then((updatedSession) => {
+      queryClient.setQueryData(["session", sid], updatedSession)
       setSelectedActor(null)
+      setShowSessionHome(false)
       setActiveTab("actors")
-      queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+      queryClient.invalidateQueries({ queryKey: ["eligibleMovies", sid] })
     })
   }
 
@@ -308,6 +335,59 @@ export default function GameSession() {
             )}
           </div>
         )}
+
+        {/* Session home page — shown after movie confirmation */}
+        {showSessionHome && session && (() => {
+          const sortedSteps = [...session.steps].sort((a, b) => b.step_order - a.step_order)
+          const currentStep = sortedSteps[0]
+          const previousStep = sortedSteps.find(s => s.movie_title && s !== currentStep)
+          return (
+            <div className="rounded-lg border border-border bg-card px-6 py-5 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-foreground">Session homebase</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground text-xs"
+                  onClick={() => setShowSessionHome(false)}
+                >
+                  Back to chain
+                </Button>
+              </div>
+
+              {/* Current movie */}
+              <div className="flex flex-col gap-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Now in queue</p>
+                <p className="text-lg font-bold text-foreground">
+                  {currentStep?.movie_title ?? `Movie ${session.current_movie_tmdb_id}`}
+                </p>
+                <p className="text-sm text-muted-foreground">Added to Radarr. Watch it, then mark as watched to continue the chain.</p>
+              </div>
+
+              {/* Previous movie (shown only when chain has 2+ movies) */}
+              {previousStep && (
+                <div className="flex flex-col gap-1 border-t border-border pt-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Previous movie</p>
+                  <p className="text-base font-semibold text-muted-foreground">{previousStep.movie_title}</p>
+                </div>
+              )}
+
+              {/* Mark as Watched CTA */}
+              {session.status === "active" && !isWatched && (
+                <Button
+                  onClick={() => {
+                    markWatchedMutation.mutate()
+                    setShowSessionHome(false)
+                  }}
+                  disabled={markWatchedMutation.isPending}
+                  className="w-full"
+                >
+                  {markWatchedMutation.isPending ? "Marking…" : "Mark as Watched"}
+                </Button>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Movie request error — dismissible inline alert */}
         {movieRequestError && (
@@ -465,7 +545,7 @@ export default function GameSession() {
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50">
                         <tr>
-                          <th className="text-left px-4 py-2 font-medium text-muted-foreground w-10"></th>
+                          <th className="text-left px-4 py-2 font-medium text-muted-foreground w-14"></th>
                           <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
                           <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
                           <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Rating</th>
@@ -489,10 +569,10 @@ export default function GameSession() {
                                 <img
                                   src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
                                   alt={movie.title}
-                                  className="w-8 h-12 rounded object-cover"
+                                  className="w-12 h-[4.5rem] rounded object-cover"
                                 />
                               ) : (
-                                <div className="w-8 h-12 rounded bg-muted" />
+                                <div className="w-12 h-[4.5rem] rounded bg-muted" />
                               )}
                             </td>
                             <td className="px-4 py-2">
