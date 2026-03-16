@@ -22,6 +22,7 @@ export interface GameSessionDTO {
   current_movie_watched: boolean
   steps: GameSessionStepDTO[]
   radarr_status?: string | null
+  current_movie_title: string | null    // resolved by backend from Movie table
 }
 
 export interface PaginatedMoviesDTO {
@@ -76,6 +77,9 @@ export const api = {
 
   getActiveSession: () =>
     apiFetch<GameSessionDTO | null>("/game/sessions/active"),
+
+  getSession: (sessionId: number) =>
+    apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}`),
 
   getEligibleActors: (sessionId: number) =>
     apiFetch<EligibleActorDTO[]>(`/game/sessions/${sessionId}/eligible-actors`),
