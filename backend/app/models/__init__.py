@@ -73,6 +73,7 @@ class SessionStatus(str, enum.Enum):
     paused = "paused"
     awaiting_continue = "awaiting_continue"
     ended = "ended"
+    archived = "archived"
 
 
 class GameSession(Base):
@@ -84,6 +85,8 @@ class GameSession(Base):
     current_movie_watched: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
