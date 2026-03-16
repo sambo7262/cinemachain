@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 03-29-PLAN.md — Phase 3 complete; Phase 4 (Query Mode) ready to start
-last_updated: "2026-03-16T03:20:42.069Z"
+stopped_at: Completed 03.1-01-PLAN.md — Phase 03.1 Wave 0 test stubs done; ready for 03.1-02 backend implementation
+last_updated: "2026-03-16T04:02:35.172Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 3
-  total_plans: 38
-  completed_plans: 38
+  total_plans: 45
+  completed_plans: 39
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4 — Query Mode (Phase 3 complete; ready to start Phase 4 planning)
-- **Plan:** Completed 03-29
-- **Status:** Ready to plan
+- **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (in progress)
+- **Plan:** Completed 03.1-01 (Wave 0 test stubs)
+- **Status:** In progress — ready for 03.1-02
 
 ## Progress
 
-`[██████████] 100%` — 38 of 38 plans complete
+`[█████████░] 87%` — 39 of 45 plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 4. Query Mode | Not started — ready to begin |
+| 3.1. UI Improvements and Multi-Session Support | In Progress — 1 of 7 plans done (03.1-01 Wave 0 stubs complete) |
+| 4. Query Mode | Not started — waiting on Phase 03.1 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.1-01: Wave 0 test stubs for UI-01 through UI-08 appended to test_game.py — test_create_session_conflict preserved for 03.1-02 to update when multi-session gate is removed
 - **2026-03-15:** 03-29: Full 6-step game loop PASS on live NAS — Phase 3 declared complete; all GAME-01 through GAME-08 requirements satisfied in production; Phase 4 (Query Mode) ready to start
 - **2026-03-16:** 03-28: GAME-04 fix applied — request_movie fires BackgroundTasks pre-fetch for new movie cast; get_eligible_actors has on-demand TMDB fallback (top 20 cast) when DB returns empty; both changes in game.py only; Docker rebuild + NAS deploy + Step 6 re-verify required via 03-29
 - **2026-03-16:** 03-28: on-demand fallback re-runs original SQL stmt (same current_movie_tmdb_id filter + picked_ids exclusion) after populating credits — avoids code duplication; degrades gracefully if TMDB unavailable
@@ -151,6 +153,10 @@ progress:
 - Plex webhook reliability: `media.scrobble` has confirmed delivery bugs; polling fallback must be implemented alongside webhook in Phase 2
 - Synology PUID/PGID: must match a NAS user; PostgreSQL must not bind to port 5432 (reserved on Synology — use 5433)
 
+### Roadmap Evolution
+
+- Phase 03.1 inserted after Phase 03: UI improvements and multi-session support (INSERTED)
+
 ## Accumulated Context
 
 ### Critical Pitfalls (from research)
@@ -173,6 +179,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T03:14:53.341Z
-Stopped at: Completed 03-29-PLAN.md — Phase 3 complete; Phase 4 (Query Mode) ready to start
+Last session: 2026-03-16T04:02:35.166Z
+Stopped at: Completed 03.1-01-PLAN.md — Phase 03.1 Wave 0 test stubs done; ready for 03.1-02 backend implementation
 Resume with: Begin Phase 4 (Query Mode) — run plan-phase to generate Phase 4 plans covering QUERY-01 through QUERY-07.
