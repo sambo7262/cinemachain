@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-27-PLAN.md — partial pass; GAME-04 eligible-actors intersection defect documented for 03-28 gap-closure
-last_updated: "2026-03-16T02:29:37.496Z"
+status: 03-26 fix live and confirmed (2nd movie Mark as Watched working); GAME-04 defect documented — get_eligible_actors intersects all chain movies' casts instead of subtracting picked actors from current movie's cast; 03-28 gap-closure required
+stopped_at: Completed 03-28-PLAN.md — GAME-04 eligible-actors fix applied in game.py; Docker rebuild + NAS deploy + Step 6 verify pending via 03-29
+last_updated: "2026-03-16T02:44:02.172Z"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 36
-  completed_plans: 36
+  completed_phases: 2
+  total_plans: 38
+  completed_plans: 37
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (03-27 partial pass — Steps 1-5 verified on live NAS; GAME-04 eligible-actors intersection bug blocks Step 6; 03-28 required to fix and close Phase 3)
-- **Plan:** Completed 03-27
-- **Status:** 03-26 fix live and confirmed (2nd movie Mark as Watched working); GAME-04 defect documented — get_eligible_actors intersects all chain movies' casts instead of subtracting picked actors from current movie's cast; 03-28 gap-closure required
+- **Phase:** Phase 3 — Movie Game (03-28 fix applied — GAME-04 eligible-actors bug fixed in game.py; Docker rebuild + NAS deploy + live re-verify required via 03-29)
+- **Plan:** Completed 03-28
+- **Status:** GAME-04 fix in game.py: request_movie now fires BackgroundTasks pre-fetch for new movie; get_eligible_actors has on-demand fallback when DB is empty; Docker rebuild required before live verification
 
 ## Progress
 
-`[██████████] 100%` — 36 of 36 plans complete (03-27 partial pass; 03-28 gap-closure planned)
+`[██████████] 97%` — 37 of 38 plans complete (03-28 fix applied; 03-29 Docker rebuild + NAS deploy + live verify pending)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-27 partial pass (Steps 1-5 verified; GAME-04 Step 6 fails — eligible-actors intersection bug); 03-28 fix required before Phase 3 closes |
+| 3. Movie Game | In progress — 03-28 fix applied (GAME-04 eligible-actors bug closed in game.py); 03-29 Docker rebuild + live re-verify required before Phase 3 closes |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03-28: GAME-04 fix applied — request_movie fires BackgroundTasks pre-fetch for new movie cast; get_eligible_actors has on-demand TMDB fallback (top 20 cast) when DB returns empty; both changes in game.py only; Docker rebuild + NAS deploy + Step 6 re-verify required via 03-29
+- **2026-03-16:** 03-28: on-demand fallback re-runs original SQL stmt (same current_movie_tmdb_id filter + picked_ids exclusion) after populating credits — avoids code duplication; degrades gracefully if TMDB unavailable
 - **2026-03-15:** 03-27: PARTIAL PASS — Steps 1-5 verified on live NAS (deploy, fresh session, first movie flow, 2nd movie Mark as Watched button confirmed); Step 6 blocked by GAME-04 eligible-actors intersection bug; 03-28 required to close Phase 3
 - **2026-03-15:** 03-27: GAME-04 root cause — get_eligible_actors intersects cast across all chain movies rather than (cast of current_movie_tmdb_id) MINUS (actor_tmdb_id values already in session.steps); fix: query credits for current movie only, exclude picked actor ids; no architectural change needed
 - **2026-03-15:** 03-26: request_movie resets current_movie_watched=False after updating current_movie_tmdb_id and before db.commit() — closes game loop state machine so Session Home Page condition (active + !current_movie_watched) is met for 2nd movie
@@ -124,11 +126,9 @@ progress:
 
 ## Blockers / Concerns
 
-- **[OPEN — 03-28 required] GAME-04 eligible-actors intersection bug:**
-  - Found in 03-27 Step 6 verification (Free Guy → Ryan Reynolds → Deadpool and Wolverine test sequence)
-  - Actual: Eligible Actors tab shows intersection of all chain movies' casts rather than (current movie cast) MINUS (picked actor ids)
-  - Fix: in backend/app/routers/game.py get_eligible_actors — (1) get credits for current_movie_tmdb_id only, (2) build picked_actor_ids from session.steps, (3) return (1) NOT IN (2)
-  - 03-28 gap-closure plan required; then Docker rebuild + NAS deploy + re-verify Step 6
+- **[FIXED in 03-28 — DEPLOY REQUIRED] GAME-04 eligible-actors intersection bug:**
+  - Fix applied in 2d0381c: request_movie fires BackgroundTasks pre-fetch; get_eligible_actors has on-demand fallback when DB empty
+  - Docker rebuild + NAS deploy + live re-verify Step 6 required via 03-29
 - **[RESOLVED — 03-27] 03-26 fix deployed and confirmed:**
   - request_movie current_movie_watched=False reset is live; 2nd movie Mark as Watched button confirmed working in production
 - **[RESOLVED — 03-26] request_movie does not reset current_movie_watched=False:**
@@ -173,5 +173,5 @@ progress:
 ## Session Continuity
 
 Last session: 2026-03-16T02:29:37.489Z
-Stopped at: Completed 03-27-PLAN.md — partial pass; GAME-04 eligible-actors intersection defect documented for 03-28 gap-closure
-Resume with: Rebuild Docker images (make rebuild), push to registry, deploy to NAS, verify full game loop end-to-end (GAME-04 actor dedup, GAME-05 session continuation).
+Stopped at: Completed 03-28-PLAN.md — GAME-04 eligible-actors fix applied in game.py; Docker rebuild + NAS deploy + Step 6 live re-verify pending via 03-29
+Resume with: Execute 03-29 (Docker rebuild, push to registry, deploy to NAS, verify full game loop Step 6 — Eligible Actors tab shows correct cast for new movie).
