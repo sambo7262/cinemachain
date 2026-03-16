@@ -6,7 +6,7 @@ from datetime import datetime as _datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func as _func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
@@ -97,13 +97,18 @@ async def _get_single_active_session(db: AsyncSession) -> GameSession | None:
 async def _enrich_steps_watched_at(
     steps: list[GameSessionStep], db: AsyncSession
 ) -> dict[int, _datetime]:
-    """Return mapping of movie_tmdb_id -> watched_at for movies in the given steps."""
+    """Return mapping of movie_tmdb_id -> watched_at for movies in the given steps.
+
+    Uses MAX(watched_at) GROUP BY tmdb_id to guarantee at most one result per movie,
+    even if multiple WatchEvent rows exist for the same tmdb_id.
+    """
     tmdb_ids = [s.movie_tmdb_id for s in steps]
     if not tmdb_ids:
         return {}
     result = await db.execute(
-        select(WatchEvent.tmdb_id, WatchEvent.watched_at)
+        select(WatchEvent.tmdb_id, _func.max(WatchEvent.watched_at).label("watched_at"))
         .where(WatchEvent.tmdb_id.in_(tmdb_ids))
+        .group_by(WatchEvent.tmdb_id)
     )
     return {row.tmdb_id: row.watched_at for row in result.all()}
 
@@ -448,6 +453,27 @@ async def get_active_session(db: AsyncSession = Depends(get_db)):
         return None
     wa_map = await _enrich_steps_watched_at(session.steps, db)
     return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
+
+
+@router.get("/sessions/{session_id}", response_model=GameSessionResponse)
+async def get_session_by_id(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Return a single session by ID with steps and watched_at enrichment.
+
+    Used by GameSession.tsx which navigates to /game/:sessionId and needs to
+    fetch that specific session — not just the single 'active' session.
+    """
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    return _build_session_response(
+        session, wa_map, current_movie_title=_resolve_current_movie_title(session)
+    )
 
 
 @router.get("/sessions/{session_id}/export-csv")
