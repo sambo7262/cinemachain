@@ -99,6 +99,7 @@ export default function GameLobby() {
 
   // View state: "grid" shows session grid; "form" shows new-session form
   const [view, setView] = useState<"grid" | "form">("grid")
+  const [defaultTab, setDefaultTab] = useState<"watched" | "search" | "csv">("watched")
 
   // Session name state
   const [sessionName, setSessionName] = useState("")
@@ -186,11 +187,16 @@ export default function GameLobby() {
                 {activeSessions.map((session) => (
                   <Card key={session.id} className="cursor-pointer hover:border-primary/50 transition-colors">
                     <CardContent className="flex items-center justify-between py-4 px-5">
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-1">
                         <span className="font-semibold text-foreground">{session.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {currentMovieForSession(session)} · {session.steps.length} step{session.steps.length !== 1 ? "s" : ""}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-md bg-primary/10 text-primary text-xs font-medium px-2 py-0.5 ring-1 ring-inset ring-primary/20">
+                            {session.current_movie_title ?? currentMovieForSession(session)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {session.steps.length} step{session.steps.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
@@ -220,11 +226,32 @@ export default function GameLobby() {
                 setSessionName("")
                 setCsvRows([])
                 setCsvFileName(null)
+                setDefaultTab("watched")
                 setView("form")
               }}
             >
               + Start a new session
             </Button>
+            {/* Standalone Import Chain card (BUG-5) */}
+            <Card
+              className="cursor-pointer hover:border-primary/50 transition-colors border-dashed"
+              onClick={() => {
+                setSessionName("")
+                setCsvRows([])
+                setCsvFileName(null)
+                setDefaultTab("csv")
+                setView("form")
+              }}
+            >
+              <CardContent className="flex items-center gap-3 py-4 px-5">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-foreground">Import a chain</span>
+                  <span className="text-sm text-muted-foreground">
+                    Create a session from a CSV export
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         ) : (
           /* New session form (inline expansion) */
@@ -261,7 +288,7 @@ export default function GameLobby() {
 
             {/* Tabs — only enabled when name is valid */}
             <div className={cn(!isNameValid && "opacity-50 pointer-events-none")}>
-              <Tabs defaultValue="watched">
+              <Tabs key={defaultTab} defaultValue={defaultTab}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="watched">Watch History</TabsTrigger>
                   <TabsTrigger value="search">Search Title</TabsTrigger>
