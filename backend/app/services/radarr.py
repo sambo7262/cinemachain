@@ -4,7 +4,8 @@ import httpx
 
 
 class RadarrClient:
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(self, base_url: str, api_key: str, quality_profile: str = "HD+") -> None:
+        self._quality_profile = quality_profile
         self._client = httpx.AsyncClient(
             base_url=base_url,
             headers={"X-Api-Key": api_key},
@@ -45,10 +46,18 @@ class RadarrClient:
         return folders[0]["path"] if folders else "/movies"
 
     async def get_quality_profile_id(self) -> int:
-        """GET /api/v3/qualityprofile — return first profile id."""
+        """GET /api/v3/qualityprofile — return id of profile matching self._quality_profile name."""
         r = await self._client.get("/api/v3/qualityprofile")
         r.raise_for_status()
         profiles = r.json()
+        for profile in profiles:
+            if profile["name"] == self._quality_profile:
+                return profile["id"]
+        # Fallback: log warning and use first profile if named profile not found
+        import logging
+        logging.getLogger(__name__).warning(
+            "Radarr quality profile %r not found; falling back to first profile", self._quality_profile
+        )
         return profiles[0]["id"] if profiles else 1
 
     async def close(self) -> None:

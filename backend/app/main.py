@@ -30,7 +30,11 @@ async def lifespan(app: FastAPI):
     logger.info("TMDBClient initialized")
 
     # 3. Initialize Radarr client (shared across all requests via app.state)
-    radarr_client = RadarrClient(base_url=settings.radarr_url, api_key=settings.radarr_api_key)
+    radarr_client = RadarrClient(
+        base_url=settings.radarr_url,
+        api_key=settings.radarr_api_key,
+        quality_profile=settings.radarr_quality_profile,
+    )
     app.state.radarr_client = radarr_client
     logger.info("RadarrClient initialized")
 

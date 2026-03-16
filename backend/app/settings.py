@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     plex_url: str
     radarr_url: str
     radarr_api_key: str
+    radarr_quality_profile: str = "HD+"
     sonarr_url: str
     sonarr_api_key: str
 
