@@ -11,7 +11,7 @@
 
 - [ ] **Phase 1: Infrastructure** — Docker Compose stack with PostgreSQL, backend skeleton, and Tailscale sidecar running on Synology NAS
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
-- [~] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-23 PARTIAL PASS 2026-03-15 — root state machine defect fixed, Plex webhook removed, thumbnails enlarged; session home page UX gaps require 03-24/03-25 gap-closure)
+- [~] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (03-25 PARTIAL PASS 2026-03-15 — Steps 2-5 verified on NAS; Step 6 blocked by request_movie not resetting current_movie_watched=False; 03-26 fix + verify required)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -92,7 +92,8 @@ Plans:
 - [ ] 03-22-PLAN.md — Wave 14 (gap-closure): Frontend — handleContinue fix (calls continueChain), Radarr polling fallback, session home page (NEW-02), thumbnail size fix
 - [~] 03-23-PLAN.md — Wave 15 (gap-closure): Docker rebuild + NAS deploy + PARTIAL PASS — root state machine defect fixed; session home page UX gaps (Mark as Watched button, Back button, NavBar routing) require 03-24
 - [ ] 03-24-PLAN.md — Wave 16 (gap-closure): Frontend — view state refactor (home|tabs), Session Home Page as default hub, Back button in Tab View, NavBar active session routing
-- [ ] 03-25-PLAN.md — Wave 17 (gap-closure): Docker rebuild + NAS deploy + full game loop verification (GAME-04 through GAME-08)
+- [~] 03-25-PLAN.md — Wave 17 (gap-closure): Docker rebuild + NAS deploy + PARTIAL PASS — Steps 2-5 verified (session home page, NavBar, Mark as Watched, Continue/Back); Step 6 fails (request_movie does not reset current_movie_watched=False); 03-26 required
+- [ ] 03-26-PLAN.md — Wave 18 (gap-closure): Backend fix — set current_movie_watched=False in request_movie; Docker rebuild + NAS deploy + full game loop verification (GAME-04 through GAME-08)
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -173,4 +174,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-16 — 03-24/03-25 gap-closure planned: view state refactor (home|tabs), Back button, NavBar active session routing, Docker rebuild + full GAME-04–08 verification*
+*Last updated: 2026-03-15 — 03-25 partial pass: Steps 2-5 verified; Step 6 blocked (request_movie must reset current_movie_watched=False); 03-26 fix + verify planned*

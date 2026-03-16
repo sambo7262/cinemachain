@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-24-PLAN.md — view state refactor and NavBar routing; 03-25 Docker rebuild and NAS verification required
-last_updated: "2026-03-16T01:15:00Z"
+stopped_at: 03-25 PARTIAL PASS — Steps 2-5 verified on NAS; Step 6 fails (request_movie does not reset current_movie_watched=False); 03-26 required to fix and close game loop
+last_updated: "2026-03-15T00:00:00Z"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -24,23 +24,26 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-24 UX gap-closure complete; 03-25 Docker rebuild and NAS verification required)
-- **Plan:** Completed 03-24
-- **Status:** 03-24 complete — view state refactor done, NavBar routing to active session done; 03-25 Docker rebuild and NAS verification of full game loop (GAME-04 through GAME-08) required before Phase 3 closes
+- **Phase:** Phase 3 — Movie Game (in progress — 03-25 partial pass; 03-26 fix + deploy required to close game loop)
+- **Plan:** Completed 03-25 (partial pass)
+- **Status:** Steps 2-5 verified on live NAS; Step 6 (2nd movie Mark as Watched) blocked by request_movie not resetting current_movie_watched=False; 03-26 must fix game.py and close the loop
 
 ## Progress
 
-`[██████████] 97%` — 33 of 34 plans complete (03-24 gap-closure done; 03-25 Docker rebuild and NAS verification remaining)
+`[██████████] 97%` — 33 of 34 plans complete (03-25 partial pass documented; 03-26 fix + verify remaining)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-24 UX gap-closure complete; 03-25 Docker rebuild + NAS verification required before Phase 3 closes |
+| 3. Movie Game | In progress — 03-25 partial pass (Steps 2-5 verified; Step 6 fails); 03-26 fix + verify required before Phase 3 closes |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-25: PARTIAL PASS — Steps 2-5 verified on live NAS; Step 6 (2nd movie) blocked by request_movie not resetting current_movie_watched=False; 03-26 required to close game loop
+- **2026-03-15:** 03-25: request_movie root cause — endpoint advances current_movie_tmdb_id but leaves current_movie_watched=True (from first movie Mark as Watched); home page condition (active + !current_movie_watched) never met for 2nd movie; fix: add session.current_movie_watched = False in game.py request_movie after creating new step
+- **2026-03-15:** 03-25: UI refinements deferred to a later iteration after core user journey is solidified — captured in deferred-items.md
 - **2026-03-16:** 03-24: view: 'home' | 'tabs' enum state replaces showSessionHome boolean — Session Home Page is permanent default hub; Continue the chain button on home hub; Back button from Tab View; Tabs only render when view === 'tabs'
 - **2026-03-16:** 03-24: NavBar queries getActiveSession independently with queryKey ['activeSession'] and polls every 10s — routes Sessions link to /game/{id} when session is active, '/' otherwise
 - **2026-03-15:** 03-23: PARTIAL PASS — root state machine cycling defect confirmed fixed (continue-chain no longer reverts UI); UX gap remaining: session home page lacks Mark as Watched button, no Back button from tab view to home page, NavBar does not consistently land on session home page hub
@@ -118,10 +121,13 @@ progress:
 
 ## Blockers / Concerns
 
-- **[ACTIVE — 03-25 REQUIRED] 03-24 frontend changes not yet deployed to NAS:**
-  - Docker rebuild required to pick up view state refactor and NavBar routing changes
-  - Full game loop verification (GAME-04 through GAME-08) pending NAS deploy
-  - Actor dedup, sort, and full chain traversal cannot be verified until 03-25 deploys these frontend changes
+- **[ACTIVE — 03-26 REQUIRED] request_movie does not reset current_movie_watched=False:**
+  - After selecting the 2nd movie, current_movie_watched remains True from first movie's Mark as Watched
+  - Session Home Page condition (active + !current_movie_watched) never met — Mark as Watched button absent for 2nd movie
+  - Fix: set session.current_movie_watched = False in game.py request_movie endpoint after updating current_movie_tmdb_id and creating new step
+  - Docker rebuild + NAS deploy required after fix; full game loop must be verified end-to-end in 03-26
+- **[RESOLVED — 03-25] 03-24 frontend changes not yet deployed to NAS:**
+  - Docker rebuild completed; NAS updated; Steps 2-5 verified passing
 - **[RESOLVED — 03-23] Root state machine cycling defect:** continue-chain endpoint confirmed working; Eligible Actors populates after Continue the chain; no reversion to Mark as Watched
 - **[RESOLVED — 03-23] Plex webhook:** returns 404 as expected
 - **[RESOLVED — 03-23] Thumbnail size:** visibly larger in Eligible Movies tab
@@ -158,6 +164,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T01:15:00Z
-Stopped at: Completed 03-24-PLAN.md — view state refactor and NavBar routing (frontend-only; Docker rebuild pending)
-Resume with: Execute 03-25-PLAN.md — rebuild Docker images, push to registry, deploy to NAS, and verify full game loop (GAME-04 through GAME-08).
+Last session: 2026-03-15T00:00:00Z
+Stopped at: 03-25 PARTIAL PASS — Steps 2-5 verified on NAS; Step 6 blocked (request_movie does not reset current_movie_watched=False)
+Resume with: Execute 03-26-PLAN.md — fix request_movie in game.py to reset current_movie_watched=False, rebuild Docker images, push, deploy to NAS, verify full game loop including GAME-04 actor dedup.
