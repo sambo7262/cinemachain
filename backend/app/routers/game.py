@@ -45,6 +45,7 @@ class GameSessionResponse(BaseModel):
     current_movie_watched: bool = False
     steps: list[StepResponse]
     radarr_status: str | None = None
+    current_movie_title: str | None = None    # NEW — title of current movie from Movie table
 
     model_config = {"from_attributes": True}
 
@@ -111,6 +112,7 @@ def _build_session_response(
     session: GameSession,
     watched_at_map: dict[int, _datetime] | None = None,
     radarr_status: str | None = None,
+    current_movie_title: str | None = None,    # NEW parameter
 ) -> GameSessionResponse:
     """Build GameSessionResponse with watched_at enrichment on each step."""
     steps = []
@@ -124,7 +126,7 @@ def _build_session_response(
             actor_name=s.actor_name,
             watched_at=wa,
         ))
-    resp = GameSessionResponse(
+    return GameSessionResponse(
         id=session.id,
         name=session.name,
         status=session.status,
@@ -132,8 +134,24 @@ def _build_session_response(
         current_movie_watched=session.current_movie_watched,
         steps=steps,
         radarr_status=radarr_status,
+        current_movie_title=current_movie_title,    # NEW
     )
-    return resp
+
+
+def _resolve_current_movie_title(session: GameSession) -> str | None:
+    """Derive current movie title from session steps (no extra DB query needed).
+
+    Looks for the step whose movie_tmdb_id matches current_movie_tmdb_id.
+    Falls back to the last step's title if no exact match (edge case during transitions).
+    """
+    for step in session.steps:
+        if step.movie_tmdb_id == session.current_movie_tmdb_id:
+            return step.movie_title
+    # Fallback: last step by step_order
+    if session.steps:
+        last = max(session.steps, key=lambda s: s.step_order)
+        return last.movie_title
+    return None
 
 
 async def _ensure_actor_credits_in_db(
@@ -312,7 +330,7 @@ async def import_csv_session(
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions", status_code=201, response_model=GameSessionResponse)
@@ -382,7 +400,7 @@ async def create_session(
     background_tasks.add_task(_prefetch_credits_background, body.start_movie_tmdb_id, tmdb)
 
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    response = _build_session_response(session, wa_map, radarr_status)
+    response = _build_session_response(session, wa_map, radarr_status, current_movie_title=_resolve_current_movie_title(session))
     return response
 
 
@@ -402,7 +420,7 @@ async def list_sessions(
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
-        out.append(_build_session_response(s, wa_map))
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s)))
     return out
 
 
@@ -418,7 +436,7 @@ async def list_archived_sessions(db: AsyncSession = Depends(get_db)):
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
-        out.append(_build_session_response(s, wa_map))
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s)))
     return out
 
 
@@ -429,7 +447,7 @@ async def get_active_session(db: AsyncSession = Depends(get_db)):
     if session is None:
         return None
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.get("/sessions/{session_id}/export-csv")
@@ -483,7 +501,7 @@ async def pause_session(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions/{session_id}/resume", response_model=GameSessionResponse)
@@ -512,7 +530,7 @@ async def resume_session(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions/{session_id}/end", response_model=GameSessionResponse)
@@ -536,7 +554,7 @@ async def end_session(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions/{session_id}/archive", response_model=GameSessionResponse)
@@ -559,7 +577,7 @@ async def archive_session(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions/{session_id}/mark-current-watched", response_model=GameSessionResponse)
@@ -607,7 +625,7 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 @router.post("/sessions/{session_id}/continue-chain", response_model=GameSessionResponse)
@@ -649,7 +667,7 @@ async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 # ---------------------------------------------------------------------------
@@ -942,7 +960,7 @@ async def pick_actor(
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
 # ---------------------------------------------------------------------------
@@ -1016,5 +1034,5 @@ async def request_movie(
     wa_map = await _enrich_steps_watched_at(session.steps, db)
     return {
         "status": radarr_result["status"],
-        "session": _build_session_response(session, wa_map),
+        "session": _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session)),
     }
