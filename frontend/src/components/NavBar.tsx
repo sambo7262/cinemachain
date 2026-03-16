@@ -1,13 +1,23 @@
 import { Link, useLocation } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 import { Film } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { api } from "@/lib/api"
 
 export function NavBar() {
   const location = useLocation()
+  const { data: activeSession } = useQuery({
+    queryKey: ["activeSession"],
+    queryFn: api.getActiveSession,
+    staleTime: 0,
+    refetchInterval: 10000,
+  })
 
-  const links = [
-    { to: "/", label: "Sessions" },
-  ]
+  const sessionHref = activeSession?.id ? `/game/${activeSession.id}` : "/"
+  // The Sessions link is "active" when we are on GameLobby (/) OR on the active session page
+  const isSessionsActive =
+    location.pathname === "/" ||
+    (activeSession?.id != null && location.pathname === `/game/${activeSession.id}`)
 
   return (
     <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -23,20 +33,17 @@ export function NavBar() {
 
         {/* Nav links */}
         <div className="flex items-center gap-1">
-          {links.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname === link.to
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+          <Link
+            to={sessionHref}
+            className={cn(
+              "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+              isSessionsActive
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            )}
+          >
+            Sessions
+          </Link>
         </div>
       </div>
     </nav>
