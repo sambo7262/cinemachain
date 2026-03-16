@@ -453,6 +453,45 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     return GameSessionResponse.model_validate(session)
 
 
+@router.post("/sessions/{session_id}/continue-chain", response_model=GameSessionResponse)
+async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Transition awaiting_continue -> active WITHOUT resetting current_movie_watched.
+
+    This is the correct endpoint for the 'Continue the chain' button in the UI.
+    It preserves current_movie_watched=True so the eligible actors and movies
+    queries remain unlocked after the user clicks Continue.
+
+    CRITICAL DIFFERENCE FROM resume_session:
+    - resume_session: paused -> active, resets current_movie_watched=False (new movie iteration)
+    - continue_chain: awaiting_continue -> active, keeps current_movie_watched=True (same movie, pick actor)
+    """
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.status != "awaiting_continue":
+        raise HTTPException(
+            status_code=422,
+            detail=f"continue-chain requires awaiting_continue status, got {session.status!r}",
+        )
+    # Transition to active — do NOT touch current_movie_watched
+    session.status = "active"
+    await db.commit()
+
+    # Re-fetch with steps
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session.id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+    return GameSessionResponse.model_validate(session)
+
+
 # ---------------------------------------------------------------------------
 # Radarr helper
 # ---------------------------------------------------------------------------
