@@ -16,7 +16,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface GameSessionDTO {
   id: number
-  status: "active" | "paused" | "awaiting_continue" | "ended"
+  name: string
+  status: "active" | "paused" | "awaiting_continue" | "ended" | "archived"
   current_movie_tmdb_id: number
   current_movie_watched: boolean
   steps: GameSessionStepDTO[]
@@ -37,6 +38,7 @@ export interface GameSessionStepDTO {
   movie_title: string | null
   actor_tmdb_id: number | null
   actor_name: string | null
+  watched_at: string | null
 }
 
 export interface EligibleActorDTO {
@@ -69,7 +71,7 @@ export interface MovieSearchResultDTO {
 // --- Game session API ---
 
 export const api = {
-  createSession: (body: { start_movie_tmdb_id: number }) =>
+  createSession: (body: { start_movie_tmdb_id: number; name: string }) =>
     apiFetch<GameSessionDTO>("/game/sessions", { method: "POST", body: JSON.stringify(body) }),
 
   getActiveSession: () =>
@@ -109,12 +111,34 @@ export const api = {
   markCurrentWatched: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/mark-current-watched`, { method: "POST" }),
 
-  importCsv: (rows: Array<{ movieName: string; actorName: string; order: number }>) =>
-    apiFetch<GameSessionDTO>("/game/sessions/import-csv", { method: "POST", body: JSON.stringify({ rows }) }),
+  importCsv: (rows: Array<{ movieName: string; actorName: string; order: number }>, name: string) =>
+    apiFetch<GameSessionDTO>("/game/sessions/import-csv", { method: "POST", body: JSON.stringify({ rows, name }) }),
 
   searchMovies: (q: string) =>
     apiFetch<MovieSearchResultDTO[]>(`/movies/search?q=${encodeURIComponent(q)}`),
 
   getWatchedMovies: () =>
     apiFetch<MovieSearchResultDTO[]>("/movies/watched"),
+
+  listSessions: () =>
+    apiFetch<GameSessionDTO[]>("/game/sessions"),
+
+  listArchivedSessions: () =>
+    apiFetch<GameSessionDTO[]>("/game/sessions/archived"),
+
+  archiveSession: (sessionId: number) =>
+    apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/archive`, { method: "POST" }),
+
+  exportCsv: (sessionId: number, sessionName: string) => {
+    fetch(`${BASE}/game/sessions/${sessionId}/export-csv`)
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `chain-${sessionName || sessionId}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
+  },
 }
