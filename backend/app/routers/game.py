@@ -795,6 +795,7 @@ async def request_movie(
 
     # Advance the session's current movie
     session.current_movie_tmdb_id = body.movie_tmdb_id
+    session.current_movie_watched = False
     await db.commit()
 
     # Re-fetch with steps loaded
