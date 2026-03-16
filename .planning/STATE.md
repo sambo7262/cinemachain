@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 03.1-01-PLAN.md — Phase 03.1 Wave 0 test stubs done; ready for 03.1-02 backend implementation
-last_updated: "2026-03-16T04:02:35.172Z"
+status: executing
+stopped_at: Completed 03.1-02-PLAN.md — Backend multi-session support, archive/list/export-csv endpoints, watched_at enrichment, Radarr quality profile fix
+last_updated: "2026-03-16T04:12:32.134Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 45
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # STATE.md — CinemaChain
@@ -25,23 +25,25 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (in progress)
-- **Plan:** Completed 03.1-01 (Wave 0 test stubs)
-- **Status:** In progress — ready for 03.1-02
+- **Plan:** Completed 03.1-02 (Backend implementation — multi-session, archive, export-csv)
+- **Status:** In progress — ready for 03.1-03
 
 ## Progress
 
-`[█████████░] 87%` — 39 of 45 plans complete
+`[█████████░] 89%` — 40 of 45 plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 3.1. UI Improvements and Multi-Session Support | In Progress — 1 of 7 plans done (03.1-01 Wave 0 stubs complete) |
+| 3.1. UI Improvements and Multi-Session Support | In Progress — 2 of 7 plans done (03.1-02 backend complete) |
 | 4. Query Mode | Not started — waiting on Phase 03.1 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.1-02: name required on CreateSessionRequest; partial unique index uq_game_sessions_name_active allows name reuse after archive/end; _build_session_response centralizes response construction with watched_at enrichment
+- **2026-03-16:** 03.1-02: radarr_quality_profile setting (default "HD+") selects quality profile by name with fallback to first profile + warning if named profile not found
 - **2026-03-16:** 03.1-01: Wave 0 test stubs for UI-01 through UI-08 appended to test_game.py — test_create_session_conflict preserved for 03.1-02 to update when multi-session gate is removed
 - **2026-03-15:** 03-29: Full 6-step game loop PASS on live NAS — Phase 3 declared complete; all GAME-01 through GAME-08 requirements satisfied in production; Phase 4 (Query Mode) ready to start
 - **2026-03-16:** 03-28: GAME-04 fix applied — request_movie fires BackgroundTasks pre-fetch for new movie cast; get_eligible_actors has on-demand TMDB fallback (top 20 cast) when DB returns empty; both changes in game.py only; Docker rebuild + NAS deploy + Step 6 re-verify required via 03-29
@@ -179,6 +181,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:02:35.166Z
-Stopped at: Completed 03.1-01-PLAN.md — Phase 03.1 Wave 0 test stubs done; ready for 03.1-02 backend implementation
+Last session: 2026-03-16T04:12:32.128Z
+Stopped at: Completed 03.1-02-PLAN.md — Backend multi-session support, archive/list/export-csv endpoints, watched_at enrichment, Radarr quality profile fix
 Resume with: Begin Phase 4 (Query Mode) — run plan-phase to generate Phase 4 plans covering QUERY-01 through QUERY-07.
