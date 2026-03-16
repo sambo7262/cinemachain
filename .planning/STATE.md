@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-22-PLAN.md
-last_updated: "2026-03-15T00:00:00.000Z"
+stopped_at: Completed 03-23-PLAN.md (partial pass — 03-24 gap-closure required)
+last_updated: "2026-03-16T00:57:36.804Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 32
   completed_plans: 32
 ---
@@ -24,23 +24,25 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 3 — Movie Game (in progress — 03-22 frontend gap-closure complete; Docker rebuild required for NAS verification)
-- **Plan:** Completed 03-22
-- **Status:** 03-22 complete — frontend wired to continueChain endpoint, Radarr fallback added, session homebase page implemented, thumbnails enlarged. Docker rebuild required before NAS verification.
+- **Phase:** Phase 3 — Movie Game (in progress — 03-23 NAS deploy partial pass; 03-24 UX gap-closure required)
+- **Plan:** Completed 03-23 (partial pass)
+- **Status:** 03-23 partial pass — root state machine cycling defect confirmed fixed; session home page UX architecture requires 03-24 gap-closure (Mark as Watched button on home page, Back button from tab view, NavBar routing to home page)
 
 ## Progress
 
-`[██████████] 97%` — 31 of 32 plans complete (03-22 frontend gap-closure done; Docker rebuild + NAS verification remain)
+`[██████████] 100%` — 32 of 32 plans complete (03-23 partial pass documented; 03-24 gap-closure plan required)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | In progress — 03-11 through 03-20 done (partial); 03-21 gap-closure required before Phase 3 closes |
+| 3. Movie Game | In progress — 03-23 partial pass; 03-24 session home page UX gap-closure required before Phase 3 closes |
 | 4. Query Mode | Not started |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03-23: PARTIAL PASS — root state machine cycling defect confirmed fixed (continue-chain no longer reverts UI); UX gap remaining: session home page lacks Mark as Watched button, no Back button from tab view to home page, NavBar does not consistently land on session home page hub
+- **2026-03-15:** 03-23: Two-view session UX architecture confirmed — Session Home Page (permanent hub: current+previous movie, Mark as Watched, Continue the chain) is architecturally distinct from Tab View (Eligible Actors/Movies with Back button); NavBar Sessions always routes to home page
 - **2026-03-15:** 03-22: continueChain must be called instead of resumeSession in handleContinue — resumeSession resets current_movie_watched=False causing state machine cycling defect (users reverted to Mark as Watched state)
 - **2026-03-15:** 03-22: Radarr status fallback reads session.radarr_status from first poll response via useEffect with useRef guard — resolves confirmed NAS location.state delivery failure
 - **2026-03-15:** 03-22: queryClient.setQueryData used in handleContinue to synchronously inject continueChain response — avoids stale poll cycle before next 5s refetch
@@ -114,14 +116,14 @@ progress:
 
 ## Blockers / Concerns
 
-- **[ACTIVE — 03-21 REQUIRED] 03-20 partial pass failures:**
-  1. Radarr notification (GAME-08): `location.state?.radarr_status` not surfacing in UI — frontend not reading it correctly
-  2. Eligible Actors tab: complete data failure — tab never populates; root cause unknown (backend 423 gate still active? query disabled incorrectly?)
-  3. State machine reversion: clicking Continue the chain reverts UI back to Mark as Watched state instead of staying in actor-selection mode
-  4. Sorting (GAME-05): not effective — not all results populated across tabs
-  5. Thumbnail size: Eligible Movies thumbnails too small, need to be bigger
-  6. New requirement: remove Plex webhook integration entirely
-  7. New requirement: session home page after movie confirmation (shows current + previous movie)
+- **[ACTIVE — 03-24 REQUIRED] 03-23 partial pass failures:**
+  1. Session home page missing "Mark as Watched" button — home page renders but primary action absent
+  2. No navigation path from Tab View back to Session Home Page — Back button required
+  3. NavBar Sessions link does not reliably land on session home page hub
+  4. Tests 3/4 (actor dedup, sort, GAME-04 through GAME-07) blocked pending full game loop UX working
+- **[RESOLVED — 03-23] Root state machine cycling defect:** continue-chain endpoint confirmed working; Eligible Actors populates after Continue the chain; no reversion to Mark as Watched
+- **[RESOLVED — 03-23] Plex webhook:** returns 404 as expected
+- **[RESOLVED — 03-23] Thumbnail size:** visibly larger in Eligible Movies tab
 - **[RESOLVED] 03-10 defects 1, 3, 4 fixed by 03-11/03-12:**
   1. Routing: FIXED — Docker `--no-cache` rebuild resolved Phase 1 placeholder at `/`
   3. Eligible movies: FIXED — `_ensure_actor_credits_in_db` fetches filmography on demand; user confirmed 5+ movies populate
@@ -155,6 +157,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-15T00:00:00.000Z
-Stopped at: Completed 03-22-PLAN.md
-Resume with: Docker rebuild (make rebuild) and push updated images to NAS, then run NAS verification for all 03-20 partial-pass defects: (1) Continue the chain stays in actor-selection mode with Eligible Actors populated, (2) Radarr notification surfaces on session page, (3) session homebase appears after movie confirmation, (4) thumbnails visibly larger
+Last session: 2026-03-16T00:57:36.800Z
+Stopped at: Completed 03-23-PLAN.md (partial pass — 03-24 gap-closure required)
+Resume with: Write 03-24-PLAN.md to fix session home page UX: (1) Mark as Watched button on home page when active+!watched, (2) Back button from Tab View to home page, (3) NavBar Sessions always routes to session home page hub, (4) after movie confirmation navigate to home page. Then rebuild Docker images, deploy to NAS, and verify full game loop (actor dedup, sort, GAME-04 through GAME-07).
