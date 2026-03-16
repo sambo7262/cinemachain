@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03.1-08-PLAN.md — GET /sessions/{id}, current_movie_title in GameSessionResponse, _enrich_steps_watched_at GROUP BY dedup
-last_updated: "2026-03-16T04:58:00Z"
+status: completed
+stopped_at: Completed 03.1-09-PLAN.md — frontend gap closure: getSession(id), current_movie_title display, Pause/Resume/End removed, movie badge, Import Chain card
+last_updated: "2026-03-15T04:43:00Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 47
-  completed_plans: 45
+  completed_plans: 46
 ---
 
 # STATE.md — CinemaChain
@@ -25,23 +25,26 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (complete)
-- **Plan:** Completed 03.1-08 (GET /sessions/{id}, current_movie_title, _enrich_steps_watched_at GROUP BY dedup)
+- **Plan:** Completed 03.1-09 (frontend gap closure: getSession(id), current_movie_title display, Pause/Resume/End removed, movie badge, Import Chain card)
 - **Status:** Phase 03.1 complete — Docker rebuild and NAS deploy required; Phase 4 (Query Mode) ready to start
 
 ## Progress
 
-`[██████████] 96%` — 43 of 45 plans complete
+`[██████████] 98%` — 46 of 47 plans complete
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 3.1. UI Improvements and Multi-Session Support | Complete — all 8 plans done (03.1-08: GET /sessions/{id}, current_movie_title, dedup fix) |
+| 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
 | 4. Query Mode | Not started — waiting on Phase 03.1 completion |
 
 ## Recent Decisions
 
+- **2026-03-15:** 03.1-09: getSession(id) added alongside getActiveSession — both kept; getActiveSession still used in NavBar and other contexts
+- **2026-03-15:** 03.1-09: key={defaultTab} on Tabs remounts component to reset active tab — simpler than controlled tab state for Import Chain card pre-selection
+- **2026-03-15:** 03.1-09: pauseMutation/resumeMutation/endMutation removed entirely from GameSession.tsx — dead code elimination after Pause/Resume/End buttons removed
 - **2026-03-16:** 03.1-08: current_movie_title derived from session.steps — no extra DB query; step.movie_title already stored at session creation
 - **2026-03-16:** 03.1-08: GET /sessions/{session_id} placed after static /sessions/active to prevent FastAPI casting string 'active' as integer (422 error)
 - **2026-03-16:** 03.1-08: _enrich_steps_watched_at uses MAX(watched_at) GROUP BY tmdb_id — defensive dedup even though UniqueConstraint currently guarantees one row per tmdb_id
@@ -194,6 +197,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:24:10Z
-Stopped at: Completed 03.1-06-PLAN.md — ArchivedSessions page, NavBar updated, /archived route registered
-Resume with: Execute 03.1-07 (final Phase 03.1 plan), then begin Phase 4 (Query Mode).
+Last session: 2026-03-15T04:43:00Z
+Stopped at: Completed 03.1-09-PLAN.md — frontend gap closure: getSession(id), current_movie_title display, Pause/Resume/End removed, movie badge, Import Chain card
+Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
