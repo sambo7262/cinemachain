@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useParams, useNavigate, useLocation } from "react-router-dom"
+import { useParams, useLocation } from "react-router-dom"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO } from "@/lib/api"
@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils"
 export default function GameSession() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const sid = Number(sessionId)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const location = useLocation()
 
