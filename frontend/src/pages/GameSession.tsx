@@ -13,7 +13,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import { X, Clock, CheckCircle2 } from "lucide-react"
+import { X, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function GameSession() {
@@ -33,7 +33,7 @@ export default function GameSession() {
   const [radarrStatus, setRadarrStatus] = useState<string | null>(
     (location.state as { radarr_status?: string } | null)?.radarr_status ?? null
   )
-  const [showSessionHome, setShowSessionHome] = useState(false)
+  const [view, setView] = useState<"home" | "tabs">("home")
   const radarrFallbackFiredRef = useRef(false)
 
   // Session polling — stops when awaiting_continue
@@ -67,6 +67,14 @@ export default function GameSession() {
       )
     }
   }, [session?.radarr_status])
+
+  // Safety reset: if session reloads while in tab view and status is awaiting_continue,
+  // return to home hub (home hub shows the Continue the chain button).
+  useEffect(() => {
+    if (session && view === "tabs" && session.status === "awaiting_continue") {
+      setView("home")
+    }
+  }, [session?.status])
 
   // Eligible actors for the current movie
   const { data: eligibleActors = [] } = useQuery({
@@ -123,7 +131,7 @@ export default function GameSession() {
       } else if (requestResult?.status === "queued") {
         setRadarrStatus("Added to Radarr queue.")
       }
-      setShowSessionHome(true)
+      setView("home")
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       setMoviesPage(1)
@@ -179,7 +187,7 @@ export default function GameSession() {
     api.continueChain(sid).then((updatedSession) => {
       queryClient.setQueryData(["session", sid], updatedSession)
       setSelectedActor(null)
-      setShowSessionHome(false)
+      setView("tabs")
       setActiveTab("actors")
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleMovies", sid] })
@@ -316,44 +324,17 @@ export default function GameSession() {
               </p>
             )}
 
-            {session.status === "awaiting_continue" && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
-                  <p className="text-green-300">
-                    <span className="font-semibold">{currentMovieTitle}</span> marked as watched!
-                  </p>
-                </div>
-                <Button
-                  onClick={handleContinue}
-                  className="bg-green-700 hover:bg-green-600"
-                  size="sm"
-                >
-                  Continue the chain
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Session home page — shown after movie confirmation */}
-        {showSessionHome && session && (() => {
+        {/* Session home page — permanent hub, shown when view === "home" */}
+        {view === "home" && session && (() => {
           const sortedSteps = [...session.steps].sort((a, b) => b.step_order - a.step_order)
           const currentStep = sortedSteps[0]
           const previousStep = sortedSteps.find(s => s.movie_title && s !== currentStep)
           return (
             <div className="rounded-lg border border-border bg-card px-6 py-5 flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-foreground">Session homebase</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground text-xs"
-                  onClick={() => setShowSessionHome(false)}
-                >
-                  Back to chain
-                </Button>
-              </div>
+              <h2 className="text-base font-semibold text-foreground">Now playing</h2>
 
               {/* Current movie */}
               <div className="flex flex-col gap-1">
@@ -361,7 +342,11 @@ export default function GameSession() {
                 <p className="text-lg font-bold text-foreground">
                   {currentStep?.movie_title ?? `Movie ${session.current_movie_tmdb_id}`}
                 </p>
-                <p className="text-sm text-muted-foreground">Added to Radarr. Watch it, then mark as watched to continue the chain.</p>
+                <p className="text-sm text-muted-foreground">
+                  {isStartingMovie
+                    ? "Watch this movie, then mark it as watched to start the chain."
+                    : "Added to Radarr. Watch it, then mark as watched to continue the chain."}
+                </p>
               </div>
 
               {/* Previous movie (shown only when chain has 2+ movies) */}
@@ -372,12 +357,23 @@ export default function GameSession() {
                 </div>
               )}
 
+              {/* Continue the chain CTA — shown when movie has been watched */}
+              {session.status === "awaiting_continue" && (
+                <Button
+                  onClick={() => {
+                    handleContinue()
+                  }}
+                  className="w-full bg-green-700 hover:bg-green-600"
+                >
+                  Continue the chain
+                </Button>
+              )}
+
               {/* Mark as Watched CTA */}
               {session.status === "active" && !isWatched && (
                 <Button
                   onClick={() => {
                     markWatchedMutation.mutate()
-                    setShowSessionHome(false)
                   }}
                   disabled={markWatchedMutation.isPending}
                   className="w-full"
@@ -417,8 +413,22 @@ export default function GameSession() {
           </div>
         )}
 
-        {/* Two-tab panel */}
-        <Tabs
+        {/* Back button — returns to Session Home Page hub */}
+        {view === "tabs" && (
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground pl-0"
+              onClick={() => setView("home")}
+            >
+              ← Back to session
+            </Button>
+          </div>
+        )}
+
+        {/* Two-tab panel — only shown when in tabs view */}
+        {view === "tabs" && <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "actors" | "movies")}
           className="flex-1"
@@ -612,7 +622,7 @@ export default function GameSession() {
               </>
             )}
           </TabsContent>
-        </Tabs>
+        </Tabs>}
       </div>
     </div>
   )
