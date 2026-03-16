@@ -8,12 +8,10 @@ from app.db import engine
 from app.routers import health
 from app.routers import movies as movies_router
 from app.routers import actors as actors_router
-from app.routers import plex as plex_router
 from app.routers import debug as debug_router
 from app.routers import game as game_router
 from app.services.tmdb import TMDBClient
 from app.services.radarr import RadarrClient
-from app.services.plex import sync_on_startup
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -36,9 +34,6 @@ async def lifespan(app: FastAPI):
     app.state.radarr_client = radarr_client
     logger.info("RadarrClient initialized")
 
-    # 4. Plex startup library sync (non-fatal if Plex is unreachable)
-    await sync_on_startup(settings.plex_url, settings.plex_token)
-
     yield
 
     # Shutdown
@@ -52,6 +47,5 @@ app = FastAPI(title="CinemaChain", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(movies_router.router)
 app.include_router(actors_router.router)
-app.include_router(plex_router.router)
 app.include_router(debug_router.router)
 app.include_router(game_router.router)
