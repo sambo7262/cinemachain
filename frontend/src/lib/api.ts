@@ -72,7 +72,7 @@ export interface MovieSearchResultDTO {
 // --- Game session API ---
 
 export const api = {
-  createSession: (body: { start_movie_tmdb_id: number; name: string }) =>
+  createSession: (body: { start_movie_tmdb_id: number; name: string; start_movie_title?: string }) =>
     apiFetch<GameSessionDTO>("/game/sessions", { method: "POST", body: JSON.stringify(body) }),
 
   getActiveSession: () =>

@@ -57,6 +57,7 @@ class GameSessionResponse(BaseModel):
 class CreateSessionRequest(BaseModel):
     start_movie_tmdb_id: int
     name: str                              # NEW — required
+    start_movie_title: str | None = None   # title from frontend (avoids DB lookup miss)
 
 
 class CSVRow(BaseModel):
@@ -355,12 +356,15 @@ async def create_session(
     if name_check.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Session name already in use")
 
-    # Look up movie title from DB if available
-    movie_result = await db.execute(
-        select(Movie).where(Movie.tmdb_id == body.start_movie_tmdb_id)
-    )
-    movie = movie_result.scalar_one_or_none()
-    movie_title = movie.title if movie else None
+    # Prefer title from request body (frontend always knows it); fall back to DB lookup
+    if body.start_movie_title:
+        movie_title = body.start_movie_title
+    else:
+        movie_result = await db.execute(
+            select(Movie).where(Movie.tmdb_id == body.start_movie_tmdb_id)
+        )
+        movie = movie_result.scalar_one_or_none()
+        movie_title = movie.title if movie else None
 
     session = GameSession(
         status="active",
@@ -967,11 +971,19 @@ async def pick_actor(
     if body.actor_tmdb_id in picked_ids:
         raise HTTPException(status_code=409, detail="Actor already picked in this session")
 
+    # Resolve current movie title from existing steps (for the actor-pick step record)
+    current_title: str | None = None
+    for s in session.steps:
+        if s.movie_tmdb_id == session.current_movie_tmdb_id and s.movie_title:
+            current_title = s.movie_title
+            break
+
     next_order = max((s.step_order for s in session.steps), default=-1) + 1
     new_step = GameSessionStep(
         session_id=session.id,
         step_order=next_order,
         movie_tmdb_id=session.current_movie_tmdb_id,
+        movie_title=current_title,
         actor_tmdb_id=body.actor_tmdb_id,
         actor_name=body.actor_name,
     )

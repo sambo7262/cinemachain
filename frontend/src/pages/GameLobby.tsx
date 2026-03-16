@@ -131,8 +131,8 @@ export default function GameLobby() {
 
   // Create session mutation
   const createMutation = useMutation({
-    mutationFn: (tmdb_id: number) =>
-      api.createSession({ start_movie_tmdb_id: tmdb_id, name: sessionName.trim() }),
+    mutationFn: ({ tmdb_id, title }: { tmdb_id: number; title?: string }) =>
+      api.createSession({ start_movie_tmdb_id: tmdb_id, name: sessionName.trim(), start_movie_title: title }),
     onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
       navigate(`/game/${session.id}`, { state: { radarr_status: session.radarr_status ?? null } })
@@ -313,7 +313,7 @@ export default function GameLobby() {
                         key={movie.tmdb_id}
                         {...movie}
                         watched
-                        onClick={() => createMutation.mutate(movie.tmdb_id)}
+                        onClick={() => createMutation.mutate({ tmdb_id: movie.tmdb_id, title: movie.title })}
                         selectable={!createMutation.isPending}
                       />
                     ))}
@@ -350,7 +350,7 @@ export default function GameLobby() {
                       <MovieCard
                         key={movie.tmdb_id}
                         {...movie}
-                        onClick={() => createMutation.mutate(movie.tmdb_id)}
+                        onClick={() => createMutation.mutate({ tmdb_id: movie.tmdb_id, title: movie.title })}
                         selectable={!createMutation.isPending}
                       />
                     ))}
