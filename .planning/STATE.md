@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Concession loading messages, CSV direct TMDB ID input, and explicit current_movie_watched=False in import complete; Docker rebuild + NAS deploy required for backend changes
-stopped_at: Completed 03.2-18-PLAN.md
-last_updated: "2026-03-17T06:13:29.012Z"
+status: Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
+stopped_at: Completed 03.2-22-PLAN.md
+last_updated: "2026-03-17T14:55:34.912Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 66
-  completed_plans: 63
+  total_plans: 71
+  completed_plans: 68
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-18 (concession loading messages, CSV direct TMDB ID input, import last-row fix)
-- **Status:** Concession loading messages, CSV direct TMDB ID input, and explicit current_movie_watched=False in import complete; Docker rebuild + NAS deploy required for backend changes
+- **Plan:** Completed 03.2-21 (TMDB enrichment guard — combined-view eligible movies 504 fix)
+- **Status:** Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
 
 ## Progress
 
-`[█████████░] 93%` — 57 of 61 plans complete (2 open issues require follow-up plans)
+`[█████████░] 94%` — 67 of 71 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -43,6 +43,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-22: staleTime: 0 added to session query in GameSession.tsx — cached current_movie_watched: true was hiding Mark as Watched button after navigate-away and return; zero staleTime forces immediate refetch before render-critical button condition evaluates
+- **2026-03-17:** 03.2-22: ChainHistory already correctly guarded by session.steps.length > 0 — no separate Watch History TabsTrigger exists; no change needed for Fix 3
+- **2026-03-17:** 03.2-21: Both TMDB enrichment blocks merged under single `if actor_id is not None and hasattr(...)` guard — eliminates duplicate hasattr checks and makes combined-view vs actor-scoped branching explicit; combined-view returns immediately from DB cache avoiding NAS 504 timeouts
 - **2026-03-16:** 03.2-18: useLoadingMessages returns string|null (not empty string); GameSession actors+movies and GameLobby CSV import use it; showMoviesSpinner state+useEffect removed entirely
 - **2026-03-16:** 03.2-18: Direct TMDB ID input in CSV validation report placed outside u.suggestions conditional so it appears for both suggestion and no-result rows; calls handleOverridePick same as suggestion buttons
 - **2026-03-16:** 03.2-18: import_csv_session sets current_movie_watched=False explicitly to document intent that last CSV row is in-progress (not yet watched)
@@ -235,6 +238,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T06:13:29.007Z
-Stopped at: Completed 03.2-18-PLAN.md
+Last session: 2026-03-17T14:55:34.903Z
+Stopped at: Completed 03.2-22-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
