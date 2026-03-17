@@ -128,7 +128,7 @@ Plans:
   3. Ineligible actors are always visible below eligible actors (no toggle)
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
-**Plans:** 21/24 plans executed
+**Plans:** 21/27 plans executed
 
 Plans:
 - [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
@@ -155,7 +155,9 @@ Plans:
 - [ ] 03.2-22-PLAN.md — Wave 1 (gap-closure round 4): Frontend — staleTime: 0 on session query; suppress empty-state during fetch; concession rotation 2s→3s
 - [ ] 03.2-23-PLAN.md — Wave 1 (gap-closure round 4): Backend — CSV import creates WatchEvent records for all prior steps so session counters reflect full chain history
 - [ ] 03.2-24-PLAN.md — Wave 2 (gap-closure round 4): Docker rebuild + NAS deploy + human verify all 9 tests + regression check
-
+- [ ] 03.2-25-PLAN.md — Wave 3 (gap-closure round 5): Backend — _ensure_movie_cast_in_db Movie stub upsert + import_csv_session BackgroundTasks pre-fetch
+- [ ] 03.2-26-PLAN.md — Wave 3 (gap-closure round 5): Frontend — session home dead state fix: Continue the chain button covers active+isWatched state
+- [ ] 03.2-27-PLAN.md — Wave 4 (gap-closure round 5): Docker rebuild + NAS deploy + human verify 3 new tests + 9 regression checks
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
 **Depends on:** Phase 2
@@ -179,7 +181,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 21/24 | In Progress|  |
+| 03.2. Game UX Enhancements | 21/27 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
