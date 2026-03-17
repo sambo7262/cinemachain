@@ -24,9 +24,9 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements ✅ COMPLETE
-- **Plan:** Completed 03.2-31 (final verify — all 12 NAS tests passing)
-- **Status:** Phase 03.2 complete. SP-1 (South Park 0 eligible actors) resolved via fetched_at NOT NULL fix + credits.character[:255] truncation. Ready for Phase 4.
+- **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (not started)
+- **Plan:** None yet — ready to plan
+- **Status:** Phase 03.2 complete. Phase 4 scope confirmed: nightly TMDB cache, UI polish (Radarr notification, thumbnails, image coverage), delete last step, delete archived sessions.
 
 ## Progress
 
@@ -39,7 +39,8 @@ progress:
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
 | 3.2. Game UX Enhancements | Complete — all 31 plans done; SP-1 South Park regression resolved (2026-03-17); all 12 NAS tests passing |
-| 4. Query Mode | Not started — waiting on Phase 03.2 completion |
+| 4. Caching, UI/UX Polish, Session Mgmt | Not started — next phase |
+| 5. Production Deployment | Not started |
 
 ## Recent Decisions
 

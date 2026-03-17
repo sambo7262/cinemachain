@@ -14,7 +14,8 @@
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
 - [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
-- [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
+- [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
+- [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
 
@@ -158,17 +159,28 @@ Plans:
 - [ ] 03.2-25-PLAN.md — Wave 3 (gap-closure round 5): Backend — _ensure_movie_cast_in_db Movie stub upsert + import_csv_session BackgroundTasks pre-fetch
 - [ ] 03.2-26-PLAN.md — Wave 3 (gap-closure round 5): Frontend — session home dead state fix: Continue the chain button covers active+isWatched state
 - [ ] 03.2-27-PLAN.md — Wave 4 (gap-closure round 5): Docker rebuild + NAS deploy + human verify 3 new tests + 9 regression checks
-### Phase 4: Query Mode
-**Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
-**Depends on:** Phase 2
-**Requirements:** QUERY-01, QUERY-02, QUERY-03, QUERY-04, QUERY-05, QUERY-06, QUERY-07
+### Phase 4: Caching, UI/UX Polish, and Session Management
+**Goal:** Eliminate all on-demand TMDB calls through nightly pre-population, polish the UI so images and notifications render correctly throughout the session journey, and add session management actions (delete last step, delete archived sessions).
+**Depends on:** Phase 03.2
+**Requirements:** CACHE-01, CACHE-02, UX-06, UX-07, UX-08, UX-09, SESSION-01, SESSION-02
 **Success Criteria** (what must be TRUE):
-  1. Searching by actor name returns that actor's full filmography from TMDB
-  2. Searching by movie or TV show title returns a matching result the user can inspect and request
-  3. Browsing by genre or keyword returns a list of relevant results
-  4. Results can be sorted by genre, rating, or year; user can toggle to hide already-watched items
-  5. Selecting a movie from search results triggers a Radarr request
-  6. Selecting a TV show from search results triggers a Sonarr request
+  1. A nightly job pre-populates the top ~5000 movies by vote count so no mainstream film triggers an on-demand TMDB call during gameplay
+  2. Movie stubs from CSV import have runtime and genre data populated (lazy enrichment closes this gap)
+  3. Radarr notification appears in a consistent, unobtrusive position and does not overlap game controls
+  4. Session home page displays the active movie's poster thumbnail
+  5. Actor and movie images load correctly at every step of the session journey (actor grid, movie grid, chain history)
+  6. User can delete the last step of a session to go one move backwards
+  7. Archived sessions can be permanently deleted from the DB (removes test/invalid sessions)
+**Plans:** TBD
+
+### Phase 5: Production Deployment
+**Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
+**Depends on:** Phase 4
+**Requirements:** PROD-01, PROD-02, PROD-03
+**Success Criteria** (what must be TRUE):
+  1. All secrets (API keys, DB password, Plex token) are loaded exclusively from a .env file; .env.example documents every variable with description and no real values
+  2. Docker Compose yaml is clean, annotated, and deployable by a user following a README setup guide
+  3. A security review confirms no credentials in images, no open ports beyond what's required, and no hardcoded values in source
 **Plans:** TBD
 
 ---
@@ -177,12 +189,13 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 1/4 | In Progress|  |
-| 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
-| 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
-| 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 26/29 | In Progress|  |
-| 4. Query Mode | 0/? | Not started | — |
+| 1. Infrastructure | 1/4 | In Progress |  |
+| 2. Data Foundation | 5/5 | Complete | 2026-03-15 |
+| 3. Movie Game | 29/29 | Complete | 2026-03-16 |
+| 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
+| 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
+| 4. Caching, UI/UX Polish, Session Mgmt | 0/? | Not started | — |
+| 5. Production Deployment | 0/? | Not started | — |
 
 ---
 
@@ -221,15 +234,19 @@ Plans:
 | UX-03 | Phase 03.2 |
 | UX-04 | Phase 03.2 |
 | UX-05 | Phase 03.2 |
-| QUERY-01 | Phase 4 |
-| QUERY-02 | Phase 4 |
-| QUERY-03 | Phase 4 |
-| QUERY-04 | Phase 4 |
-| QUERY-05 | Phase 4 |
-| QUERY-06 | Phase 4 |
-| QUERY-07 | Phase 4 |
+| CACHE-01 | Phase 4 |
+| CACHE-02 | Phase 4 |
+| UX-06 | Phase 4 |
+| UX-07 | Phase 4 |
+| UX-08 | Phase 4 |
+| UX-09 | Phase 4 |
+| SESSION-01 | Phase 4 |
+| SESSION-02 | Phase 4 |
+| PROD-01 | Phase 5 |
+| PROD-02 | Phase 5 |
+| PROD-03 | Phase 5 |
 
-**Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements + 5 Phase 03.2 UX requirements
+**Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements + 5 Phase 03.2 UX requirements + 8 Phase 4 requirements + 3 Phase 5 requirements
 
 ---
 
@@ -276,4 +293,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 03.2 gap closure round 4: plans 20 (batch actor credits), 21 (combined-view TMDB skip), 22 (Mark as Watched staleTime + UX), 23 (CSV WatchEvent prior steps), 24 (Docker rebuild + verify) added*
+*Last updated: 2026-03-17 — Phase 4 redefined as Caching/UI/UX Polish/Session Management; Phase 5 added for Production Deployment; Query Mode removed from v1.0 scope; Phase 03.2 marked complete (31/31 plans)*
