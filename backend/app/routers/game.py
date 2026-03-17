@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import csv
+import sqlalchemy as sa
 from datetime import datetime as _datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -32,20 +33,24 @@ class StepResponse(BaseModel):
     movie_title: str | None
     actor_tmdb_id: int | None
     actor_name: str | None
-    watched_at: _datetime | None = None   # NEW — joined from WatchEvent at query time
+    watched_at: _datetime | None = None   # joined from WatchEvent at query time
+    poster_path: str | None = None        # NEW — from Movie.poster_path
+    profile_path: str | None = None       # NEW — from Actor.profile_path
 
     model_config = {"from_attributes": True}
 
 
 class GameSessionResponse(BaseModel):
     id: int
-    name: str = ""                         # NEW
+    name: str = ""
     status: str
     current_movie_tmdb_id: int
     current_movie_watched: bool = False
     steps: list[StepResponse]
     radarr_status: str | None = None
-    current_movie_title: str | None = None    # NEW — title of current movie from Movie table
+    current_movie_title: str | None = None    # title of current movie from Movie table
+    watched_count: int = 0                    # NEW — count of watched movie steps
+    watched_runtime_minutes: int = 0          # NEW — sum of runtime for watched movie steps
 
     model_config = {"from_attributes": True}
 
@@ -114,14 +119,91 @@ async def _enrich_steps_watched_at(
     return {row.tmdb_id: row.watched_at for row in result.all()}
 
 
+async def _enrich_steps_thumbnails(
+    steps: list[GameSessionStep], db: AsyncSession
+) -> tuple[dict[int, str | None], dict[int, str | None]]:
+    """Return (movie_tmdb_id->poster_path, actor_tmdb_id->profile_path) for chain history display."""
+    movie_tmdb_ids = [s.movie_tmdb_id for s in steps]
+    actor_tmdb_ids = [s.actor_tmdb_id for s in steps if s.actor_tmdb_id is not None]
+
+    poster_map: dict[int, str | None] = {}
+    profile_map: dict[int, str | None] = {}
+
+    if movie_tmdb_ids:
+        m_rows = await db.execute(
+            select(Movie.tmdb_id, Movie.poster_path).where(Movie.tmdb_id.in_(movie_tmdb_ids))
+        )
+        poster_map = {row.tmdb_id: row.poster_path for row in m_rows.all()}
+
+    if actor_tmdb_ids:
+        a_rows = await db.execute(
+            select(Actor.tmdb_id, Actor.profile_path).where(Actor.tmdb_id.in_(actor_tmdb_ids))
+        )
+        profile_map = {row.tmdb_id: row.profile_path for row in a_rows.all()}
+
+    return poster_map, profile_map
+
+
+async def _enrich_steps_runtime(
+    steps: list[GameSessionStep], db: AsyncSession
+) -> dict[int, int | None]:
+    """Return movie_tmdb_id->runtime for all steps (for session counter calculation)."""
+    movie_tmdb_ids = list({s.movie_tmdb_id for s in steps})
+    if not movie_tmdb_ids:
+        return {}
+    rows = await db.execute(
+        select(Movie.tmdb_id, Movie.runtime).where(Movie.tmdb_id.in_(movie_tmdb_ids))
+    )
+    return {row.tmdb_id: row.runtime for row in rows.all()}
+
+
+async def _fetch_mpaa_rating(
+    tmdb_id: int,
+    tmdb: TMDBClient,
+    db: AsyncSession,
+) -> str:
+    """Fetch MPAA (US certification) from TMDB /movie/{id}/release_dates and cache on Movie row.
+
+    Returns the certification string (e.g. "PG-13", "R") or "" if no US cert found.
+    Stores "" as the sentinel for "fetched, no cert" so re-fetch is never triggered again.
+    Errors are swallowed — caller treats missing mpaa_rating as NR in the UI.
+    """
+    try:
+        r = await tmdb._client.get(f"/movie/{tmdb_id}/release_dates")
+        r.raise_for_status()
+        results = r.json().get("results", [])
+        cert = ""
+        for country in results:
+            if country.get("iso_3166_1") == "US":
+                for rd in country.get("release_dates", []):
+                    c = rd.get("certification", "")
+                    if c:
+                        cert = c
+                        break
+                break
+        # Store cert (or "" for "checked, no US cert") — None means "never fetched"
+        await db.execute(
+            sa.update(Movie).where(Movie.tmdb_id == tmdb_id).values(mpaa_rating=cert)
+        )
+        await db.commit()
+        return cert
+    except Exception:
+        return ""
+
+
 def _build_session_response(
     session: GameSession,
     watched_at_map: dict[int, _datetime] | None = None,
     radarr_status: str | None = None,
-    current_movie_title: str | None = None,    # NEW parameter
+    current_movie_title: str | None = None,
+    poster_map: dict[int, str | None] | None = None,
+    profile_map: dict[int, str | None] | None = None,
+    runtime_map: dict[int, int | None] | None = None,
 ) -> GameSessionResponse:
-    """Build GameSessionResponse with watched_at enrichment on each step."""
+    """Build GameSessionResponse with watched_at, thumbnail, and counter enrichment on each step."""
     steps = []
+    watched_count = 0
+    watched_runtime_minutes = 0
     for s in session.steps:
         wa = (watched_at_map or {}).get(s.movie_tmdb_id)
         steps.append(StepResponse(
@@ -131,7 +213,15 @@ def _build_session_response(
             actor_tmdb_id=s.actor_tmdb_id,
             actor_name=s.actor_name,
             watched_at=wa,
+            poster_path=(poster_map or {}).get(s.movie_tmdb_id),
+            profile_path=(profile_map or {}).get(s.actor_tmdb_id) if s.actor_tmdb_id else None,
         ))
+        # Accumulate counters: movie steps (actor_tmdb_id IS NULL) that are watched
+        if s.actor_tmdb_id is None and wa is not None:
+            watched_count += 1
+            runtime = (runtime_map or {}).get(s.movie_tmdb_id)
+            if runtime is not None:
+                watched_runtime_minutes += runtime
     return GameSessionResponse(
         id=session.id,
         name=session.name,
@@ -140,7 +230,9 @@ def _build_session_response(
         current_movie_watched=session.current_movie_watched,
         steps=steps,
         radarr_status=radarr_status,
-        current_movie_title=current_movie_title,    # NEW
+        current_movie_title=current_movie_title,
+        watched_count=watched_count,
+        watched_runtime_minutes=watched_runtime_minutes,
     )
 
 
@@ -204,8 +296,15 @@ async def _ensure_actor_credits_in_db(
             year=int(credit_data["release_date"][:4]) if credit_data.get("release_date") else None,
             poster_path=credit_data.get("poster_path"),
             vote_average=credit_data.get("vote_average"),
+            vote_count=credit_data.get("vote_count"),
             genres=None,
-        ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+        ).on_conflict_do_update(
+            index_elements=["tmdb_id"],
+            set_={
+                "vote_count": credit_data.get("vote_count"),
+                "vote_average": credit_data.get("vote_average"),
+            }
+        )
         await db.execute(movie_stmt)
     await db.commit()
 
@@ -478,7 +577,13 @@ async def get_active_session(db: AsyncSession = Depends(get_db)):
     if session is None:
         return None
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
+    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    runtime_map = await _enrich_steps_runtime(session.steps, db)
+    return _build_session_response(
+        session, wa_map,
+        current_movie_title=_resolve_current_movie_title(session),
+        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map,
+    )
 
 
 @router.get("/sessions/{session_id}", response_model=GameSessionResponse)
@@ -497,8 +602,12 @@ async def get_session_by_id(session_id: int, db: AsyncSession = Depends(get_db))
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     wa_map = await _enrich_steps_watched_at(session.steps, db)
+    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    runtime_map = await _enrich_steps_runtime(session.steps, db)
     return _build_session_response(
-        session, wa_map, current_movie_title=_resolve_current_movie_title(session)
+        session, wa_map,
+        current_movie_title=_resolve_current_movie_title(session),
+        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map,
     )
 
 
@@ -755,9 +864,14 @@ async def _request_radarr(tmdb_id: int, radarr: RadarrClient) -> dict:
 async def get_eligible_actors(
     session_id: int,
     request: Request,
+    include_ineligible: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return actors from the session's current movie, excluding already-picked actors."""
+    """Return actors from the session's current movie.
+
+    When include_ineligible=False (default), excludes already-picked actors.
+    When include_ineligible=True, returns all cast with an is_eligible flag.
+    """
     result = await db.execute(
         select(GameSession)
         .where(GameSession.id == session_id)
@@ -778,6 +892,7 @@ async def get_eligible_actors(
 
     # Collect already-picked actor tmdb_ids from steps
     picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
+    picked_set = set(picked_ids)
 
     # SQL join: Credit -> Actor + Movie, filter by current movie
     stmt = (
@@ -786,18 +901,21 @@ async def get_eligible_actors(
         .join(Movie, Movie.id == Credit.movie_id)
         .where(Movie.tmdb_id == session.current_movie_tmdb_id)
     )
-    if picked_ids:
+    if picked_ids and not include_ineligible:
         stmt = stmt.where(Actor.tmdb_id.not_in(picked_ids))
 
     rows = await db.execute(stmt)
     actors = []
     for actor, credit in rows.all():
-        actors.append({
+        actor_dict = {
             "tmdb_id": actor.tmdb_id,
             "name": actor.name,
             "profile_path": actor.profile_path,
             "character": credit.character,
-        })
+        }
+        if include_ineligible:
+            actor_dict["is_eligible"] = actor.tmdb_id not in picked_set
+        actors.append(actor_dict)
 
     # On-demand fallback: if the background pre-fetch has not completed yet,
     # synchronously fetch the current movie's cast and populate credits so the
@@ -818,12 +936,15 @@ async def get_eligible_actors(
         # Re-run the same query now that credits may be populated
         rows2 = await db.execute(stmt)
         for actor, credit in rows2.all():
-            actors.append({
+            actor_dict = {
                 "tmdb_id": actor.tmdb_id,
                 "name": actor.name,
                 "profile_path": actor.profile_path,
                 "character": credit.character,
-            })
+            }
+            if include_ineligible:
+                actor_dict["is_eligible"] = actor.tmdb_id not in picked_set
+            actors.append(actor_dict)
 
     return actors
 
@@ -891,6 +1012,8 @@ async def get_eligible_movies(
                     "year": movie.year,
                     "poster_path": movie.poster_path,
                     "vote_average": movie.vote_average,
+                    "vote_count": movie.vote_count,
+                    "mpaa_rating": movie.mpaa_rating,
                     "genres": movie.genres,
                     "runtime": movie.runtime,
                     "watched": movie.tmdb_id in watched_ids,
@@ -935,6 +1058,8 @@ async def get_eligible_movies(
                         "year": movie.year,
                         "poster_path": movie.poster_path,
                         "vote_average": movie.vote_average,
+                        "vote_count": movie.vote_count,
+                        "mpaa_rating": movie.mpaa_rating,
                         "genres": movie.genres,
                         "runtime": movie.runtime,
                         "watched": movie.tmdb_id in watched_ids,
@@ -942,15 +1067,31 @@ async def get_eligible_movies(
                         "via_actor_name": actor.name,
                     }
 
+    # Fetch mpaa_rating on-demand for movies where it has never been fetched (mpaa_rating is None)
+    # Sequential fetch is acceptable — cold start only; subsequent requests use cached value.
+    if hasattr(request.app.state, "tmdb_client"):
+        _tmdb = request.app.state.tmdb_client
+        for mid, m in movies_map.items():
+            if m.get("mpaa_rating") is None:
+                cert = await _fetch_mpaa_rating(mid, _tmdb, db)
+                m["mpaa_rating"] = cert
+
     movies = list(movies_map.values())
 
     # Filter: default only unwatched
     if not all_movies:
         movies = [m for m in movies if not m["watched"]]
 
+    VOTE_FLOOR = 500
+
+    def _effective_rating(m: dict) -> float | None:
+        if m.get("vote_count") is None or m["vote_count"] < VOTE_FLOOR:
+            return None
+        return m.get("vote_average")
+
     # Sort
     if sort == "rating":
-        movies.sort(key=lambda m: (m["vote_average"] is None, -(m["vote_average"] or 0)))
+        movies.sort(key=lambda m: (_effective_rating(m) is None, -(_effective_rating(m) or 0)))
     elif sort == "runtime":
         movies.sort(key=lambda m: (m["runtime"] is None, m["runtime"] or 0))
     elif sort == "genre":
