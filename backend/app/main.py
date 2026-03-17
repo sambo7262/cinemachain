@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from sqlalchemy import text
 
@@ -10,6 +12,7 @@ from app.routers import movies as movies_router
 from app.routers import actors as actors_router
 from app.routers import debug as debug_router
 from app.routers import game as game_router
+from app.services.cache import nightly_cache_job
 from app.services.tmdb import TMDBClient
 from app.services.radarr import RadarrClient
 from app.settings import settings
@@ -38,9 +41,28 @@ async def lifespan(app: FastAPI):
     app.state.radarr_client = radarr_client
     logger.info("RadarrClient initialized")
 
+    # 4. Start APScheduler for nightly TMDB cache job
+    cache_time_parts = settings.tmdb_cache_time.split(":")
+    cache_hour = int(cache_time_parts[0])
+    cache_minute = int(cache_time_parts[1])
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        nightly_cache_job,
+        trigger=CronTrigger(hour=cache_hour, minute=cache_minute, timezone="UTC"),
+        kwargs={"tmdb": tmdb_client, "top_n": settings.tmdb_cache_top_n},
+        id="nightly_tmdb_cache",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    scheduler.start()
+    app.state.scheduler = scheduler
+    logger.info("APScheduler started — nightly cache at %02d:%02d UTC", cache_hour, cache_minute)
+
     yield
 
     # Shutdown
+    scheduler.shutdown(wait=False)
     await tmdb_client.close()
     await radarr_client.close()
     await engine.dispose()
