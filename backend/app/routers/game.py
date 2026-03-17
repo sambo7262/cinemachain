@@ -1502,3 +1502,82 @@ async def request_movie(
         "status": radarr_result["status"],
         "session": _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session)),
     }
+
+
+@router.delete("/sessions/{session_id}/steps/last", response_model=GameSessionResponse)
+async def delete_last_step(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """SESSION-01: Remove the most recent step and revert session to the previous movie.
+
+    Blocked when only 1 step remains (the starting movie cannot be removed).
+    No Radarr cancellation — the Radarr request stays in queue regardless.
+    """
+    session = await db.get(GameSession, session_id, options=[selectinload(GameSession.steps)])
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    steps = sorted(session.steps, key=lambda s: s.step_order)
+    if len(steps) <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete the starting movie step. At least one step must remain.",
+        )
+
+    last_step = steps[-1]
+    await db.delete(last_step)
+
+    # Revert session state to previous step
+    prev_step = steps[-2]
+    session.current_movie_tmdb_id = prev_step.movie_tmdb_id
+    session.current_movie_watched = False  # revert to unwatched so home page CTA appears
+
+    # If session was awaiting_continue, revert to active so it is playable again
+    if session.status == "awaiting_continue":
+        session.status = "active"
+
+    await db.commit()
+
+    # Re-fetch with steps for response building
+    refreshed = await db.get(GameSession, session_id, options=[selectinload(GameSession.steps)])
+    watched_at_map = await _enrich_steps_watched_at(refreshed.steps, db)
+    poster_map, profile_map = await _enrich_steps_thumbnails(refreshed.steps, db)
+    runtime_map = await _enrich_steps_runtime(refreshed.steps, db)
+    return _build_session_response(
+        refreshed,
+        watched_at_map=watched_at_map,
+        current_movie_title=_resolve_current_movie_title(refreshed),
+        poster_map=poster_map,
+        profile_map=profile_map,
+        runtime_map=runtime_map,
+    )
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_archived_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """SESSION-02: Permanently remove an archived session and all its steps from the DB.
+
+    Only permitted when session.status == 'archived'. Active/paused sessions are protected.
+    """
+    session = await db.get(GameSession, session_id, options=[selectinload(GameSession.steps)])
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.status != "archived":
+        raise HTTPException(
+            status_code=403,
+            detail="Only archived sessions can be deleted. Archive the session first.",
+        )
+
+    # Delete all steps first (foreign key safety)
+    for step in session.steps:
+        await db.delete(step)
+    await db.flush()
+
+    await db.delete(session)
+    await db.commit()
+    # 204 No Content — FastAPI returns empty body automatically
