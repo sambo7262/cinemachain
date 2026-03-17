@@ -31,11 +31,20 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
                 <tr>
                   <td className="px-3 py-2 text-muted-foreground text-xs">{i + 1}</td>
                   <td className="px-3 py-2">
-                    <div className="w-10 h-14 rounded bg-muted flex items-center justify-center text-muted-foreground">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
-                      </svg>
-                    </div>
+                    {step.poster_path ? (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w92${step.poster_path}`}
+                        alt={step.movie_title ?? "Movie poster"}
+                        className="w-10 h-14 rounded object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                      />
+                    ) : (
+                      <div className="w-10 h-14 rounded bg-muted flex items-center justify-center text-muted-foreground" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                        </svg>
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 font-medium">
                     {step.movie_title ?? "(untitled)"}
@@ -51,9 +60,18 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
                   <tr className="bg-muted/20">
                     <td className="px-3 py-2 text-muted-foreground text-xs"></td>
                     <td className="px-3 py-2">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                        {actorStep.actor_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                      </div>
+                      {actorStep.profile_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w45${actorStep.profile_path}`}
+                          alt={actorStep.actor_name ?? "Actor"}
+                          className="w-7 h-7 rounded-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground" aria-hidden="true">
+                          {actorStep.actor_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground italic" colSpan={2}>
                       {actorStep.actor_name}
