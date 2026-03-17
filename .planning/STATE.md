@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
-stopped_at: Completed 03.2-20-PLAN.md
-last_updated: "2026-03-17T14:57:05.249Z"
+status: Dead state in session home eliminated — active+isWatched now shows Continue the chain button; navigates to actor selection tab without a backend call; no Docker rebuild required (frontend-only)
+stopped_at: Completed 03.2-26-PLAN.md
+last_updated: "2026-03-17T19:02:42.600Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 71
-  completed_plans: 69
+  total_plans: 74
+  completed_plans: 70
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-23 (WatchEvent batch-insert for CSV import prior movie steps)
-- **Status:** CSV import now creates WatchEvent records for all prior chain movies (source="csv_import"); session watched_count and watched_runtime_minutes correct immediately after import; Docker rebuild + NAS deploy required to activate
+- **Plan:** Completed 03.2-26 (dead state fix — Continue the chain button covers active+isWatched)
+- **Status:** Dead state in session home eliminated — active+isWatched now shows Continue the chain button; navigates to actor selection tab without a backend call; no Docker rebuild required (frontend-only)
 
 ## Progress
 
-`[██████████] 96%` — 68 of 71 plans complete
+`[██████████] 95%` — 70 of 74 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -43,6 +43,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-26: active+isWatched branch in Continue the chain handler skips continueChain backend call — transition already occurred; setView("tabs") + setActiveTab("actors") navigate directly; eliminates only known stuck state on session home page
 - **2026-03-17:** 03.2-23: prior_movie_ids set comprehension over steps_data (actor_tmdb_id is None and movie != last_movie_id) batch-inserts WatchEvent rows with source="csv_import" after db.commit()/db.refresh(); second db.commit() ensures WatchEvents exist before _build_session_response derives watched_count from them
 - **2026-03-17:** 03.2-22: staleTime: 0 added to session query in GameSession.tsx — cached current_movie_watched: true was hiding Mark as Watched button after navigate-away and return; zero staleTime forces immediate refetch before render-critical button condition evaluates
 - **2026-03-17:** 03.2-22: ChainHistory already correctly guarded by session.steps.length > 0 — no separate Watch History TabsTrigger exists; no change needed for Fix 3
@@ -239,6 +240,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T14:57:05.243Z
-Stopped at: Completed 03.2-20-PLAN.md
+Last session: 2026-03-17T19:02:42.594Z
+Stopped at: Completed 03.2-26-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
