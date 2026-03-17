@@ -23,6 +23,8 @@ class Movie(Base):
     vote_average: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     genres: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)  # JSON-encoded list of genre names
     runtime: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    vote_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    mpaa_rating: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     credits: Mapped[list[Credit]] = relationship(back_populates="movie", lazy="raise")
