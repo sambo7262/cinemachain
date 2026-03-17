@@ -492,13 +492,19 @@ async def export_session_csv(session_id: int, db: AsyncSession = Depends(get_db)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    sorted_steps = sorted(session.steps, key=lambda s: s.step_order)
+    step_by_order = {s.step_order: s for s in sorted_steps}
+    # Only movie-pick steps (actor_tmdb_id IS NULL) form the chain rows.
+    # The actor that bridges to the next movie lives in the immediately following step.
+    movie_steps = [s for s in sorted_steps if s.actor_tmdb_id is None]
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["order", "movie_name", "actor_name"])
-    for step in sorted(session.steps, key=lambda s: s.step_order):
-        writer.writerow([step.step_order, step.movie_title or "", ""])
-        if step.actor_name:
-            writer.writerow([step.step_order, "", step.actor_name])
+    for i, step in enumerate(movie_steps, start=1):
+        actor_step = step_by_order.get(step.step_order + 1)
+        actor_name = actor_step.actor_name if actor_step and actor_step.actor_tmdb_id else ""
+        writer.writerow([i, step.movie_title or "", actor_name])
 
     output.seek(0)
     filename = f"chain-{session.name or session.id}.csv"

@@ -286,8 +286,8 @@ export default function GameLobby() {
               )}
             </div>
 
-            {/* Tabs — only enabled when name is valid */}
-            <div className={cn(!isNameValid && "opacity-50 pointer-events-none")}>
+            {/* Movie picker — only rendered once name is valid */}
+            {isNameValid && <div>
               <Tabs key={defaultTab} defaultValue={defaultTab}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="watched">Watch History</TabsTrigger>
@@ -424,7 +424,7 @@ export default function GameLobby() {
                   </div>
                 </TabsContent>
               </Tabs>
-            </div>
+            </div>}
           </div>
         )}
       </div>
