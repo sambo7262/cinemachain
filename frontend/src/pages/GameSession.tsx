@@ -51,7 +51,7 @@ export default function GameSession() {
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
   // Session polling — stops when awaiting_continue
-  const { data: session, isLoading: sessionLoading } = useQuery({
+  const { data: session } = useQuery({
     queryKey: ["session", sid],
     queryFn: () => api.getSession(sid),    // fetch by ID, not active session
     refetchInterval: (query) =>
