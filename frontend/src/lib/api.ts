@@ -23,6 +23,8 @@ export interface GameSessionDTO {
   steps: GameSessionStepDTO[]
   radarr_status?: string | null
   current_movie_title: string | null    // resolved by backend from Movie table
+  watched_count: number
+  watched_runtime_minutes: number
 }
 
 export interface PaginatedMoviesDTO {
@@ -40,6 +42,8 @@ export interface GameSessionStepDTO {
   actor_tmdb_id: number | null
   actor_name: string | null
   watched_at: string | null
+  poster_path: string | null
+  profile_path: string | null
 }
 
 export interface EligibleActorDTO {
@@ -47,6 +51,7 @@ export interface EligibleActorDTO {
   name: string
   profile_path: string | null
   character: string | null
+  is_eligible?: boolean
 }
 
 export interface EligibleMovieDTO {
@@ -60,6 +65,8 @@ export interface EligibleMovieDTO {
   watched: boolean
   selectable: boolean
   via_actor_name: string | null
+  vote_count: number | null
+  mpaa_rating: string | null
 }
 
 export interface MovieSearchResultDTO {
@@ -81,8 +88,11 @@ export const api = {
   getSession: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}`),
 
-  getEligibleActors: (sessionId: number) =>
-    apiFetch<EligibleActorDTO[]>(`/game/sessions/${sessionId}/eligible-actors`),
+  getEligibleActors: (sessionId: number, include_ineligible?: boolean) => {
+    const q = new URLSearchParams()
+    if (include_ineligible) q.set("include_ineligible", "true")
+    return apiFetch<EligibleActorDTO[]>(`/game/sessions/${sessionId}/eligible-actors?${q}`)
+  },
 
   getEligibleMovies: (sessionId: number, params?: { actor_id?: number; sort?: string; all_movies?: boolean; page?: number; page_size?: number }) => {
     const q = new URLSearchParams()
