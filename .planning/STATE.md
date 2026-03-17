@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
 stopped_at: Completed 03.2-22-PLAN.md
-last_updated: "2026-03-17T14:55:34.912Z"
+last_updated: "2026-03-17T14:55:50.244Z"
 progress:
   total_phases: 6
   completed_phases: 3
