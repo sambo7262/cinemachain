@@ -124,6 +124,16 @@ export default function GameSession() {
   const allEligibleMovies = eligibleMoviesData?.items ?? []
   const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
 
+  // Show spinner only after 1 second of fetching — avoids flash on fast responses
+  useEffect(() => {
+    if (!eligibleMoviesFetching) {
+      setShowMoviesSpinner(false)
+      return
+    }
+    const t = setTimeout(() => setShowMoviesSpinner(true), 1000)
+    return () => clearTimeout(t)
+  }, [eligibleMoviesFetching])
+
   // Client-side filtering: search + sidebar filters applied simultaneously (AND relationship)
   const filteredMovies = allEligibleMovies
     .filter((m) => debouncedSearch === "" || m.title.toLowerCase().includes(debouncedSearch.toLowerCase()))
@@ -584,6 +594,13 @@ export default function GameSession() {
                   />
 
                   <div className="flex-1 min-w-0">
+                    {/* Loading spinner — visible after 1s when fetching */}
+                    {showMoviesSpinner && eligibleMoviesFetching && (
+                      <div className="flex justify-center py-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" aria-label="Loading movies..." />
+                      </div>
+                    )}
+
                     {/* Empty state messages */}
                     {filteredMovies.length === 0 && allEligibleMovies.length > 0 && (
                       <p className="text-sm text-muted-foreground py-4">
@@ -600,7 +617,7 @@ export default function GameSession() {
                       <p className="text-sm text-muted-foreground py-8 text-center">
                         {selectedActor
                           ? `No eligible movies via ${selectedActor.name}.`
-                          : "Pick an actor from the Eligible Actors tab to see movies."}
+                          : "No eligible movies found for this session."}
                       </p>
                     ) : filteredMovies.length > 0 ? (
                       <div className="rounded-md border border-border overflow-hidden">
