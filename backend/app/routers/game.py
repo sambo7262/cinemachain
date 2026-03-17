@@ -374,7 +374,7 @@ async def _ensure_movie_cast_in_db(
     # this upsert guarantees the FK target exists even on first call.
     await db.execute(
         pg_insert(Movie)
-        .values(tmdb_id=movie_tmdb_id, title="", year=None, genres=None)
+        .values(tmdb_id=movie_tmdb_id, title="", year=None, genres=None, fetched_at=_datetime.utcnow())
         .on_conflict_do_nothing(index_elements=["tmdb_id"])
     )
     await db.flush()
@@ -396,7 +396,7 @@ async def _ensure_movie_cast_in_db(
         # Upsert Actor
         await db.execute(
             pg_insert(Actor)
-            .values(tmdb_id=aid, name=aname, profile_path=profile)
+            .values(tmdb_id=aid, name=aname, profile_path=profile, fetched_at=_datetime.utcnow())
             .on_conflict_do_update(
                 index_elements=["tmdb_id"],
                 set_={"name": aname, "profile_path": profile},
@@ -416,9 +416,9 @@ async def _ensure_movie_cast_in_db(
             .values(
                 actor_id=actor_obj.id,
                 movie_id=movie_obj.id,
-                character=character,
+                character=character[:255],
             )
-            .on_conflict_do_nothing()
+            .on_conflict_do_nothing(index_elements=["movie_id", "actor_id"])
         )
 
     await db.commit()
