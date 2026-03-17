@@ -13,7 +13,7 @@
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
-- [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 3: cross-session contamination, combined-view speed, session remount, concession messages, CSV improvements — plans 15-19 created)
+- [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -128,7 +128,7 @@ Plans:
   3. Ineligible actors are always visible below eligible actors (no toggle)
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
-**Plans:** 13/19 plans executed
+**Plans:** 13/24 plans executed
 
 Plans:
 - [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
@@ -149,7 +149,12 @@ Plans:
 - [ ] 03.2-16-PLAN.md — Wave 1 (gap-closure round 3): Backend — combined-view speed: remove sequential _ensure_actor_credits_in_db loop from no-actor path
 - [ ] 03.2-17-PLAN.md — Wave 1 (gap-closure round 3): Frontend — session remount: add refetchOnMount: "always" to session query in GameSession.tsx
 - [ ] 03.2-18-PLAN.md — Wave 1 (gap-closure round 3): Frontend + Backend — concession loading messages (useLoadingMessages hook), CSV direct TMDB ID input, CSV last-row-as-current-movie
-- [ ] 03.2-19-PLAN.md — Wave 2 (gap-closure round 3): Docker rebuild + NAS deploy + human verify all 7 issues
+- [~] 03.2-19-PLAN.md — Wave 2 (gap-closure round 3): Docker rebuild + NAS deploy + human verify all 7 issues (BLOCKED — 4 failures in round 4 testing)
+- [ ] 03.2-20-PLAN.md — Wave 1 (gap-closure round 4): Backend — batch actor credits fetch: _ensure_movie_cast_in_db helper replaces per-actor loop in get_eligible_actors fallback
+- [ ] 03.2-21-PLAN.md — Wave 1 (gap-closure round 4): Backend — guard _ensure_movie_details_in_db + _fetch_mpaa_rating behind actor_id check; combined-view skips all TMDB enrichment
+- [ ] 03.2-22-PLAN.md — Wave 1 (gap-closure round 4): Frontend — staleTime: 0 on session query; suppress empty-state during fetch; concession rotation 2s→3s
+- [ ] 03.2-23-PLAN.md — Wave 1 (gap-closure round 4): Backend — CSV import creates WatchEvent records for all prior steps so session counters reflect full chain history
+- [ ] 03.2-24-PLAN.md — Wave 2 (gap-closure round 4): Docker rebuild + NAS deploy + human verify all 9 tests + regression check
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -174,7 +179,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 13/19 | In Progress|  |
+| 03.2. Game UX Enhancements | 13/24 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -262,7 +267,11 @@ Plans:
 | WatchEvent queries scoped to session_id (03.2-15) | 03.2-12 live test: watched exclusion fetched WatchEvents across all sessions; movies watched in Session A were excluded from Session B eligibility; cross-session contamination |
 | Combined-view sequential TMDB loop removed (03.2-16) | 03.2-12 live test: 20+ sequential _ensure_actor_credits_in_db calls caused 30-60s load for no-actor combined view; DB-only path returns immediately |
 | refetchOnMount: "always" on session query (03.2-17) | 03.2-12 live test: stale cache on remount could serve current_movie_watched: true from prior awaiting_continue state, hiding Mark as Watched button |
+| On-demand fallback uses _ensure_movie_cast_in_db (03.2-20) | 03.2-19 live test: per-actor loop triggers TMDB rate-limit after ~3 actors; single /movie/{id}/credits call batch-inserts all cast, eliminating rate-limit failure |
+| _ensure_movie_details_in_db + _fetch_mpaa_rating guarded by actor_id (03.2-21) | 03.2-19 live test: combined-view 504 — both enrichment blocks ran for all movies in combined-view path; moving behind actor_id guard eliminates sequential TMDB calls for no-actor tab load |
+| staleTime: 0 on session query (03.2-22) | 03.2-19 live test: Mark as Watched button absent after remount — stale cache with current_movie_watched: true from prior awaiting_continue state served before refetch completed; staleTime: 0 forces immediate replacement |
+| CSV import creates WatchEvent for prior steps (03.2-23) | 03.2-19 live test: session counters showed 0 watched after CSV import — WatchEvent records never created for imported steps; source="csv_import" batch insert closes this gap |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 03.2 gap closure round 3: plans 15 (cross-session contamination), 16 (combined-view speed), 17 (session remount), 18 (concession messages + CSV improvements), 19 (Docker rebuild + verify) added*
+*Last updated: 2026-03-17 — Phase 03.2 gap closure round 4: plans 20 (batch actor credits), 21 (combined-view TMDB skip), 22 (Mark as Watched staleTime + UX), 23 (CSV WatchEvent prior steps), 24 (Docker rebuild + verify) added*
