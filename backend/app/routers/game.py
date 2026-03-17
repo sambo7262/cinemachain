@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from datetime import datetime as _datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func as _func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -477,13 +477,18 @@ async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> int | None:
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/sessions/import-csv", status_code=201, response_model=GameSessionResponse)
+@router.post("/sessions/import-csv", status_code=201)
 async def import_csv_session(
     body: ImportCSVRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a session with pre-populated steps from CSV rows (resolves names via TMDB)."""
+    """Validate-first CSV import with fuzzy match resolution.
+
+    Pass 1: resolve all rows via TMDB. If all high-confidence -> import immediately.
+    If any rows are ambiguous or unresolvable -> return 200 + validation_required payload.
+    Pass 2 (re-submission with body.overrides): skip TMDB for overridden rows, import directly.
+    """
     # Check name uniqueness among active sessions
     name_check = await db.execute(
         select(GameSession)
@@ -495,41 +500,71 @@ async def import_csv_session(
 
     tmdb: TMDBClient = request.app.state.tmdb_client
 
-    # Each CSV row has movie_name + actor_name on the same row (new export format).
-    # Expand into the step model: one movie-pick step + one actor-pick step per row.
+    # Build override lookup: row index -> confirmed tmdb_id
+    override_map: dict[int, int] = {o.row: o.tmdb_id for o in body.overrides}
+
     steps_data = []
     step_order = 0
-    for row in body.rows:
+    unresolved: list[dict] = []
+    resolved_count = 0
+
+    # Each CSV row has movie_name + actor_name on the same row.
+    # Expand into: one movie-pick step + one actor-pick step per row.
+    for i, row in enumerate(body.rows):
         if not row.movieName:
             continue  # skip actor-only rows from old-format CSVs
-        movie_id = await _resolve_movie_tmdb_id(row.movieName, tmdb)
-        if movie_id is None:
-            raise HTTPException(status_code=422, detail=f"Could not resolve movie '{row.movieName}' from TMDB")
-        # Movie-pick step
-        steps_data.append({
-            "step_order": step_order,
-            "movie_tmdb_id": movie_id,
-            "movie_title": row.movieName,
-            "actor_tmdb_id": None,
-            "actor_name": None,
-        })
-        step_order += 1
-        # Actor-pick step (only if actor name provided)
-        if row.actorName:
-            actor_id = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+
+        if i in override_map:
+            # Re-submission: use confirmed tmdb_id, skip TMDB lookup
+            movie_id = override_map[i]
+            confidence = "high"
+            suggestions: list[dict] = []
+        else:
+            confidence, movie_id, suggestions = await _resolve_movie_tmdb_id(row.movieName, tmdb)
+
+        if confidence in ("high", "medium") and movie_id is not None:
+            resolved_count += 1
             steps_data.append({
                 "step_order": step_order,
                 "movie_tmdb_id": movie_id,
                 "movie_title": row.movieName,
-                "actor_tmdb_id": actor_id,
-                "actor_name": row.actorName,
+                "actor_tmdb_id": None,
+                "actor_name": None,
             })
             step_order += 1
+            if row.actorName:
+                actor_id = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+                steps_data.append({
+                    "step_order": step_order,
+                    "movie_tmdb_id": movie_id,
+                    "movie_title": row.movieName,
+                    "actor_tmdb_id": actor_id,
+                    "actor_name": row.actorName,
+                })
+                step_order += 1
+        else:
+            # Low confidence or zero results — flag for user review
+            unresolved.append({
+                "row": i,
+                "csv_title": row.movieName,
+                "suggestions": suggestions,
+            })
+
+    # If any rows need review, return validation_required (do NOT create session)
+    if unresolved:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "validation_required",
+                "resolved_count": resolved_count,
+                "unresolved": unresolved,
+            },
+        )
 
     if not steps_data:
         raise HTTPException(status_code=422, detail="No valid rows found in CSV")
 
-    # current_movie_tmdb_id = last movie in the chain (last movie-pick step)
+    # All rows resolved — create the session
     last_movie_id = next(
         s["movie_tmdb_id"] for s in reversed(steps_data) if s["actor_tmdb_id"] is None
     )
