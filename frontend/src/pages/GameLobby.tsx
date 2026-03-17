@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { useLoadingMessages } from "@/hooks/useLoadingMessages"
 
 function toast(message: string) {
   alert(message)
@@ -148,6 +149,8 @@ export default function GameLobby() {
     },
     onError: () => toast("Failed to import CSV chain."),
   })
+
+  const csvLoadingMessage = useLoadingMessages(importMutation.isPending)
 
   const handleOverridePick = (row: number, tmdb_id: number) => {
     setOverrides(prev => {
@@ -394,8 +397,8 @@ export default function GameLobby() {
 
                     {/* Loading state */}
                     {importMutation.isPending && (
-                      <p className="text-sm text-muted-foreground text-center py-2">
-                        Validating your session history... this may take up to 2 minutes.
+                      <p className="text-sm text-muted-foreground text-center py-2 animate-pulse">
+                        {csvLoadingMessage ?? "Validating your session history..."}
                       </p>
                     )}
 

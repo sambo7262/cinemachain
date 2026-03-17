@@ -455,6 +455,11 @@ export default function GameSession() {
               </div>
             ) : (
               <>
+                {actorsLoadingMessage && (
+                  <p className="text-sm text-muted-foreground text-center py-4 animate-pulse">
+                    {actorsLoadingMessage}
+                  </p>
+                )}
                 {eligibleActors.length === 0 && eligibleActorsData.filter((a) => a.is_eligible === false).length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">No eligible actors found.</p>
                 ) : (
@@ -587,11 +592,11 @@ export default function GameSession() {
                   />
 
                   <div className="flex-1 min-w-0">
-                    {/* Loading spinner — visible after 1s when fetching */}
-                    {showMoviesSpinner && eligibleMoviesFetching && (
-                      <div className="flex justify-center py-4">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" aria-label="Loading movies..." />
-                      </div>
+                    {/* Concession-themed loading message */}
+                    {moviesLoadingMessage && eligibleMoviesFetching && (
+                      <p className="text-sm text-muted-foreground text-center py-4 animate-pulse">
+                        {moviesLoadingMessage}
+                      </p>
                     )}
 
                     {/* Empty state messages */}
