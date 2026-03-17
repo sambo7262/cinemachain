@@ -49,9 +49,6 @@ export default function GameSession() {
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  // Ineligible actors toggle
-  const [showIneligible, setShowIneligible] = useState(false)
-
   // Session polling — stops when awaiting_continue
   const { data: session } = useQuery({
     queryKey: ["session", sid],
@@ -100,8 +97,8 @@ export default function GameSession() {
 
   // Eligible actors for the current movie
   const { data: eligibleActorsData = [] } = useQuery({
-    queryKey: ["eligibleActors", sid, session?.current_movie_tmdb_id, showIneligible],
-    queryFn: () => api.getEligibleActors(sid, showIneligible),
+    queryKey: ["eligibleActors", sid, session?.current_movie_tmdb_id],
+    queryFn: () => api.getEligibleActors(sid, true),  // always fetch ineligible too
     enabled: !!sid && session?.status === "active" && isWatched,
   })
   // Eligible actors: only those with is_eligible !== false (or undefined = eligible)
@@ -265,11 +262,6 @@ export default function GameSession() {
       </header>
 
       <div className="flex-1 flex flex-col gap-4 px-6 py-4 max-w-3xl w-full mx-auto">
-        {/* Chain History */}
-        {session && session.steps.length > 0 && (
-          <ChainHistory steps={session.steps} />
-        )}
-
         {/* Session state panel — shows context-appropriate guidance */}
         {session && (
           <div className="rounded-lg border border-border px-4 py-3 text-sm">
@@ -455,16 +447,7 @@ export default function GameSession() {
               </div>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowIneligible((v) => !v)}
-                  className="mb-3"
-                >
-                  {showIneligible ? "Hide already-picked actors" : "Show already-picked actors"}
-                </Button>
-
-                {eligibleActors.length === 0 && !showIneligible ? (
+                {eligibleActors.length === 0 && eligibleActorsData.filter((a) => a.is_eligible === false).length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">No eligible actors found.</p>
                 ) : (
                   <div className="rounded-md border border-border overflow-hidden">
@@ -505,8 +488,8 @@ export default function GameSession() {
                   </div>
                 )}
 
-                {/* Ineligible actors section — shown when showIneligible is true */}
-                {showIneligible && (() => {
+                {/* Ineligible actors section — always visible when there are ineligible actors */}
+                {(() => {
                   const ineligible = eligibleActorsData.filter((a) => a.is_eligible === false)
                   if (ineligible.length === 0) return null
                   return (
@@ -612,7 +595,7 @@ export default function GameSession() {
                       <p className="text-sm text-muted-foreground py-8 text-center">
                         {selectedActor
                           ? `No eligible movies via ${selectedActor.name}.`
-                          : "No eligible movies found."}
+                          : "Pick an actor from the Eligible Actors tab to see movies."}
                       </p>
                     ) : filteredMovies.length > 0 ? (
                       <div className="rounded-md border border-border overflow-hidden">
@@ -689,6 +672,11 @@ export default function GameSession() {
             )}
           </TabsContent>
         </Tabs>}
+
+        {/* Chain History — bottom of page */}
+        {session && session.steps.length > 0 && (
+          <ChainHistory steps={session.steps} />
+        )}
       </div>
     </div>
   )
