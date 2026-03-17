@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Dead state in session home eliminated — active+isWatched now shows Continue the chain button; navigates to actor selection tab without a backend call; no Docker rebuild required (frontend-only)
-stopped_at: Completed 03.2-26-PLAN.md
-last_updated: "2026-03-17T19:02:42.600Z"
+stopped_at: Completed 03.2-25-PLAN.md
+last_updated: "2026-03-17T19:06:17.793Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 74
-  completed_plans: 70
+  completed_plans: 71
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-26 (dead state fix — Continue the chain button covers active+isWatched)
-- **Status:** Dead state in session home eliminated — active+isWatched now shows Continue the chain button; navigates to actor selection tab without a backend call; no Docker rebuild required (frontend-only)
+- **Plan:** Completed 03.2-25 (CSV import actor eligibility fix — Movie stub upsert + BackgroundTasks pre-fetch)
+- **Status:** CSV import actor eligibility fixed — _ensure_movie_cast_in_db upserts Movie stub before cast loop; import_csv_session fires _prefetch_credits_background; Docker rebuild + NAS deploy required to activate
 
 ## Progress
 
-`[██████████] 95%` — 70 of 74 plans complete
+`[██████████] 96%` — 71 of 74 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -43,6 +43,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-25: _ensure_movie_cast_in_db upserts Movie stub with title='' before cast loop — CSV sessions never insert into movies table so Credit FK target was missing; empty title filled by _ensure_movie_details_in_db later
+- **2026-03-17:** 03.2-25: Movie PK resolved once outside cast loop (was per-iteration SELECT) — same movie_tmdb_id for all cast members; eliminates N redundant DB round-trips per call
+- **2026-03-17:** 03.2-25: background_tasks.add_task placed unconditionally after if prior_movie_ids: block in import_csv_session — mirrors create_session; even single-movie CSV imports get the cast pre-fetch
 - **2026-03-17:** 03.2-26: active+isWatched branch in Continue the chain handler skips continueChain backend call — transition already occurred; setView("tabs") + setActiveTab("actors") navigate directly; eliminates only known stuck state on session home page
 - **2026-03-17:** 03.2-23: prior_movie_ids set comprehension over steps_data (actor_tmdb_id is None and movie != last_movie_id) batch-inserts WatchEvent rows with source="csv_import" after db.commit()/db.refresh(); second db.commit() ensures WatchEvents exist before _build_session_response derives watched_count from them
 - **2026-03-17:** 03.2-22: staleTime: 0 added to session query in GameSession.tsx — cached current_movie_watched: true was hiding Mark as Watched button after navigate-away and return; zero staleTime forces immediate refetch before render-critical button condition evaluates
@@ -240,6 +243,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T19:02:42.594Z
-Stopped at: Completed 03.2-26-PLAN.md
+Last session: 2026-03-17T19:06:17.788Z
+Stopped at: Completed 03.2-25-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
