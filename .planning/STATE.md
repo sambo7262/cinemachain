@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03.2-01-PLAN.md
-last_updated: "2026-03-17T02:48:20.885Z"
+stopped_at: Completed 03.2-04-PLAN.md
+last_updated: "2026-03-17T02:48:49.098Z"
 progress:
   total_phases: 6
   completed_phases: 3
@@ -42,6 +42,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-04: Slider thumb rendering uses both defaultValue and value arrays to support controlled and uncontrolled modes; callers always use controlled value in practice
+- **2026-03-17:** 03.2-04: Collapsible is a thin Radix re-export with no forwardRef wrapper — matches canonical shadcn pattern for this primitive
+- **2026-03-17:** 03.2-04: Installed @radix-ui/react-slider, react-checkbox, react-collapsible via npm — packages assumed bundled but were absent from package.json
 - **2026-03-15:** 03.1-09: getSession(id) added alongside getActiveSession — both kept; getActiveSession still used in NavBar and other contexts
 - **2026-03-15:** 03.1-09: key={defaultTab} on Tabs remounts component to reset active tab — simpler than controlled tab state for Import Chain card pre-selection
 - **2026-03-15:** 03.1-09: pauseMutation/resumeMutation/endMutation removed entirely from GameSession.tsx — dead code elimination after Pause/Resume/End buttons removed
@@ -197,6 +200,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T02:48:18.349Z
-Stopped at: Completed 03.2-01-PLAN.md
+Last session: 2026-03-17T02:48:49.093Z
+Stopped at: Completed 03.2-02-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
