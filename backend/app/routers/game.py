@@ -10,16 +10,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func as _func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db import engine, get_db
+from app.db import engine, get_db, _bg_session_factory
 from app.models import Actor, Credit, GameSession, GameSessionStep, Movie, WatchEvent
 from app.services.radarr import RadarrClient
 from app.services.tmdb import TMDBClient
-
-# Background-task DB session factory (separate from request-scoped sessions)
-_bg_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 router = APIRouter(prefix="/game", tags=["game"])
 

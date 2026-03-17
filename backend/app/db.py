@@ -13,6 +13,9 @@ engine = create_async_engine(
 
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
+# Shared factory for background tasks (scheduler, background_tasks) — separate from request sessions
+_bg_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
