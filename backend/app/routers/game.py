@@ -469,22 +469,17 @@ async def _prefetch_credits_background(
     movie_tmdb_id: int,
     tmdb: TMDBClient,
 ) -> None:
-    """Background task: fetch cast of starting movie from TMDB, then populate credits for each cast member.
+    """Background task: populate Credits for the starting movie's cast in a single TMDB call.
 
-    Creates its own DB session (cannot share the request-scoped session after response is sent).
-    Errors are swallowed — this is best-effort pre-population; eligible-movies falls back to on-demand fetch.
+    Uses _ensure_movie_cast_in_db (1 call to /movie/{id}/credits) instead of
+    _ensure_actor_credits_in_db per actor (20 calls to /person/{id}/movie_credits).
+    This eliminates TMDB rate-limit exhaustion for movies with large-filmography cast members.
+    Actor filmographies are fetched on-demand when the user selects an actor.
     """
     try:
-        r = await tmdb._client.get(f"/movie/{movie_tmdb_id}/credits")
-        r.raise_for_status()
-        cast = r.json().get("cast", [])[:20]  # limit to top 20 billed actors
         async with _bg_session_factory() as db:
-            for member in cast:
-                actor_tmdb_id = member.get("id")
-                if actor_tmdb_id:
-                    await _ensure_actor_credits_in_db(actor_tmdb_id, tmdb, db)
+            await _ensure_movie_cast_in_db(movie_tmdb_id, tmdb, db)
     except Exception:
-        # Best-effort — never crash background task
         pass
 
 
