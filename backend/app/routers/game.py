@@ -414,13 +414,54 @@ async def _prefetch_credits_background(
         pass
 
 
-async def _resolve_movie_tmdb_id(title: str, tmdb: TMDBClient) -> int | None:
-    """Search TMDB for a movie by title; pick the result with the highest vote_count."""
+import re as _re
+
+
+def _title_confidence(query: str, result_title: str) -> str:
+    """Return 'high' for near-exact match, 'medium' for contains-match, 'low' otherwise."""
+    q = query.lower().strip()
+    t = result_title.lower().strip()
+    if q == t:
+        return "high"
+    # Remove common parenthetical suffixes before comparing
+    q_clean = _re.sub(r"\s*[\(\[].*?[\)\]]", "", q).strip()
+    t_clean = _re.sub(r"\s*[\(\[].*?[\)\]]", "", t).strip()
+    if q_clean == t_clean:
+        return "high"
+    if q_clean in t_clean or t_clean in q_clean:
+        return "medium"
+    return "low"
+
+
+async def _resolve_movie_tmdb_id(
+    title: str, tmdb: TMDBClient
+) -> tuple[str, int | None, list[dict]]:
+    """Search TMDB for a movie by title.
+
+    Returns (confidence, best_tmdb_id_or_None, top3_suggestions).
+    confidence: 'high' | 'medium' | 'low' | 'none'
+    top3_suggestions: list of {tmdb_id, title, year} dicts
+    """
     r = await tmdb._client.get("/search/movie", params={"query": title})
     results = r.json().get("results", [])
     if not results:
-        return None
-    return max(results, key=lambda m: m.get("vote_count", 0))["id"]
+        return ("none", None, [])
+
+    # Sort by vote_count descending (most popular first) then take top 3
+    sorted_results = sorted(results, key=lambda m: m.get("vote_count", 0), reverse=True)
+    top3 = sorted_results[:3]
+    suggestions = [
+        {
+            "tmdb_id": m["id"],
+            "title": m.get("title", ""),
+            "year": int(m["release_date"][:4]) if m.get("release_date") else None,
+        }
+        for m in top3
+    ]
+
+    best = top3[0]
+    confidence = _title_confidence(title, best.get("title", ""))
+    return (confidence, best["id"], suggestions)
 
 
 async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> int | None:

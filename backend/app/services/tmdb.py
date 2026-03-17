@@ -10,7 +10,7 @@ class TMDBClient:
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
             params={"api_key": api_key},
-            timeout=10.0,
+            timeout=httpx.Timeout(connect=60.0, read=90.0, write=30.0, pool=10.0),
         )
         self._sem = asyncio.Semaphore(10)
 
