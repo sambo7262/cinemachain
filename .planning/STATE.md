@@ -43,6 +43,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-23: prior_movie_ids set comprehension over steps_data (actor_tmdb_id is None and movie != last_movie_id) batch-inserts WatchEvent rows with source="csv_import" after db.commit()/db.refresh(); second db.commit() ensures WatchEvents exist before _build_session_response derives watched_count from them
 - **2026-03-17:** 03.2-22: staleTime: 0 added to session query in GameSession.tsx — cached current_movie_watched: true was hiding Mark as Watched button after navigate-away and return; zero staleTime forces immediate refetch before render-critical button condition evaluates
 - **2026-03-17:** 03.2-22: ChainHistory already correctly guarded by session.steps.length > 0 — no separate Watch History TabsTrigger exists; no change needed for Fix 3
 - **2026-03-17:** 03.2-21: Both TMDB enrichment blocks merged under single `if actor_id is not None and hasattr(...)` guard — eliminates duplicate hasattr checks and makes combined-view vs actor-scoped branching explicit; combined-view returns immediately from DB cache avoiding NAS 504 timeouts
