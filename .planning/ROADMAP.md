@@ -13,7 +13,7 @@
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
-- [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gaps 1,2,4,5 closed; gap 3 redefined — all eligible movies on tab open without actor; 2 regressions open; plans 10-12 created)
+- [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 3: cross-session contamination, combined-view speed, session remount, concession messages, CSV improvements — plans 15-19 created)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -128,7 +128,7 @@ Plans:
   3. Ineligible actors are always visible below eligible actors (no toggle)
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
-**Plans:** 13/14 plans executed
+**Plans:** 19 plans (gap closure round 3 adds plans 15-19)
 
 Plans:
 - [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
@@ -142,7 +142,14 @@ Plans:
 - [~] 03.2-09-PLAN.md — Wave 2 (gap-closure): Docker rebuild + NAS deploy + verify; gaps 1,2,4,5 CLOSED; gap 3 redefined; 2 regressions found (actor eligibility after _ensure_movie_details_in_db; stale movie list on actor change)
 - [ ] 03.2-10-PLAN.md — Wave 1 (gap-closure round 2): Backend — Regression 1 fix: fresh SELECT in get_eligible_actors on-demand fallback
 - [ ] 03.2-11-PLAN.md — Wave 1 (gap-closure round 2): Gap 3 + Regression 2: frontend no-actor eligible movies fetch + queryKey null-stabilization + loading spinner
-- [ ] 03.2-12-PLAN.md — Wave 2 (gap-closure round 2): Docker rebuild + NAS deploy + human verify all 3 issues
+- [~] 03.2-12-PLAN.md — Wave 2 (gap-closure round 2): Docker rebuild + NAS deploy + human verify all 7 issues (5 issues identified for round 3)
+- [ ] 03.2-13-PLAN.md — Wave 1 (gap-closure round 2): Mark as Watched nav bug — setQueryData after handleMovieConfirm
+- [ ] 03.2-14-PLAN.md — Wave 1 (gap-closure round 2): CSV validate-first import with fuzzy match resolution and timeout fix
+- [ ] 03.2-15-PLAN.md — Wave 1 (gap-closure round 3): Backend — cross-session contamination: scope WatchEvent filter to session_id in get_eligible_movies and request_movie
+- [ ] 03.2-16-PLAN.md — Wave 1 (gap-closure round 3): Backend — combined-view speed: remove sequential _ensure_actor_credits_in_db loop from no-actor path
+- [ ] 03.2-17-PLAN.md — Wave 1 (gap-closure round 3): Frontend — session remount: add refetchOnMount: "always" to session query in GameSession.tsx
+- [ ] 03.2-18-PLAN.md — Wave 1 (gap-closure round 3): Frontend + Backend — concession loading messages (useLoadingMessages hook), CSV direct TMDB ID input, CSV last-row-as-current-movie
+- [ ] 03.2-19-PLAN.md — Wave 2 (gap-closure round 3): Docker rebuild + NAS deploy + human verify all 7 issues
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -167,7 +174,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 13/14 | In Progress|  |
+| 03.2. Game UX Enhancements | 14/19 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -252,7 +259,10 @@ Plans:
 | Regression 1 fix — rebuild SELECT after on-demand fallback inserts (03.2-10) | get_eligible_actors on-demand fallback reused pre-built `stmt` after multiple db.commit() calls; fresh SELECT guarantees visibility of newly inserted Credit rows |
 | Gap 3 fix — eligible-movies query enabled without actor (03.2-11) | Backend combined-view already returns all eligible movies when actor_id=None; frontend fix: enable query unconditionally, queryKey uses null (not undefined) for no-actor state |
 | Regression 2 fix — queryKey null-stabilization (03.2-11) | selectedActor?.tmdb_id ?? null ensures distinct React Query cache entries for no-actor vs actor-present states, preventing stale actor data flash |
+| WatchEvent queries scoped to session_id (03.2-15) | 03.2-12 live test: watched exclusion fetched WatchEvents across all sessions; movies watched in Session A were excluded from Session B eligibility; cross-session contamination |
+| Combined-view sequential TMDB loop removed (03.2-16) | 03.2-12 live test: 20+ sequential _ensure_actor_credits_in_db calls caused 30-60s load for no-actor combined view; DB-only path returns immediately |
+| refetchOnMount: "always" on session query (03.2-17) | 03.2-12 live test: stale cache on remount could serve current_movie_watched: true from prior awaiting_continue state, hiding Mark as Watched button |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 03.2 gap closure round 2: plans 10 (Regression 1 backend fix), 11 (Gap 3 frontend + Regression 2 queryKey fix), 12 (Docker rebuild + verify) added*
+*Last updated: 2026-03-17 — Phase 03.2 gap closure round 3: plans 15 (cross-session contamination), 16 (combined-view speed), 17 (session remount), 18 (concession messages + CSV improvements), 19 (Docker rebuild + verify) added*
