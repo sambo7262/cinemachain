@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: CSV import actor eligibility fixed — _ensure_movie_cast_in_db upserts Movie stub before cast loop; import_csv_session fires _prefetch_credits_background; Docker rebuild + NAS deploy required to activate
-stopped_at: Completed 03.2-28-PLAN.md
-last_updated: "2026-03-17T20:15:03.958Z"
+status: Phase 03.2 complete — all 31 plans done, SP-1 resolved (fetched_at NOT NULL + character VARCHAR truncation), all 12 NAS tests passing
+stopped_at: Completed 03.2-31 (final verify — SP-1 + full regression PASS)
+last_updated: "2026-03-17T21:30:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 76
-  completed_plans: 72
+  completed_phases: 4
+  total_plans: 79
+  completed_plans: 79
 ---
 
 # STATE.md — CinemaChain
@@ -24,9 +24,9 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-25 (CSV import actor eligibility fix — Movie stub upsert + BackgroundTasks pre-fetch)
-- **Status:** CSV import actor eligibility fixed — _ensure_movie_cast_in_db upserts Movie stub before cast loop; import_csv_session fires _prefetch_credits_background; Docker rebuild + NAS deploy required to activate
+- **Phase:** Phase 03.2 — Game UX Enhancements ✅ COMPLETE
+- **Plan:** Completed 03.2-31 (final verify — all 12 NAS tests passing)
+- **Status:** Phase 03.2 complete. SP-1 (South Park 0 eligible actors) resolved via fetched_at NOT NULL fix + credits.character[:255] truncation. Ready for Phase 4.
 
 ## Progress
 
@@ -38,7 +38,7 @@ progress:
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 3.2. Game UX Enhancements | Follow-up plans executing — 03.2-13 stale cache fix done (Mark as Watched button regression closed); Gap 3 (eligible movies without actor) and Regression 2 (stale movie list on actor change) still open |
+| 3.2. Game UX Enhancements | Complete — all 31 plans done; SP-1 South Park regression resolved (2026-03-17); all 12 NAS tests passing |
 | 4. Query Mode | Not started — waiting on Phase 03.2 completion |
 
 ## Recent Decisions

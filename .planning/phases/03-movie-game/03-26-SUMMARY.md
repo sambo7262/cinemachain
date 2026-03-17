@@ -86,6 +86,14 @@ Docker rebuild and NAS deploy required to activate this fix (standard deployment
 - Full end-to-end verification of the game loop (GAME-04, GAME-05) is the remaining step before Phase 3 can close
 - Deploy to NAS and run verification to confirm 2nd movie Mark as Watched button appears
 
+## Self-Check: PASSED
+
+- `backend/app/routers/game.py` — FOUND (modified)
+- `.planning/phases/03-movie-game/03-26-SUMMARY.md` — FOUND (created)
+- Commit `d6003d9` — FOUND (task fix commit)
+- Commit `c71dd12` — FOUND (metadata commit)
+- `grep -n "current_movie_watched = False" game.py` returns lines 370 and 798 — VERIFIED
+
 ---
 *Phase: 03-movie-game*
 *Completed: 2026-03-15*
