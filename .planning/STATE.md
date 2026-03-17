@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: 03.2-09 complete — gaps 1,2,4,5 closed; gap 3 redefined; 2 regressions open; follow-up plans needed
-last_updated: "2026-03-17T04:28:39.355Z"
+stopped_at: Completed 03.2-13-PLAN.md
+last_updated: "2026-03-17T05:06:42.225Z"
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 56
-  completed_plans: 56
+  completed_phases: 3
+  total_plans: 61
+  completed_plans: 57
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements (all 9 plans executed; 3 open issues remain)
-- **Plan:** Completed 03.2-09 (Docker rebuild, NAS deploy, 5-gap verification)
-- **Status:** Phase 03.2 verification complete with findings — gap 3 redefined, 2 regressions found; follow-up plans required to close UX-03 and fix regressions before Phase 4
+- **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; 2 open issues remain)
+- **Plan:** Completed 03.2-10 (Regression 1 fix — fresh_stmt in get_eligible_actors fallback)
+- **Status:** Regression 1 closed; Regression 2 (stale movie list queryKey) and Gap 3 (eligible movies without actor) still require follow-up plans
 
 ## Progress
 
-`[██████████] 98%` — 56 of 56 plans complete (3 open issues require follow-up plans)
+`[█████████░] 93%` — 57 of 61 plans complete (2 open issues require follow-up plans)
 
 | Phase | Status |
 |-------|--------|
@@ -38,11 +38,13 @@ progress:
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 3.2. Game UX Enhancements | 9 of 9 plans done — 03.2-09 NAS deploy + verify complete; gaps 1,2,4,5 closed; gap 3 redefined (all eligible movies on tab open without actor); 2 regressions (eligibility after _ensure_movie_details_in_db; stale movie list on actor change) |
+| 3.2. Game UX Enhancements | Follow-up plans executing — 03.2-13 stale cache fix done (Mark as Watched button regression closed); Gap 3 (eligible movies without actor) and Regression 2 (stale movie list on actor change) still open |
 | 4. Query Mode | Not started — waiting on Phase 03.2 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-13: setQueryData(["session", sid], requestResult.session) inserted in handleMovieConfirm immediately after setView("home") — ensures current_movie_watched: false is in cache before user navigates away; invalidateQueries still runs for background refresh
+- **2026-03-17:** 03.2-10: Regression 1 closed — fresh_stmt rebuilt after all _ensure_actor_credits_in_db inserts committed; reusing pre-built stmt missed new Credit rows due to SQLAlchemy async session transaction boundary semantics; fix is surgical (if not actors: block only)
 - **2026-03-17:** 03.2-09: Gap 3 redefined — Eligible Movies tab must load ALL eligible movies immediately when opened without an actor selected (no-actor = show-all); loading spinner acceptable if fetch >1s; plan 08 empty-state text change does not satisfy this intent; new plan required
 - **2026-03-17:** 03.2-09: Regression found — South Park chain (The Martian → Matt Damon → Good Will Hunting → Minnie Driver → South Park: Bigger Longer Uncut) returns zero eligible actors; likely _ensure_movie_details_in_db corrupting credits data during detail fetch
 - **2026-03-17:** 03.2-09: Regression found — stale movie list on actor change; React Query queryKey for eligible-movies does not include selected actor ID, so cache is not invalidated when actor changes
@@ -166,10 +168,9 @@ progress:
   - Current state: plan 08 only changed empty state text; no data-load change was made.
   - Required: new backend query/param for no-actor eligible movies + frontend fetch-on-tab-open without actor selected.
 
-- **[OPEN — 03.2-09] Regression 1 — Actor eligibility broken for _ensure_movie_details_in_db movies:**
-  - Reproduction: The Martian → Matt Damon → Good Will Hunting → Minnie Driver → South Park: Bigger Longer Uncut → zero eligible actors returned.
-  - Likely cause: `_ensure_movie_details_in_db` overwrites or corrupts actor credits during TMDB detail fetch, breaking the `get_eligible_actors` exclusion query.
-  - Files to investigate: `backend/app/routers/game.py` (`_ensure_movie_details_in_db` and `get_eligible_actors`).
+- **[RESOLVED — 03.2-10] Regression 1 — Actor eligibility broken for _ensure_movie_details_in_db movies:**
+  - Root cause: `get_eligible_actors` on-demand fallback reused pre-built `stmt` after `db.commit()` calls inside `_ensure_actor_credits_in_db`; new Credit rows were invisible due to SQLAlchemy async session transaction boundary semantics.
+  - Fix: rebuild `fresh_stmt` after all inserts complete; commit be332ca in `backend/app/routers/game.py`.
 
 - **[OPEN — 03.2-09] Regression 2 — Stale movie list on actor change:**
   - Symptom: switching actors in the Eligible Movies tab briefly shows the previous actor's movie list.
@@ -226,6 +227,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T04:28:39.334Z
-Stopped at: 03.2-09 complete — gaps 1,2,4,5 closed; gap 3 redefined; 2 regressions open; follow-up plans needed
+Last session: 2026-03-17T05:06:42.220Z
+Stopped at: Completed 03.2-13-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
