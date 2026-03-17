@@ -13,7 +13,7 @@
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
-- [x] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure in progress) (completed 2026-03-17)
+- [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gaps 1,2,4,5 closed; gap 3 redefined — all eligible movies on tab open without actor; 2 regressions open)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -139,7 +139,7 @@ Plans:
 - [~] 03.2-06-PLAN.md — Wave 4: Docker rebuild + NAS deploy + migration 0005 + human verify checkpoint (5 gaps identified)
 - [ ] 03.2-07-PLAN.md — Wave 1 (gap-closure): Backend — _ensure_movie_details_in_db to fetch genres + runtime from TMDB for movie stubs
 - [ ] 03.2-08-PLAN.md — Wave 1 (gap-closure): Frontend — ChainHistory to bottom, always-visible ineligible actors, movies tab empty state
-- [ ] 03.2-09-PLAN.md — Wave 2 (gap-closure): Docker rebuild + NAS deploy + verify all 5 gaps closed
+- [~] 03.2-09-PLAN.md — Wave 2 (gap-closure): Docker rebuild + NAS deploy + verify; gaps 1,2,4,5 CLOSED; gap 3 redefined; 2 regressions found (actor eligibility after _ensure_movie_details_in_db; stale movie list on actor change)
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -164,7 +164,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 9/9 | Complete   | 2026-03-17 |
+| 03.2. Game UX Enhancements | 9/9 | In Progress (3 issues open) | — |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -245,7 +245,8 @@ Plans:
 | Step thumbnails only in get_session_by_id and get_active_session (03.2-03) | _enrich_steps_thumbnails adds DB queries; only these two endpoints render ChainHistory; other endpoints (pause, resume, etc.) return poster_path=None by default |
 | _ensure_movie_details_in_db called in eligible-movies (03.2-07) | Movie stubs from _ensure_actor_credits_in_db have genres=NULL and runtime=NULL; /person/{id}/movie_credits does not return genres or runtime; full TMDB movie detail fetch required during eligible-movies request for stubs with genres IS NULL |
 | Ineligible actors always visible, no toggle (03.2-08) | 03.2-06 human verify: user prefers always-visible at top rather than toggle; removes showIneligible state, always fetches include_ineligible=true |
+| Gap 3 redefined — Eligible Movies tab must show all eligible movies immediately without actor selection (03.2-09) | 03.2-09 human verify: empty state text change insufficient; user intent is no-actor = load all eligible movies for session with filters available; entirely new behavior not yet implemented |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 03.2 gap closure plans 07-09 added (runtime/genre data, ChainHistory position, ineligible always-visible)*
+*Last updated: 2026-03-17 — Phase 03.2 gap closure plans 07-09 added (runtime/genre data, ChainHistory position, ineligible always-visible); 03.2-09 verify complete: gaps 1,2,4,5 closed; gap 3 redefined; 2 regressions open*

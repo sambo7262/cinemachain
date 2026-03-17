@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: 03.2-09 Task 1 complete — Docker images rebuilt/pushed; awaiting NAS deploy and human verify checkpoint
-last_updated: "2026-03-17T04:07:23.283Z"
+stopped_at: 03.2-09 complete — NAS deploy verified; gaps 1,2,4,5 closed; gap 3 redefined; 2 regressions found; follow-up plans needed before Phase 03.2 can be declared complete
+last_updated: "2026-03-17T05:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 56
-  completed_plans: 55
+  completed_plans: 56
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements (plans 01-08 complete)
-- **Plan:** Completed 03.2-08 (GameSession.tsx layout fixes: ChainHistory to bottom, always-visible ineligible actors, movies empty state CTA)
-- **Status:** Phase 03.2 gap closure in progress — 03.2-08 done; 03.2-09 remains (if any)
+- **Phase:** Phase 03.2 — Game UX Enhancements (all 9 plans executed; 3 open issues remain)
+- **Plan:** Completed 03.2-09 (Docker rebuild, NAS deploy, 5-gap verification)
+- **Status:** Phase 03.2 verification complete with findings — gap 3 redefined, 2 regressions found; follow-up plans required to close UX-03 and fix regressions before Phase 4
 
 ## Progress
 
-`[██████████] 96%` — 55 of 56 plans complete
+`[██████████] 98%` — 56 of 56 plans complete (3 open issues require follow-up plans)
 
 | Phase | Status |
 |-------|--------|
@@ -38,11 +38,14 @@ progress:
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 3.2. Game UX Enhancements | 8 of 9 plans done — 03.2-08 fixes GameSession layout (ChainHistory bottom, always-visible ineligible actors, movies empty state); 03.2-09 remains |
+| 3.2. Game UX Enhancements | 9 of 9 plans done — 03.2-09 NAS deploy + verify complete; gaps 1,2,4,5 closed; gap 3 redefined (all eligible movies on tab open without actor); 2 regressions (eligibility after _ensure_movie_details_in_db; stale movie list on actor change) |
 | 4. Query Mode | Not started — waiting on Phase 03.2 completion |
 
 ## Recent Decisions
 
+- **2026-03-17:** 03.2-09: Gap 3 redefined — Eligible Movies tab must load ALL eligible movies immediately when opened without an actor selected (no-actor = show-all); loading spinner acceptable if fetch >1s; plan 08 empty-state text change does not satisfy this intent; new plan required
+- **2026-03-17:** 03.2-09: Regression found — South Park chain (The Martian → Matt Damon → Good Will Hunting → Minnie Driver → South Park: Bigger Longer Uncut) returns zero eligible actors; likely _ensure_movie_details_in_db corrupting credits data during detail fetch
+- **2026-03-17:** 03.2-09: Regression found — stale movie list on actor change; React Query queryKey for eligible-movies does not include selected actor ID, so cache is not invalidated when actor changes
 - **2026-03-17:** 03.2-08: showIneligible toggle removed entirely; always call getEligibleActors(sid, true); queryKey drops showIneligible entry; ChainHistory moved to bottom of GameSession page after Tabs; movies empty state updated to "Pick an actor from the Eligible Actors tab to see movies."
 - **2026-03-16:** 03.2-07: _ensure_movie_details_in_db fetches per-movie inside try/except; refresh query re-reads genre+runtime for all movies_map keys after fetch; helper placed between _ensure_actor_credits_in_db and _prefetch_credits_background
 - **2026-03-16:** 03.2-05: eligibleActorsData holds full API result (eligible+ineligible); eligibleActors filtered client-side to is_eligible !== false; ineligible section reads eligibleActorsData directly — avoids double-fetch
@@ -157,6 +160,21 @@ progress:
 - Confirm Plex Pass availability before Phase 2 — DATA-05 (webhook) requires Plex Pass; DATA-06 (manual mark) covers non-Plex-Pass setups
 
 ## Blockers / Concerns
+
+- **[OPEN — 03.2-09] Gap 3 — Eligible Movies tab without actor (redefined):**
+  - User intent: opening Eligible Movies tab with no actor selected should immediately load ALL eligible movies for the session (no actor filter), with filters available. Loading spinner acceptable if >1s.
+  - Current state: plan 08 only changed empty state text; no data-load change was made.
+  - Required: new backend query/param for no-actor eligible movies + frontend fetch-on-tab-open without actor selected.
+
+- **[OPEN — 03.2-09] Regression 1 — Actor eligibility broken for _ensure_movie_details_in_db movies:**
+  - Reproduction: The Martian → Matt Damon → Good Will Hunting → Minnie Driver → South Park: Bigger Longer Uncut → zero eligible actors returned.
+  - Likely cause: `_ensure_movie_details_in_db` overwrites or corrupts actor credits during TMDB detail fetch, breaking the `get_eligible_actors` exclusion query.
+  - Files to investigate: `backend/app/routers/game.py` (`_ensure_movie_details_in_db` and `get_eligible_actors`).
+
+- **[OPEN — 03.2-09] Regression 2 — Stale movie list on actor change:**
+  - Symptom: switching actors in the Eligible Movies tab briefly shows the previous actor's movie list.
+  - Cause: React Query `queryKey` for eligible-movies does not include selected actor ID; cache not invalidated on actor change.
+  - Files to fix: `frontend/src/pages/GameSession.tsx` (eligibleMovies query key).
 
 - **[RESOLVED — 03-29] GAME-04 eligible-actors intersection bug:**
   - Fix confirmed PASS in live NAS Step 6 verification (2026-03-15)
