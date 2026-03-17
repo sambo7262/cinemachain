@@ -555,6 +555,7 @@ async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> int | None:
 async def import_csv_session(
     body: ImportCSVRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Validate-first CSV import with fuzzy match resolution.
@@ -686,6 +687,11 @@ async def import_csv_session(
             ).on_conflict_do_nothing(index_elements=["tmdb_id"])
             await db.execute(we_stmt)
         await db.commit()
+
+    # Spawn background credits pre-fetch for the last (in-progress) movie's cast.
+    # Mirrors create_session — ensures eligible actors are populated without waiting
+    # for the on-demand fallback, which requires a Movie record to already exist.
+    background_tasks.add_task(_prefetch_credits_background, last_movie_id, tmdb)
 
     # Re-fetch with steps loaded
     result = await db.execute(
