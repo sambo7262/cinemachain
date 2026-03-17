@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03.2-13-PLAN.md
-last_updated: "2026-03-17T05:06:42.225Z"
+status: Regression 1 closed; Regression 2 (stale movie list queryKey) and Gap 3 (eligible movies without actor) still require follow-up plans
+stopped_at: Completed 03.2-11-PLAN.md
+last_updated: "2026-03-17T05:08:27.295Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 61
-  completed_plans: 57
+  completed_plans: 58
 ---
 
 # STATE.md — CinemaChain
@@ -43,6 +43,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-11: selectedActor?.tmdb_id ?? null in eligibleMovies queryKey — null (not undefined) creates distinct React Query cache entry for no-actor state; fixes Regression 2 stale movie list on actor change
+- **2026-03-16:** 03.2-11: enabled condition for eligibleMovies is !!sid && !!session && isWatched with no selectedActor requirement — combined-view fires on tab open without actor selected; closes Gap 3 (UX-03)
 - **2026-03-16:** 03.2-13: setQueryData(["session", sid], requestResult.session) inserted in handleMovieConfirm immediately after setView("home") — ensures current_movie_watched: false is in cache before user navigates away; invalidateQueries still runs for background refresh
 - **2026-03-17:** 03.2-10: Regression 1 closed — fresh_stmt rebuilt after all _ensure_actor_credits_in_db inserts committed; reusing pre-built stmt missed new Credit rows due to SQLAlchemy async session transaction boundary semantics; fix is surgical (if not actors: block only)
 - **2026-03-17:** 03.2-09: Gap 3 redefined — Eligible Movies tab must load ALL eligible movies immediately when opened without an actor selected (no-actor = show-all); loading spinner acceptable if fetch >1s; plan 08 empty-state text change does not satisfy this intent; new plan required
@@ -163,19 +165,17 @@ progress:
 
 ## Blockers / Concerns
 
-- **[OPEN — 03.2-09] Gap 3 — Eligible Movies tab without actor (redefined):**
-  - User intent: opening Eligible Movies tab with no actor selected should immediately load ALL eligible movies for the session (no actor filter), with filters available. Loading spinner acceptable if >1s.
-  - Current state: plan 08 only changed empty state text; no data-load change was made.
-  - Required: new backend query/param for no-actor eligible movies + frontend fetch-on-tab-open without actor selected.
+- **[RESOLVED — 03.2-11] Gap 3 — Eligible Movies tab without actor:**
+  - Fix: removed selectedActor requirement from enabled condition; queryKey uses null-stable actor ID; combined-view backend branch already handles actor_id=None correctly.
+  - Commit: 40e404e in `frontend/src/pages/GameSession.tsx`.
 
 - **[RESOLVED — 03.2-10] Regression 1 — Actor eligibility broken for _ensure_movie_details_in_db movies:**
   - Root cause: `get_eligible_actors` on-demand fallback reused pre-built `stmt` after `db.commit()` calls inside `_ensure_actor_credits_in_db`; new Credit rows were invisible due to SQLAlchemy async session transaction boundary semantics.
   - Fix: rebuild `fresh_stmt` after all inserts complete; commit be332ca in `backend/app/routers/game.py`.
 
-- **[OPEN — 03.2-09] Regression 2 — Stale movie list on actor change:**
-  - Symptom: switching actors in the Eligible Movies tab briefly shows the previous actor's movie list.
-  - Cause: React Query `queryKey` for eligible-movies does not include selected actor ID; cache not invalidated on actor change.
-  - Files to fix: `frontend/src/pages/GameSession.tsx` (eligibleMovies query key).
+- **[RESOLVED — 03.2-11] Regression 2 — Stale movie list on actor change:**
+  - Fix: `selectedActor?.tmdb_id ?? null` in queryKey creates distinct cache entries for no-actor vs actor-scoped queries; loading spinner added for slow combined-view fetches.
+  - Commit: 40e404e in `frontend/src/pages/GameSession.tsx`.
 
 - **[RESOLVED — 03-29] GAME-04 eligible-actors intersection bug:**
   - Fix confirmed PASS in live NAS Step 6 verification (2026-03-15)
@@ -227,6 +227,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T05:06:42.220Z
-Stopped at: Completed 03.2-13-PLAN.md
+Last session: 2026-03-17T05:08:27.289Z
+Stopped at: Completed 03.2-11-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
