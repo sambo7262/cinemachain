@@ -610,3 +610,72 @@ async def test_session_response_name(client):
     data = create_resp.json()
     assert "name" in data
     assert data["name"] == "NamedSession"
+
+
+# ---------------------------------------------------------------------------
+# Phase 03.2 — Game UX Enhancements
+# ---------------------------------------------------------------------------
+
+# UX-01: vote_count stored on Movie, vote floor applied in rating sort
+@pytest.mark.asyncio
+async def test_eligible_movies_vote_floor(client):
+    """UX-01: GET /eligible-movies?sort=rating puts movies with < 500 votes at the bottom.
+    Requires vote_count on Movie model (migration 0005) and _effective_rating logic in sort.
+    """
+    pytest.fail("not implemented — requires migration 0005 and vote floor sort in get_eligible_movies")
+
+
+# UX-02: mpaa_rating fetched on-demand and cached after first fetch
+@pytest.mark.asyncio
+async def test_eligible_movies_mpaa_cached(client):
+    """UX-02: GET /eligible-movies returns mpaa_rating field per movie.
+    First call triggers TMDB /movie/{id}/release_dates fetch; subsequent calls use cached value.
+    mpaa_rating=None means never fetched; mpaa_rating='' means fetched but no US cert found.
+    """
+    pytest.fail("not implemented — requires migration 0005, _fetch_mpaa_rating helper, and get_eligible_movies enrichment")
+
+
+# UX-03: include_ineligible=true returns all cast with is_eligible flag
+@pytest.mark.asyncio
+async def test_eligible_actors_include_ineligible(client):
+    """UX-03: GET /sessions/{id}/eligible-actors?include_ineligible=true returns ALL cast members.
+    Picked actors have is_eligible=False; unpicked actors have is_eligible=True.
+    Default (no param) continues to return only eligible actors without is_eligible field.
+    """
+    pytest.fail("not implemented — requires include_ineligible query param and is_eligible flag in get_eligible_actors")
+
+
+# UX-04: GameSessionResponse includes watched_count and watched_runtime_minutes
+@pytest.mark.asyncio
+async def test_session_counters(client):
+    """UX-04: GameSessionResponse includes watched_count (int) and watched_runtime_minutes (int).
+    watched_count = number of movie steps (actor_tmdb_id IS NULL) where watched_at is not None.
+    watched_runtime_minutes = sum of Movie.runtime for those watched movie steps.
+    Both fields are 0 on a fresh session with no watched movies.
+    """
+    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "CounterTest03.2"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "watched_count" in data, "GameSessionResponse must include watched_count"
+    assert "watched_runtime_minutes" in data, "GameSessionResponse must include watched_runtime_minutes"
+    assert data["watched_count"] == 0
+    assert data["watched_runtime_minutes"] == 0
+
+
+# UX-05: StepResponse includes poster_path and profile_path
+@pytest.mark.asyncio
+async def test_step_thumbnails(client):
+    """UX-05: GET /sessions/{id} returns steps where each step has poster_path and profile_path fields.
+    poster_path sourced from Movie.poster_path; profile_path from Actor.profile_path.
+    Both may be None (null) when no image data is available.
+    """
+    resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "ThumbnailTest03.2"})
+    assert resp.status_code == 201
+    sid = resp.json()["id"]
+    get_resp = await client.get(f"/game/sessions/{sid}")
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert len(data["steps"]) > 0
+    step = data["steps"][0]
+    assert "poster_path" in step, "StepResponse must include poster_path field"
+    assert "profile_path" in step, "StepResponse must include profile_path field"
