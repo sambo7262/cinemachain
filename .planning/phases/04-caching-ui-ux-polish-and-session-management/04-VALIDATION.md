@@ -2,8 +2,8 @@
 phase: 4
 slug: caching-ui-ux-polish-and-session-management
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-17
 ---
 
@@ -41,8 +41,9 @@ created: 2026-03-17
 | 4-01-01 | 01 | 0 | CACHE-01 | unit | `pytest backend/tests/test_cache.py -x -q` | ❌ W0 | ⬜ pending |
 | 4-01-02 | 01 | 1 | CACHE-01 | integration | `pytest backend/tests/test_cache.py -x -q` | ❌ W0 | ⬜ pending |
 | 4-01-03 | 01 | 1 | CACHE-02 | unit | `pytest backend/tests/test_cache.py::test_lazy_enrich -x -q` | ❌ W0 | ⬜ pending |
-| 4-02-01 | 02 | 0 | UX-06 | unit | `cd frontend && npm run test -- radarr` | ❌ W0 | ⬜ pending |
-| 4-02-02 | 02 | 1 | UX-06 | integration | `cd frontend && npm run test -- radarr` | ❌ W0 | ⬜ pending |
+| 4-01-04 | 01 | 0 | UX-06 | unit | `cd frontend && npm run test -- RadarrBanner` | ❌ W0 | ⬜ pending |
+| 4-02-01 | 02 | 0 | UX-06 | unit | `cd frontend && npm run test -- RadarrBanner` | ❌ W0 | ⬜ pending |
+| 4-02-02 | 02 | 1 | UX-06 | integration | `cd frontend && npm run test -- RadarrBanner` | ❌ W0 | ⬜ pending |
 | 4-03-01 | 03 | 1 | UX-07 | manual | see manual verifications | — | ⬜ pending |
 | 4-03-02 | 03 | 1 | UX-08 | manual | see manual verifications | — | ⬜ pending |
 | 4-03-03 | 03 | 1 | UX-09 | manual | see manual verifications | — | ⬜ pending |
@@ -55,9 +56,9 @@ created: 2026-03-17
 
 ## Wave 0 Requirements
 
-- [ ] `backend/tests/test_cache.py` — stubs for CACHE-01, CACHE-02 nightly job and lazy enrichment
-- [ ] `backend/tests/test_session_mgmt.py` — stubs for SESSION-01 (delete last step), SESSION-02 (delete archived session)
-- [ ] `frontend/src/components/__tests__/RadarrBanner.test.tsx` — stubs for UX-06 notification banner
+- [ ] `backend/tests/test_cache.py` — stubs for CACHE-01, CACHE-02 nightly job and lazy enrichment (Plan 01 Task 3)
+- [ ] `backend/tests/test_session_mgmt.py` — stubs for SESSION-01 (delete last step), SESSION-02 (delete archived session) (Plan 01 Task 3)
+- [ ] `frontend/src/__tests__/RadarrBanner.test.tsx` — stubs for UX-06 notification banner (Plan 01 Task 4)
 - [ ] `backend/tests/conftest.py` — verify shared fixtures are compatible with new test files
 
 ---
@@ -74,11 +75,11 @@ created: 2026-03-17
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
