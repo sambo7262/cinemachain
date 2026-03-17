@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Dead state in session home eliminated — active+isWatched now shows Continue the chain button; navigates to actor selection tab without a backend call; no Docker rebuild required (frontend-only)
-stopped_at: Completed 03.2-25-PLAN.md
-last_updated: "2026-03-17T19:06:17.793Z"
+status: CSV import actor eligibility fixed — _ensure_movie_cast_in_db upserts Movie stub before cast loop; import_csv_session fires _prefetch_credits_background; Docker rebuild + NAS deploy required to activate
+stopped_at: Completed 03.2-28-PLAN.md
+last_updated: "2026-03-17T20:15:03.958Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 74
-  completed_plans: 71
+  total_plans: 76
+  completed_plans: 72
 ---
 
 # STATE.md — CinemaChain
@@ -243,6 +243,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T19:06:17.788Z
-Stopped at: Completed 03.2-25-PLAN.md
+Last session: 2026-03-17T20:15:03.953Z
+Stopped at: Completed 03.2-28-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
