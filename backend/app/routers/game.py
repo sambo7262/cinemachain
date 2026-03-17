@@ -369,6 +369,22 @@ async def _ensure_movie_cast_in_db(
     except Exception:
         return  # Degrade gracefully — background pre-fetch will populate later
 
+    # Ensure Movie record exists so Credit FK is satisfiable.
+    # CSV-imported sessions create GameSessionSteps but never insert into movies table;
+    # this upsert guarantees the FK target exists even on first call.
+    await db.execute(
+        pg_insert(Movie)
+        .values(tmdb_id=movie_tmdb_id, title="", year=None, genres=None)
+        .on_conflict_do_nothing(index_elements=["tmdb_id"])
+    )
+    await db.flush()
+
+    # Resolve movie PK ONCE — same movie_tmdb_id for every cast member in this call.
+    movie_row = await db.execute(select(Movie).where(Movie.tmdb_id == movie_tmdb_id))
+    movie_obj = movie_row.scalar_one_or_none()
+    if not movie_obj:
+        return  # Should never happen after the upsert above; degrade gracefully.
+
     for member in cast:
         aid = member.get("id")
         aname = member.get("name")
@@ -392,12 +408,6 @@ async def _ensure_movie_cast_in_db(
         actor_row = await db.execute(select(Actor).where(Actor.tmdb_id == aid))
         actor_obj = actor_row.scalar_one_or_none()
         if not actor_obj:
-            continue
-
-        # Resolve movie PK (movie must already exist — it's the session's current movie)
-        movie_row = await db.execute(select(Movie).where(Movie.tmdb_id == movie_tmdb_id))
-        movie_obj = movie_row.scalar_one_or_none()
-        if not movie_obj:
             continue
 
         # Upsert Credit
