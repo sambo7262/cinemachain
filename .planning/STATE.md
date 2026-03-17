@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 4 plans verified — 7 plans in 5 waves
-last_updated: "2026-03-17T23:42:49.258Z"
+stopped_at: Completed 04-01-PLAN.md — Wave 0 foundation (APScheduler, Dialog, DropdownMenu, test stubs)
+last_updated: "2026-03-17T23:47:57.004Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 83
-  completed_plans: 76
+  completed_plans: 77
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-01 complete — Wave 0 foundation (APScheduler, Radix UI primitives, test stubs)
-- **Status:** 04-01 complete. Wave 0 foundation installed: APScheduler, dialog.tsx, dropdown-menu.tsx, 7 RED backend test stubs, vitest setup. Ready for Wave 1 implementation plans.
+- **Plan:** 04-03 complete — SESSION-01 (delete last step) and SESSION-02 (delete archived session) endpoints
+- **Status:** 04-03 complete. Two DELETE endpoints added to game.py; test_session_mgmt.py stubs replaced with real integration tests. SESSION-01 and SESSION-02 backend done.
 
 ## Progress
 
-`[█████████░] 92%` — 76 of 83 plans complete
+`[█████████░] 93%` — 77 of 83 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -44,6 +44,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04-03: delete_last_step reverts awaiting_continue to active on step undo — allows user to continue playing after undoing last pick; current_movie_watched set to False so home page CTA reappears
+- **2026-03-17:** 04-03: delete_archived_session explicitly deletes steps before session for FK safety; 403 guard protects non-archived sessions from accidental deletion
 - **2026-03-17:** 04-01: client fixture used in backend test stubs (not async_client) — conftest.py only defines client fixture; using async_client would cause fixture-not-found error
 - **2026-03-17:** 04-01: vitest installed as Rule 3 auto-fix — frontend had no test infrastructure before this plan; needed for RadarrBanner.test.tsx to be discoverable by test runner
 - **2026-03-17:** 03.2-25: _ensure_movie_cast_in_db upserts Movie stub with title='' before cast loop — CSV sessions never insert into movies table so Credit FK target was missing; empty title filled by _ensure_movie_details_in_db later
@@ -246,6 +248,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T16:42:00Z
-Stopped at: Completed 04-01-PLAN.md — Wave 0 foundation (APScheduler, Dialog, DropdownMenu, test stubs)
-Resume with: 04-01 complete. Run 04-02 (nightly cache job) next. All Wave 0 dependencies in place.
+Last session: 2026-03-17T23:47:07Z
+Stopped at: Completed 04-03-PLAN.md — SESSION-01 delete_last_step, SESSION-02 delete_archived_session
+Resume with: 04-03 complete. SESSION-01 and SESSION-02 backend done. Continue with next Wave 2 plan.
