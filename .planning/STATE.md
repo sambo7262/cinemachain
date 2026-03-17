@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-17T22:29:24.682Z"
+stopped_at: Phase 4 plans verified — 7 plans in 5 waves
+last_updated: "2026-03-17T23:42:49.258Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 76
-  completed_plans: 75
+  total_plans: 83
+  completed_plans: 76
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (not started)
-- **Plan:** None yet — ready to plan
-- **Status:** Phase 03.2 complete. Phase 4 scope confirmed: nightly TMDB cache, UI polish (Radarr notification, thumbnails, image coverage), delete last step, delete archived sessions.
+- **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
+- **Plan:** 04-01 complete — Wave 0 foundation (APScheduler, Radix UI primitives, test stubs)
+- **Status:** 04-01 complete. Wave 0 foundation installed: APScheduler, dialog.tsx, dropdown-menu.tsx, 7 RED backend test stubs, vitest setup. Ready for Wave 1 implementation plans.
 
 ## Progress
 
-`[██████████] 96%` — 71 of 74 plans complete
+`[█████████░] 92%` — 76 of 83 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -39,11 +39,13 @@ progress:
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
 | 3.2. Game UX Enhancements | Complete — all 31 plans done; SP-1 South Park regression resolved (2026-03-17); all 12 NAS tests passing |
-| 4. Caching, UI/UX Polish, Session Mgmt | Not started — next phase |
+| 4. Caching, UI/UX Polish, Session Mgmt | In progress — 04-01 complete (Wave 0 foundation) |
 | 5. Production Deployment | Not started |
 
 ## Recent Decisions
 
+- **2026-03-17:** 04-01: client fixture used in backend test stubs (not async_client) — conftest.py only defines client fixture; using async_client would cause fixture-not-found error
+- **2026-03-17:** 04-01: vitest installed as Rule 3 auto-fix — frontend had no test infrastructure before this plan; needed for RadarrBanner.test.tsx to be discoverable by test runner
 - **2026-03-17:** 03.2-25: _ensure_movie_cast_in_db upserts Movie stub with title='' before cast loop — CSV sessions never insert into movies table so Credit FK target was missing; empty title filled by _ensure_movie_details_in_db later
 - **2026-03-17:** 03.2-25: Movie PK resolved once outside cast loop (was per-iteration SELECT) — same movie_tmdb_id for all cast members; eliminates N redundant DB round-trips per call
 - **2026-03-17:** 03.2-25: background_tasks.add_task placed unconditionally after if prior_movie_ids: block in import_csv_session — mirrors create_session; even single-movie CSV imports get the cast pre-fetch
@@ -244,6 +246,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T22:29:24.660Z
-Stopped at: Phase 4 context gathered
-Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
+Last session: 2026-03-17T16:42:00Z
+Stopped at: Completed 04-01-PLAN.md — Wave 0 foundation (APScheduler, Dialog, DropdownMenu, test stubs)
+Resume with: 04-01 complete. Run 04-02 (nightly cache job) next. All Wave 0 dependencies in place.
