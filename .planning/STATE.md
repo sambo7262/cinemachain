@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Cross-session WatchEvent eligibility contamination fixed; get_eligible_movies and request_movie now session-scoped via steps intersection; Docker rebuild + NAS deploy required
-stopped_at: Completed 03.2-15-PLAN.md
-last_updated: "2026-03-17T06:11:52.692Z"
+status: Concession loading messages, CSV direct TMDB ID input, and explicit current_movie_watched=False in import complete; Docker rebuild + NAS deploy required for backend changes
+stopped_at: Completed 03.2-18-PLAN.md
+last_updated: "2026-03-17T06:13:29.012Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 66
-  completed_plans: 62
+  completed_plans: 63
 ---
 
 # STATE.md — CinemaChain
@@ -25,8 +25,8 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-14 (validate-first CSV import with fuzzy match resolution and timeout fix)
-- **Status:** CSV import now resilient to NAS timeouts and ambiguous titles; Docker rebuild + NAS deploy required for backend changes
+- **Plan:** Completed 03.2-18 (concession loading messages, CSV direct TMDB ID input, import last-row fix)
+- **Status:** Concession loading messages, CSV direct TMDB ID input, and explicit current_movie_watched=False in import complete; Docker rebuild + NAS deploy required for backend changes
 
 ## Progress
 
@@ -43,6 +43,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-18: useLoadingMessages returns string|null (not empty string); GameSession actors+movies and GameLobby CSV import use it; showMoviesSpinner state+useEffect removed entirely
+- **2026-03-16:** 03.2-18: Direct TMDB ID input in CSV validation report placed outside u.suggestions conditional so it appears for both suggestion and no-result rows; calls handleOverridePick same as suggestion buttons
+- **2026-03-16:** 03.2-18: import_csv_session sets current_movie_watched=False explicitly to document intent that last CSV row is in-progress (not yet watched)
 - **2026-03-17:** 03.2-15: WatchEvent session-scoping via session.steps tmdb_id intersection instead of WatchEvent.session_id FK column — plan incorrectly assumed column existed; steps intersection avoids migration and delivers identical cross-session eligibility semantics (movie watched in Session A remains eligible in Session B)
 - **2026-03-16:** 03.2-14: httpx.Timeout(connect=60s, read=90s) raised in TMDBClient to prevent ConnectTimeout on NAS for 136-row CSV imports
 - **2026-03-16:** 03.2-14: import_csv_session two-pass validate-first: high/medium confidence rows auto-resolve; low/none rows return 200+validation_required without creating session; overrides re-submission skips TMDB lookup
@@ -232,6 +235,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T06:11:52.685Z
-Stopped at: Completed 03.2-15-PLAN.md
+Last session: 2026-03-17T06:13:29.007Z
+Stopped at: Completed 03.2-18-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
