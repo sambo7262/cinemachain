@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: Completed 04-02-PLAN.md — nightly cache job (APScheduler + nightly_cache_job)
-last_updated: "2026-03-17T23:49:50.126Z"
+last_updated: "2026-03-17T23:58:15.345Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 83
-  completed_plans: 78
+  completed_plans: 79
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-02 complete — nightly TMDB cache job (APScheduler wired in lifespan, nightly_cache_job service)
-- **Status:** 04-02 complete. services/cache.py created with nightly_cache_job(); APScheduler wired in lifespan with CronTrigger; _bg_session_factory moved to db.py; test_cache.py stubs replaced with real assertions. Ready for Wave 2 continuation.
+- **Plan:** 04-04 complete — UX polish: NotificationContext, RadarrNotificationBanner, Now Playing poster, 1400px layout, Watch History tab removed
+- **Status:** 04-04 complete. NotificationContext.tsx and RadarrNotificationBanner.tsx created; App.tsx wraps in NotificationProvider with banner below NavBar; GameSession.tsx migrated radarrStatus to showRadarr() context; Now Playing card has hero poster (120x180px); GameLobby Watch History tab removed; api.ts has deleteLastStep/deleteSession/getSuggestions. Wave 3 UX-06/UX-07 complete.
 
 ## Progress
 
-`[█████████░] 93%` — 77 of 83 plans complete
+`[██████████] 95%` — 79 of 83 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -46,6 +46,9 @@ progress:
 
 - **2026-03-17:** 04-02: deferred import pattern used in test_cache.py — asyncpg not installed locally; try/except ImportError inside each test function matches existing project convention; tests skip locally and pass GREEN in Docker
 - **2026-03-17:** 04-02: .env.example required DB_PASSWORD, TS_AUTHKEY, PUID, PGID in addition to TMDB cache vars — pre-existing test_settings.py assertion required these keys; all added in same .env.example creation
+- **2026-03-17:** 04-04: showRadarr() uses canonical message strings ('Already in Radarr' / 'Movie Queued for Download'); radarrFallbackFiredRef and fallback useEffect removed; global context handles deduplication via timer reset
+- **2026-03-17:** 04-04: Now Playing card poster uses TMDB w185 image tier at 120px display width (correct resolution for 2x DPI); grey bg-muted placeholder at identical 120x180px when poster_path is null
+- **2026-03-17:** 04-04: GameLobby defaultTab narrowed to 'search' | 'csv'; initial value and + Start a new session handler both set to 'search' after Watch History tab removal
 - **2026-03-17:** 04-03: delete_last_step reverts awaiting_continue to active on step undo — allows user to continue playing after undoing last pick; current_movie_watched set to False so home page CTA reappears
 - **2026-03-17:** 04-03: delete_archived_session explicitly deletes steps before session for FK safety; 403 guard protects non-archived sessions from accidental deletion
 - **2026-03-17:** 04-01: client fixture used in backend test stubs (not async_client) — conftest.py only defines client fixture; using async_client would cause fixture-not-found error
@@ -250,6 +253,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T23:49:50.120Z
-Stopped at: Completed 04-02-PLAN.md — nightly cache job (APScheduler + nightly_cache_job)
-Resume with: 04-03 complete. SESSION-01 and SESSION-02 backend done. Continue with next Wave 2 plan.
+Last session: 2026-03-17T23:57:20Z
+Stopped at: Completed 04-04-PLAN.md — UX polish (NotificationContext, RadarrNotificationBanner, poster, 1400px layout, Watch History removal)
+Resume with: 04-04 complete. UX-06 and UX-07 done. Continue with remaining Wave 3 plans.
