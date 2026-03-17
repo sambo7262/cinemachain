@@ -128,7 +128,7 @@ Plans:
   3. User can toggle to show ineligible actors alongside eligible ones
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 - [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
@@ -161,7 +161,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 3/6 | In Progress|  |
+| 03.2. Game UX Enhancements | 4/6 | In Progress|  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
