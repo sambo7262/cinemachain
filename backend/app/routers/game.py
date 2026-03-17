@@ -350,6 +350,70 @@ async def _ensure_actor_credits_in_db(
     await db.commit()
 
 
+async def _ensure_movie_cast_in_db(
+    movie_tmdb_id: int,
+    tmdb: "TMDBClient",
+    db: AsyncSession,
+    top_n: int = 20,
+) -> None:
+    """Fetch all credits for a movie in a SINGLE TMDB call and batch-insert into DB.
+
+    Replaces the old per-actor loop in the get_eligible_actors on-demand fallback.
+    One /movie/{id}/credits call vs 20 separate /person/{id}/movie_credits calls —
+    eliminates TMDB rate-limit failures when the background pre-fetch has not completed.
+    """
+    try:
+        r = await tmdb._client.get(f"/movie/{movie_tmdb_id}/credits")
+        r.raise_for_status()
+        cast = r.json().get("cast", [])[:top_n]
+    except Exception:
+        return  # Degrade gracefully — background pre-fetch will populate later
+
+    for member in cast:
+        aid = member.get("id")
+        aname = member.get("name")
+        profile = member.get("profile_path")
+        character = member.get("character", "")
+        if not aid or not aname:
+            continue
+
+        # Upsert Actor
+        await db.execute(
+            pg_insert(Actor)
+            .values(tmdb_id=aid, name=aname, profile_path=profile)
+            .on_conflict_do_update(
+                index_elements=["tmdb_id"],
+                set_={"name": aname, "profile_path": profile},
+            )
+        )
+        await db.flush()
+
+        # Resolve actor PK
+        actor_row = await db.execute(select(Actor).where(Actor.tmdb_id == aid))
+        actor_obj = actor_row.scalar_one_or_none()
+        if not actor_obj:
+            continue
+
+        # Resolve movie PK (movie must already exist — it's the session's current movie)
+        movie_row = await db.execute(select(Movie).where(Movie.tmdb_id == movie_tmdb_id))
+        movie_obj = movie_row.scalar_one_or_none()
+        if not movie_obj:
+            continue
+
+        # Upsert Credit
+        await db.execute(
+            pg_insert(Credit)
+            .values(
+                actor_id=actor_obj.id,
+                movie_id=movie_obj.id,
+                character=character,
+            )
+            .on_conflict_do_nothing()
+        )
+
+    await db.commit()
+
+
 async def _ensure_movie_details_in_db(
     tmdb_ids: list[int],
     tmdb: TMDBClient,
@@ -591,6 +655,27 @@ async def import_csv_session(
 
     await db.commit()
     await db.refresh(session)
+
+    # Create WatchEvent records for all prior movie steps (not the last in-progress movie).
+    # This ensures session counters (watched_count, watched_runtime_minutes) reflect the
+    # full imported chain history immediately — not zeros.
+    # Identify "prior" movies: all movie-pick steps whose movie is NOT the current in-progress one.
+    prior_movie_ids = list({
+        s["movie_tmdb_id"]
+        for s in steps_data
+        if s["actor_tmdb_id"] is None  # movie-pick steps only
+        and s["movie_tmdb_id"] != last_movie_id  # exclude current in-progress movie
+    })
+    if prior_movie_ids:
+        now = _datetime.utcnow()
+        for mid in prior_movie_ids:
+            we_stmt = pg_insert(WatchEvent).values(
+                tmdb_id=mid,
+                source="csv_import",
+                watched_at=now,
+            ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+            await db.execute(we_stmt)
+        await db.commit()
 
     # Re-fetch with steps loaded
     result = await db.execute(
@@ -1065,16 +1150,7 @@ async def get_eligible_actors(
     # query returns the correct result. Mirrors the combined-view branch.
     if not actors:
         tmdb: TMDBClient = request.app.state.tmdb_client
-        try:
-            r = await tmdb._client.get(f"/movie/{session.current_movie_tmdb_id}/credits")
-            r.raise_for_status()
-            cast = r.json().get("cast", [])[:20]
-            for member in cast:
-                aid = member.get("id")
-                if aid:
-                    await _ensure_actor_credits_in_db(aid, tmdb, db)
-        except Exception:
-            pass  # Degrade gracefully — return empty list if TMDB unavailable
+        await _ensure_movie_cast_in_db(session.current_movie_tmdb_id, tmdb, db)
 
         # Re-run with a FRESH statement after all inserts are committed.
         # Reusing the pre-built `stmt` may miss newly inserted rows due to
@@ -1221,9 +1297,10 @@ async def get_eligible_movies(
                         "via_actor_name": actor.name,
                     }
 
-    # Fetch full movie details (genres + runtime) for any stubs missing genre data.
-    # Must run BEFORE movies = list(...) so sorting and filtering get the updated values.
-    if hasattr(request.app.state, "tmdb_client"):
+    # Actor-scoped path only: fetch genres+runtime stubs and MPAA ratings on demand.
+    # Combined-view (actor_id is None) skips all TMDB enrichment — returns DB-cached
+    # data immediately to avoid sequential HTTP calls that cause NAS 504 timeouts.
+    if actor_id is not None and hasattr(request.app.state, "tmdb_client"):
         _tmdb2 = request.app.state.tmdb_client
         await _ensure_movie_details_in_db(list(movies_map.keys()), _tmdb2, db)
         # Refresh genre + runtime values in movies_map from DB after fetch
@@ -1236,9 +1313,8 @@ async def get_eligible_movies(
                 movies_map[row.tmdb_id]["genres"] = row.genres
                 movies_map[row.tmdb_id]["runtime"] = row.runtime
 
-    # Fetch mpaa_rating on-demand for movies where it has never been fetched (mpaa_rating is None)
-    # Sequential fetch is acceptable — cold start only; subsequent requests use cached value.
-    if hasattr(request.app.state, "tmdb_client"):
+        # Fetch mpaa_rating on-demand for movies where it has never been fetched (mpaa_rating is None)
+        # Sequential fetch is acceptable — cold start only; subsequent requests use cached value.
         _tmdb = request.app.state.tmdb_client
         for mid, m in movies_map.items():
             if m.get("mpaa_rating") is None:
