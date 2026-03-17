@@ -42,6 +42,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-02: vote_count and mpaa_rating columns nullable — no backfill needed; migration 0005 chains from 0004; mpaa_rating VARCHAR(10) covers NC-17; no index needed (display/filter only)
 - **2026-03-17:** 03.2-04: Slider thumb rendering uses both defaultValue and value arrays to support controlled and uncontrolled modes; callers always use controlled value in practice
 - **2026-03-17:** 03.2-04: Collapsible is a thin Radix re-export with no forwardRef wrapper — matches canonical shadcn pattern for this primitive
 - **2026-03-17:** 03.2-04: Installed @radix-ui/react-slider, react-checkbox, react-collapsible via npm — packages assumed bundled but were absent from package.json
