@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { X, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLoadingMessages } from "@/hooks/useLoadingMessages"
 
 const parseGenres = (s: string | null): string[] => {
   try { return JSON.parse(s ?? "[]") ?? [] } catch { return [] }
@@ -55,6 +56,7 @@ export default function GameSession() {
     queryFn: () => api.getSession(sid),    // fetch by ID, not active session
     refetchInterval: (query) =>
       query.state.data?.status === "awaiting_continue" ? false : 5000,
+    refetchOnMount: "always",
     enabled: !!sid,
   })
 
@@ -96,16 +98,13 @@ export default function GameSession() {
   }, [searchQuery])
 
   // Eligible actors for the current movie
-  const { data: eligibleActorsData = [] } = useQuery({
+  const { data: eligibleActorsData = [], isFetching: eligibleActorsFetching } = useQuery({
     queryKey: ["eligibleActors", sid, session?.current_movie_tmdb_id],
     queryFn: () => api.getEligibleActors(sid, true),  // always fetch ineligible too
     enabled: !!sid && session?.status === "active" && isWatched,
   })
   // Eligible actors: only those with is_eligible !== false (or undefined = eligible)
   const eligibleActors = eligibleActorsData.filter((a) => a.is_eligible !== false)
-
-  // Loading spinner state — shows after 1s of fetching to avoid flash on fast responses
-  const [showMoviesSpinner, setShowMoviesSpinner] = useState(false)
 
   // Eligible movies — scoped to selected actor + sort/filter params
   // enabled without selectedActor: no actor = combined-view (all eligible movies)
@@ -124,15 +123,9 @@ export default function GameSession() {
   const allEligibleMovies = eligibleMoviesData?.items ?? []
   const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
 
-  // Show spinner only after 1 second of fetching — avoids flash on fast responses
-  useEffect(() => {
-    if (!eligibleMoviesFetching) {
-      setShowMoviesSpinner(false)
-      return
-    }
-    const t = setTimeout(() => setShowMoviesSpinner(true), 1000)
-    return () => clearTimeout(t)
-  }, [eligibleMoviesFetching])
+  // Concession-themed loading messages for actors and movies
+  const actorsLoadingMessage = useLoadingMessages(eligibleActorsFetching)
+  const moviesLoadingMessage = useLoadingMessages(eligibleMoviesFetching)
 
   // Client-side filtering: search + sidebar filters applied simultaneously (AND relationship)
   const filteredMovies = allEligibleMovies
