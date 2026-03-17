@@ -572,6 +572,7 @@ async def import_csv_session(
     session = GameSession(
         status="active",
         current_movie_tmdb_id=last_movie_id,
+        current_movie_watched=False,  # last CSV row is in-progress, not yet watched
         name=body.name,
     )
     db.add(session)

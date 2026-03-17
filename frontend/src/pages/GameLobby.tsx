@@ -416,7 +416,7 @@ export default function GameLobby() {
                               <div key={u.row} className="flex flex-col gap-1 rounded bg-muted px-3 py-2">
                                 <span className="text-xs text-muted-foreground">Row {u.row + 1}: <span className="text-foreground font-medium">{u.csv_title}</span></span>
                                 {u.suggestions.length === 0 ? (
-                                  <span className="text-xs text-red-400">No TMDB results found — remove this row from the CSV and re-upload.</span>
+                                  <span className="text-xs text-red-400">No TMDB results found.</span>
                                 ) : (
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {u.suggestions.map(s => (
@@ -435,6 +435,24 @@ export default function GameLobby() {
                                     ))}
                                   </div>
                                 )}
+                                {/* Direct TMDB ID input — overrides suggestion button selection */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <label className="text-xs text-muted-foreground whitespace-nowrap">
+                                    Or enter TMDB ID directly:
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="e.g. 550"
+                                    className="text-xs rounded border border-border bg-background px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-primary"
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10)
+                                      if (!isNaN(val) && val > 0) {
+                                        handleOverridePick(u.row, val)
+                                      }
+                                    }}
+                                  />
+                                </div>
                               </div>
                             )
                           })}
