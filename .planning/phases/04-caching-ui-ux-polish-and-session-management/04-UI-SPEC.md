@@ -63,6 +63,7 @@ Declared values (multiples of 4 only):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, chip internal padding, inline badge spacing |
+| xs-plus | 12px | Notification-only slim vertical padding — Radarr banner `py-3` exclusively |
 | sm | 8px | Card internal gaps, compact metadata rows |
 | md | 16px | Default element spacing, card padding, section gaps within a panel |
 | lg | 24px | Section padding, filter sidebar padding, NavBar horizontal padding |
@@ -71,7 +72,6 @@ Declared values (multiples of 4 only):
 | 3xl | 64px | Page-level top padding |
 
 **Exceptions:**
-- Radarr notification banner: 12px vertical padding (`py-3`) — intentionally slim, not a full section
 - Now Playing hero poster: 120px wide (`w-[120px]`) — fixed width, not a spacing token
 - Actor initials placeholder circle: 40px diameter (`w-10 h-10`) — touch/display target, existing pattern
 - Touch targets (mobile): minimum 44px height for all interactive controls
@@ -87,7 +87,7 @@ All sizes use the system sans-serif stack inherited from shadcn zinc default. No
 | Body | 14px (`text-sm`) | 400 (regular) | 1.5 | Metadata rows, filter labels, muted text, actor names |
 | Label | 16px (`text-base`) | 400 (regular) | 1.5 | Button labels, nav link text, card secondary text |
 | Heading | 20px (`text-lg` → `text-xl`) | 600 (semibold) | 1.2 | Movie card title, session name, panel headings |
-| Display | 28px (`text-2xl`) | 700 (bold) | 1.2 | Page-level headings (GameLobby "Sessions" heading, session home movie title in Now Playing) |
+| Display | 28px (`text-2xl`) | 600 (semibold) | 1.2 | Page-level headings (GameLobby "Sessions" heading, session home movie title in Now Playing) — size differential from Heading is sufficient distinction without a weight change |
 
 **Existing pattern confirmed from codebase:** MovieCard uses `text-lg font-semibold` for title, `text-sm text-muted-foreground` for year/runtime metadata. This is the established heading/body pairing — retain it.
 
@@ -178,7 +178,7 @@ New components to create this phase:
 - **Confirmation:** `DeleteConfirmDialog` with:
   - Title: `"Delete Last Step"`
   - Body: `"This will remove the most recent step and revert the session to the previous movie. This cannot be undone."`
-  - Cancel button: `"Cancel"`
+  - Cancel button: `"Keep Step"`
   - Confirm button: `"Delete Step"` with `variant="destructive"`
 - **After confirm:** `DELETE /sessions/{id}/steps/last` — session home re-fetches and re-renders to prior state
 - **No Radarr cancellation** — download stays in Radarr queue; no mention of this in the UI
@@ -189,7 +189,7 @@ New components to create this phase:
 - **Confirmation:** `DeleteConfirmDialog` with:
   - Title: `"Delete Session"`
   - Body: `"This will permanently remove this session and all its steps. This cannot be undone."`
-  - Cancel button: `"Cancel"`
+  - Cancel button: `"Keep Session"`
   - Confirm button: `"Delete Session"` with `variant="destructive"`
 - **After confirm:** `DELETE /sessions/{id}` — session removed from archived list; list re-fetches
 
@@ -239,18 +239,28 @@ New components to create this phase:
 | Delete Last Step — menu item | `"Delete Last Step"` |
 | Delete Last Step — dialog title | `"Delete Last Step"` |
 | Delete Last Step — dialog body | `"This will remove the most recent step and revert the session to the previous movie. This cannot be undone."` |
+| Delete Last Step — cancel button | `"Keep Step"` |
 | Delete Last Step — confirm button | `"Delete Step"` |
 | Delete Archived Session — button | `"Delete Session"` |
 | Delete Archived Session — dialog title | `"Delete Session"` |
 | Delete Archived Session — dialog body | `"This will permanently remove this session and all its steps. This cannot be undone."` |
+| Delete Archived Session — cancel button | `"Keep Session"` |
 | Delete Archived Session — confirm button | `"Delete Session"` |
-| Cancel (all dialogs) | `"Cancel"` |
 | Suggested tab — empty state heading | `"No suggestions yet"` |
 | Suggested tab — empty state body | `"Continue the chain to unlock suggestions."` |
 | Suggested tab label | `"Suggested"` |
 | Filters toggle (mobile) | `"Filters"` |
 | Now Playing — no poster fallback | No text — grey rectangle only |
 | Export CSV — menu item | `"Export CSV"` |
+
+### Error States
+
+| Action | Error Copy | Recovery Affordance |
+|--------|-----------|---------------------|
+| Delete Last Step API failure | `"Could not delete step. Try again."` | Inline below the dialog or as a toast; retry button re-triggers the same `DELETE` call |
+| Delete Archived Session API failure | `"Could not delete session. Try again."` | Inline below the dialog or as a toast; retry button re-triggers the same `DELETE` call |
+| Suggested tab fetch failure | `"Suggestions unavailable. Refresh the tab to try again."` | Displayed in place of the suggestion list; no retry button — tab remount on re-focus triggers re-fetch |
+| Radarr banner state update failure | No user-visible error — Radarr status is best-effort; silent failure is acceptable; banner simply does not appear | None required |
 
 ---
 
@@ -282,6 +292,10 @@ No third-party registries declared for this phase.
 | NavBar existing structure and `max-w-4xl` (to replace) | `NavBar.tsx` codebase scan |
 | Dialog/DropdownMenu not yet installed | `package.json` codebase scan |
 | Mobile responsive breakpoints, poster placeholder styling, genre chip styling, sidebar proportions | Claude's Discretion (CONTEXT.md §Claude's Discretion) |
+| Cancel labels scoped to action context ("Keep Step", "Keep Session") | Checker revision — 2026-03-17 |
+| Error states section (delete failures, suggestion fetch failure, Radarr silent failure) | Checker revision — 2026-03-17 |
+| Typography: Display weight consolidated to 600 semibold (dropped 700 bold) | Checker revision — 2026-03-17 |
+| Spacing: 12px named as `xs-plus` token in declared scale (notification-only slim padding) | Checker revision — 2026-03-17 |
 
 ---
 
