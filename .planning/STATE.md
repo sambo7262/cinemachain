@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Regression 1 closed; Regression 2 (stale movie list queryKey) and Gap 3 (eligible movies without actor) still require follow-up plans
-stopped_at: Completed 03.2-14-PLAN.md
-last_updated: "2026-03-17T05:10:15.863Z"
+status: CSV import now resilient to NAS timeouts and ambiguous titles; Docker rebuild + NAS deploy required for backend changes
+stopped_at: Completed 03.2-16-PLAN.md
+last_updated: "2026-03-17T06:10:23.694Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 61
-  completed_plans: 59
+  total_plans: 66
+  completed_plans: 61
 ---
 
 # STATE.md — CinemaChain
@@ -231,6 +231,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T05:10:15.856Z
-Stopped at: Completed 03.2-14-PLAN.md
+Last session: 2026-03-17T06:10:23.688Z
+Stopped at: Completed 03.2-16-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
