@@ -121,13 +121,22 @@ Plans:
 ### Phase 03.2: Game UX Enhancements (INSERTED)
 **Goal:** Make movie selection faster and more informed during active gameplay, and surface richer session context. Adds filters, search, and richer display to the game loop without changing game rules.
 **Depends on:** Phase 03.1
-**Requirements:** TBD — to be defined during discuss-phase
+**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05
 **Success Criteria** (what must be TRUE):
   1. User can filter eligible movies by genre, runtime, MPAA rating, and TMDB rating (with vote-count floor)
   2. User can search eligible movies by title after picking an actor
   3. User can toggle to show ineligible actors alongside eligible ones
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
+**Plans:** 6 plans
+
+Plans:
+- [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
+- [ ] 03.2-02-PLAN.md — Wave 1: Alembic migration 0005 + Movie ORM model (vote_count, mpaa_rating columns)
+- [ ] 03.2-03-PLAN.md — Wave 2: Backend endpoint changes — eligible-actors include_ineligible, eligible-movies vote_count/mpaa + vote floor sort, session counters, step thumbnails
+- [ ] 03.2-04-PLAN.md — Wave 1: Frontend shadcn UI primitives — Slider, Checkbox, Collapsible components
+- [ ] 03.2-05-PLAN.md — Wave 3: Frontend feature work — api.ts DTOs, MovieFilterSidebar, SessionCounters, GameSession.tsx integration, ChainHistory.tsx thumbnails
+- [ ] 03.2-06-PLAN.md — Wave 4: Docker rebuild + NAS deploy + migration 0005 + human verify checkpoint
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -152,6 +161,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
+| 03.2. Game UX Enhancements | 0/6 | Planned | — |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -186,6 +196,11 @@ Plans:
 | UI-06 | Phase 03.1 |
 | UI-07 | Phase 03.1 |
 | UI-08 | Phase 03.1 |
+| UX-01 | Phase 03.2 |
+| UX-02 | Phase 03.2 |
+| UX-03 | Phase 03.2 |
+| UX-04 | Phase 03.2 |
+| UX-05 | Phase 03.2 |
 | QUERY-01 | Phase 4 |
 | QUERY-02 | Phase 4 |
 | QUERY-03 | Phase 4 |
@@ -194,7 +209,7 @@ Plans:
 | QUERY-06 | Phase 4 |
 | QUERY-07 | Phase 4 |
 
-**Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements
+**Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements + 5 Phase 03.2 UX requirements
 
 ---
 
@@ -221,7 +236,11 @@ Plans:
 | NavBar Sessions link → "/" always in Phase 03.1 | Multi-session world has no single "the active session"; NavBar polls removed; home page shows all sessions |
 | GameSession fetches by session ID not getActiveSession (03.1-09) | Live NAS testing: second session showed no buttons because getActiveSession always returned session 1; fix: use api.getSession(sid) with React Router :sessionId param |
 | Pause/resume removed from UI entirely (03.1-09) | Live NAS testing confirmed R1: pause/resume adds complexity without user value; archive is the session lifecycle end-point; removal simplifies GameSession.tsx significantly |
+| Phase 03.2 filters are client-side (no new API params per filter change) | CONTEXT.md locked decision: eligible-movies list loaded once per actor selection; all filter/search applied client-side to the fetched list |
+| mpaa_rating="" sentinel for "checked, no US cert" (03.2-02) | None = never fetched; "" = fetched but no US certification found; prevents re-fetch on every eligible-movies request |
+| vote_count uses on_conflict_do_update (03.2-03) | on_conflict_do_nothing would silently skip updating vote_count on existing Movie rows; must use on_conflict_do_update for vote_count and vote_average fields |
+| Step thumbnails only in get_session_by_id and get_active_session (03.2-03) | _enrich_steps_thumbnails adds DB queries; only these two endpoints render ChainHistory; other endpoints (pause, resume, etc.) return poster_path=None by default |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-16 — Phase 03.1 gap-closure: 2 new plans (03.1-08, 03.1-09) closing 5 bugs and 3 new requirements from live NAS VERIFICATION.md*
+*Last updated: 2026-03-16 — Phase 03.2 planned: 6 plans in 4 waves covering filters, search, ineligible toggle, chain thumbnails, session counters*
