@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
-stopped_at: Completed 03.2-22-PLAN.md
-last_updated: "2026-03-17T14:55:50.244Z"
+stopped_at: Completed 03.2-20-PLAN.md
+last_updated: "2026-03-17T14:57:05.249Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 71
-  completed_plans: 68
+  completed_plans: 69
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
-- **Plan:** Completed 03.2-21 (TMDB enrichment guard — combined-view eligible movies 504 fix)
-- **Status:** Combined-view Eligible Movies tab no longer calls TMDB on load; Docker rebuild + NAS deploy required to activate fix
+- **Plan:** Completed 03.2-23 (WatchEvent batch-insert for CSV import prior movie steps)
+- **Status:** CSV import now creates WatchEvent records for all prior chain movies (source="csv_import"); session watched_count and watched_runtime_minutes correct immediately after import; Docker rebuild + NAS deploy required to activate
 
 ## Progress
 
-`[█████████░] 94%` — 67 of 71 plans complete
+`[██████████] 96%` — 68 of 71 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -238,6 +238,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T14:55:34.903Z
-Stopped at: Completed 03.2-22-PLAN.md
+Last session: 2026-03-17T14:57:05.243Z
+Stopped at: Completed 03.2-20-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
