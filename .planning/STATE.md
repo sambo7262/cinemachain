@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Regression 1 closed; Regression 2 (stale movie list queryKey) and Gap 3 (eligible movies without actor) still require follow-up plans
-stopped_at: Completed 03.2-11-PLAN.md
-last_updated: "2026-03-17T05:08:27.295Z"
+stopped_at: Completed 03.2-14-PLAN.md
+last_updated: "2026-03-17T05:10:15.863Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 61
-  completed_plans: 58
+  completed_plans: 59
 ---
 
 # STATE.md — CinemaChain
@@ -24,9 +24,9 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; 2 open issues remain)
-- **Plan:** Completed 03.2-10 (Regression 1 fix — fresh_stmt in get_eligible_actors fallback)
-- **Status:** Regression 1 closed; Regression 2 (stale movie list queryKey) and Gap 3 (eligible movies without actor) still require follow-up plans
+- **Phase:** Phase 03.2 — Game UX Enhancements (follow-up plans executing; all open issues addressed)
+- **Plan:** Completed 03.2-14 (validate-first CSV import with fuzzy match resolution and timeout fix)
+- **Status:** CSV import now resilient to NAS timeouts and ambiguous titles; Docker rebuild + NAS deploy required for backend changes
 
 ## Progress
 
@@ -43,6 +43,10 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-14: httpx.Timeout(connect=60s, read=90s) raised in TMDBClient to prevent ConnectTimeout on NAS for 136-row CSV imports
+- **2026-03-16:** 03.2-14: import_csv_session two-pass validate-first: high/medium confidence rows auto-resolve; low/none rows return 200+validation_required without creating session; overrides re-submission skips TMDB lookup
+- **2026-03-16:** 03.2-14: medium confidence (contains-match) auto-accepts to avoid excessive false-positive pickers; only low and none trigger suggestion picker
+- **2026-03-16:** 03.2-14: CsvValidationResponse returns HTTP 200 (not 201) so frontend mutation onSuccess receives it instead of onError
 - **2026-03-16:** 03.2-11: selectedActor?.tmdb_id ?? null in eligibleMovies queryKey — null (not undefined) creates distinct React Query cache entry for no-actor state; fixes Regression 2 stale movie list on actor change
 - **2026-03-16:** 03.2-11: enabled condition for eligibleMovies is !!sid && !!session && isWatched with no selectedActor requirement — combined-view fires on tab open without actor selected; closes Gap 3 (UX-03)
 - **2026-03-16:** 03.2-13: setQueryData(["session", sid], requestResult.session) inserted in handleMovieConfirm immediately after setView("home") — ensures current_movie_watched: false is in cache before user navigates away; invalidateQueries still runs for background refresh
@@ -227,6 +231,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T05:08:27.289Z
-Stopped at: Completed 03.2-11-PLAN.md
+Last session: 2026-03-17T05:10:15.856Z
+Stopped at: Completed 03.2-14-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
