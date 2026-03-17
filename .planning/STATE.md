@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03.2-04-PLAN.md
-last_updated: "2026-03-17T02:48:49.098Z"
+stopped_at: Completed 03.2-05-PLAN.md
+last_updated: "2026-03-17T03:08:16.845Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 53
-  completed_plans: 49
+  completed_plans: 51
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.1 — UI Improvements and Multi-Session Support (complete)
-- **Plan:** Completed 03.1-09 (frontend gap closure: getSession(id), current_movie_title display, Pause/Resume/End removed, movie badge, Import Chain card)
-- **Status:** Phase 03.1 complete — Docker rebuild and NAS deploy required; Phase 4 (Query Mode) ready to start
+- **Phase:** Phase 03.2 — Game UX Enhancements (plans 01-05 complete; plan 06 if exists is the checkpoint)
+- **Plan:** Completed 03.2-05 (frontend wiring: filter sidebar, search, ineligible toggle, session counters, ChainHistory thumbnails)
+- **Status:** Phase 03.2 frontend complete — Docker rebuild and NAS deploy required before browser verification; Phase 4 (Query Mode) ready to start after deploy
 
 ## Progress
 
-`[██████████] 98%` — 46 of 47 plans complete
+`[██████████] 96%` — 51 of 53 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -38,10 +38,15 @@ progress:
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 4. Query Mode | Not started — waiting on Phase 03.1 completion |
+| 3.2. Game UX Enhancements | 5 of 6 plans done — 03.2-05 wired frontend; 03.2-06 checkpoint verification pending |
+| 4. Query Mode | Not started — waiting on Phase 03.2 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-05: eligibleActorsData holds full API result (eligible+ineligible); eligibleActors filtered client-side to is_eligible !== false; ineligible section reads eligibleActorsData directly — avoids double-fetch
+- **2026-03-16:** 03.2-05: filteredMovies computed from allEligibleMovies (current paginated page); Load More pagination unchanged; filters apply within each loaded page
+- **2026-03-16:** 03.2-05: parseGenres utility placed as module-level const in GameSession.tsx (not exported) — avoids coupling without adding a shared utility file
+- **2026-03-16:** 03.2-05: SessionCounters rendered inside header flex-col alongside session name and Now Playing line — matches UI-SPEC.md placement between name and tab panel
 - **2026-03-16:** 03.2-02: vote_count and mpaa_rating columns nullable — no backfill needed; migration 0005 chains from 0004; mpaa_rating VARCHAR(10) covers NC-17; no index needed (display/filter only)
 - **2026-03-17:** 03.2-04: Slider thumb rendering uses both defaultValue and value arrays to support controlled and uncontrolled modes; callers always use controlled value in practice
 - **2026-03-17:** 03.2-04: Collapsible is a thin Radix re-export with no forwardRef wrapper — matches canonical shadcn pattern for this primitive
@@ -201,6 +206,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T02:48:49.093Z
-Stopped at: Completed 03.2-02-PLAN.md
+Last session: 2026-03-17T03:08:16.840Z
+Stopped at: Completed 03.2-05-PLAN.md
 Resume with: Phase 03.1 fully complete. Docker rebuild + NAS deploy required. Begin Phase 4 (Query Mode).
