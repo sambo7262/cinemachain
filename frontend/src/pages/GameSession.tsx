@@ -355,11 +355,21 @@ export default function GameSession() {
                 </div>
               )}
 
-              {/* Continue the chain CTA — shown when movie has been watched */}
-              {session.status === "awaiting_continue" && (
+              {/* Continue the chain CTA — shown when:
+                  (a) awaiting_continue: normal post-watched flow, calls backend then navigates to tabs
+                  (b) active + isWatched: continueChain was already called but user navigated away;
+                      backend state is already active, just navigate to tabs directly */}
+              {(session.status === "awaiting_continue" || (session.status === "active" && isWatched)) && (
                 <Button
                   onClick={() => {
-                    handleContinue()
+                    if (session.status === "awaiting_continue") {
+                      handleContinue()
+                    } else {
+                      // active + isWatched: continueChain already called, session is active.
+                      // Skip the backend call — just navigate to actor selection tab.
+                      setView("tabs")
+                      setActiveTab("actors")
+                    }
                   }}
                   className="w-full bg-green-700 hover:bg-green-600"
                 >
