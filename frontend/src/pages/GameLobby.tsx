@@ -60,12 +60,6 @@ export default function GameLobby() {
     staleTime: 0,
   })
 
-  // Watched movies
-  const { data: watchedMovies, isLoading: watchedLoading } = useQuery({
-    queryKey: ["watchedMovies"],
-    queryFn: api.getWatchedMovies,
-  })
-
   // Search state
   const [searchInput, setSearchInput] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
@@ -87,7 +81,7 @@ export default function GameLobby() {
 
   // View state: "grid" shows session grid; "form" shows new-session form
   const [view, setView] = useState<"grid" | "form">("grid")
-  const [defaultTab, setDefaultTab] = useState<"watched" | "search" | "csv">("watched")
+  const [defaultTab, setDefaultTab] = useState<"search" | "csv">("search")
 
   // Session name state
   const [sessionName, setSessionName] = useState("")
@@ -236,7 +230,7 @@ export default function GameLobby() {
                 setSessionName("")
                 setCsvRows([])
                 setCsvFileName(null)
-                setDefaultTab("watched")
+                setDefaultTab("search")
                 setView("form")
               }}
             >
@@ -299,41 +293,10 @@ export default function GameLobby() {
             {/* Movie picker — only rendered once name is valid */}
             {isNameValid && <div>
               <Tabs key={defaultTab} defaultValue={defaultTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="watched">Watch History</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="search">Search Title</TabsTrigger>
                   <TabsTrigger value="csv">Import Chain</TabsTrigger>
                 </TabsList>
-
-                {/* Tab: Watch History */}
-                <TabsContent value="watched" className="mt-4">
-                  {watchedLoading && (
-                    <p className="text-muted-foreground text-sm text-center py-8">
-                      Loading watch history...
-                    </p>
-                  )}
-                  {!watchedLoading && (!watchedMovies || watchedMovies.length === 0) && (
-                    <p className="text-muted-foreground text-sm text-center py-8">
-                      No watched movies found. Watch something in Plex first, or mark movies as watched.
-                    </p>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    {watchedMovies?.map((movie) => (
-                      <MovieCard
-                        key={movie.tmdb_id}
-                        {...movie}
-                        watched
-                        onClick={() => createMutation.mutate({ tmdb_id: movie.tmdb_id, title: movie.title })}
-                        selectable={!createMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                  {createMutation.isPending && (
-                    <p className="text-muted-foreground text-sm text-center mt-4">
-                      Starting session...
-                    </p>
-                  )}
-                </TabsContent>
 
                 {/* Tab: Search Title */}
                 <TabsContent value="search" className="mt-4">

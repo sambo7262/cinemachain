@@ -173,6 +173,15 @@ export const api = {
   archiveSession: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/archive`, { method: "POST" }),
 
+  deleteLastStep: (sessionId: number) =>
+    apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/steps/last`, { method: "DELETE" }),
+
+  deleteSession: (sessionId: number) =>
+    apiFetch<void>(`/game/sessions/${sessionId}`, { method: "DELETE" }),
+
+  getSuggestions: (sessionId: number) =>
+    apiFetch<EligibleMovieDTO[]>(`/game/sessions/${sessionId}/suggestions`),
+
   exportCsv: (sessionId: number, sessionName: string) => {
     fetch(`${BASE}/game/sessions/${sessionId}/export-csv`)
       .then(r => r.blob())

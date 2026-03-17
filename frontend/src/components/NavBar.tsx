@@ -10,7 +10,7 @@ export function NavBar() {
 
   return (
     <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
         {/* Logo / wordmark */}
         <Link
           to="/"

@@ -21,6 +21,7 @@ import {
 import { X, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLoadingMessages } from "@/hooks/useLoadingMessages"
+import { useNotification } from "@/contexts/NotificationContext"
 
 const parseGenres = (s: string | null): string[] => {
   try { return JSON.parse(s ?? "[]") ?? [] } catch { return [] }
@@ -39,11 +40,8 @@ export default function GameSession() {
   const [allMovies, setAllMovies] = useState(false)
   const [moviesPage, setMoviesPage] = useState(1)
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
-  const [radarrStatus, setRadarrStatus] = useState<string | null>(
-    (location.state as { radarr_status?: string } | null)?.radarr_status ?? null
-  )
   const [view, setView] = useState<"home" | "tabs">("home")
-  const radarrFallbackFiredRef = useRef(false)
+  const { showRadarr } = useNotification()
 
   // Filter and search state — Eligible Movies
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE)
@@ -63,26 +61,6 @@ export default function GameSession() {
 
   // Derive watched state from session
   const isWatched: boolean = session?.current_movie_watched ?? false
-
-  // Radarr start notification fallback: if location.state failed to deliver the status
-  // (confirmed unreliable on NAS hardware), read it from the first successful session poll.
-  // Fires at most once per mount (radarrFallbackFiredRef prevents repeat).
-  useEffect(() => {
-    if (
-      session?.radarr_status &&
-      !radarrStatus &&
-      !radarrFallbackFiredRef.current
-    ) {
-      radarrFallbackFiredRef.current = true
-      setRadarrStatus(
-        session.radarr_status === "already_in_radarr"
-          ? "Already in your library — waiting for watched event."
-          : session.radarr_status === "queued"
-          ? "Added to Radarr queue."
-          : session.radarr_status
-      )
-    }
-  }, [session?.radarr_status])
 
   // Safety reset: if session reloads while in tab view and status is awaiting_continue,
   // return to home hub (home hub shows the Continue the chain button).
@@ -155,7 +133,6 @@ export default function GameSession() {
     if (!confirmed) return
 
     setMovieRequestError(null)
-    setRadarrStatus(null)
     try {
       if (selectedActor) {
         await api.pickActor(sid, {
@@ -168,9 +145,9 @@ export default function GameSession() {
         movie_title: movie.title,
       })
       if (requestResult?.status === "already_in_radarr") {
-        setRadarrStatus("Already in your library — waiting for watched event.")
+        showRadarr("Already in Radarr")
       } else if (requestResult?.status === "queued") {
-        setRadarrStatus("Added to Radarr queue.")
+        showRadarr("Movie Queued for Download")
       }
       setView("home")
       queryClient.setQueryData(["session", sid], requestResult.session)
@@ -335,16 +312,26 @@ export default function GameSession() {
               <h2 className="text-base font-semibold text-foreground">Now playing</h2>
 
               {/* Current movie */}
-              <div className="flex flex-col gap-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Now in queue</p>
-                <p className="text-lg font-bold text-foreground">
-                  {currentStep?.movie_title ?? "(untitled)"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {isStartingMovie
-                    ? "Watch this movie, then mark it as watched to start the chain."
-                    : "Added to Radarr. Watch it, then mark as watched to continue the chain."}
-                </p>
+              <div className="flex items-start gap-4">
+                {(() => {
+                  const posterUrl = currentStep?.poster_path
+                    ? `https://image.tmdb.org/t/p/w185${currentStep.poster_path}`
+                    : null
+                  return posterUrl
+                    ? <img src={posterUrl} alt="" className="w-[120px] h-[180px] rounded-md object-cover flex-shrink-0" />
+                    : <div className="w-[120px] h-[180px] rounded-md bg-muted flex-shrink-0" />
+                })()}
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Now in queue</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {currentStep?.movie_title ?? "(untitled)"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {isStartingMovie
+                      ? "Watch this movie, then mark it as watched to start the chain."
+                      : "Added to Radarr. Watch it, then mark as watched to continue the chain."}
+                  </p>
+                </div>
               </div>
 
               {/* Previous movie (shown only when chain has 2+ movies) */}
@@ -401,20 +388,6 @@ export default function GameSession() {
               onClick={() => setMovieRequestError(null)}
               className="flex-shrink-0 text-red-400 hover:text-red-300"
               aria-label="Dismiss error"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Radarr status notification — auto-displayed after movie selection */}
-        {radarrStatus && (
-          <div className="flex items-center gap-2 rounded-lg border border-blue-700 bg-blue-950/40 px-4 py-3 text-blue-300">
-            <span className="flex-1 text-sm">{radarrStatus}</span>
-            <button
-              onClick={() => setRadarrStatus(null)}
-              className="flex-shrink-0 text-blue-400 hover:text-blue-300"
-              aria-label="Dismiss"
             >
               <X className="w-4 h-4" />
             </button>
