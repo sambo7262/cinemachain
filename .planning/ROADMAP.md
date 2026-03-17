@@ -13,7 +13,7 @@
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
-- [x] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (completed 2026-03-17)
+- [ ] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure in progress)
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -125,10 +125,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can filter eligible movies by genre, runtime, MPAA rating, and TMDB rating (with vote-count floor)
   2. User can search eligible movies by title after picking an actor
-  3. User can toggle to show ineligible actors alongside eligible ones
+  3. Ineligible actors are always visible below eligible actors (no toggle)
   4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
   5. Session page shows a counter for movies watched and total runtime of watched movies
-**Plans:** 6/6 plans complete
+**Plans:** 9 plans (6 original + 3 gap-closure)
 
 Plans:
 - [ ] 03.2-01-PLAN.md — Wave 0: Test stubs (RED phase) for 5 new backend behaviors
@@ -136,7 +136,10 @@ Plans:
 - [ ] 03.2-03-PLAN.md — Wave 2: Backend endpoint changes — eligible-actors include_ineligible, eligible-movies vote_count/mpaa + vote floor sort, session counters, step thumbnails
 - [ ] 03.2-04-PLAN.md — Wave 1: Frontend shadcn UI primitives — Slider, Checkbox, Collapsible components
 - [ ] 03.2-05-PLAN.md — Wave 3: Frontend feature work — api.ts DTOs, MovieFilterSidebar, SessionCounters, GameSession.tsx integration, ChainHistory.tsx thumbnails
-- [ ] 03.2-06-PLAN.md — Wave 4: Docker rebuild + NAS deploy + migration 0005 + human verify checkpoint
+- [~] 03.2-06-PLAN.md — Wave 4: Docker rebuild + NAS deploy + migration 0005 + human verify checkpoint (5 gaps identified)
+- [ ] 03.2-07-PLAN.md — Wave 1 (gap-closure): Backend — _ensure_movie_details_in_db to fetch genres + runtime from TMDB for movie stubs
+- [ ] 03.2-08-PLAN.md — Wave 1 (gap-closure): Frontend — ChainHistory to bottom, always-visible ineligible actors, movies tab empty state
+- [ ] 03.2-09-PLAN.md — Wave 2 (gap-closure): Docker rebuild + NAS deploy + verify all 5 gaps closed
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
@@ -161,7 +164,7 @@ Plans:
 | 2. Data Foundation | 5/5 | Complete    | 2026-03-15 |
 | 3. Movie Game | 29/29 | Complete   | 2026-03-16 |
 | 03.1. UI + Multi-Session | 8/9 | In Progress|  |
-| 03.2. Game UX Enhancements | 6/6 | Complete   | 2026-03-17 |
+| 03.2. Game UX Enhancements | 6/9 | In Progress (gap closure) |  |
 | 4. Query Mode | 0/? | Not started | — |
 
 ---
@@ -240,7 +243,9 @@ Plans:
 | mpaa_rating="" sentinel for "checked, no US cert" (03.2-02) | None = never fetched; "" = fetched but no US certification found; prevents re-fetch on every eligible-movies request |
 | vote_count uses on_conflict_do_update (03.2-03) | on_conflict_do_nothing would silently skip updating vote_count on existing Movie rows; must use on_conflict_do_update for vote_count and vote_average fields |
 | Step thumbnails only in get_session_by_id and get_active_session (03.2-03) | _enrich_steps_thumbnails adds DB queries; only these two endpoints render ChainHistory; other endpoints (pause, resume, etc.) return poster_path=None by default |
+| _ensure_movie_details_in_db called in eligible-movies (03.2-07) | Movie stubs from _ensure_actor_credits_in_db have genres=NULL and runtime=NULL; /person/{id}/movie_credits does not return genres or runtime; full TMDB movie detail fetch required during eligible-movies request for stubs with genres IS NULL |
+| Ineligible actors always visible, no toggle (03.2-08) | 03.2-06 human verify: user prefers always-visible at top rather than toggle; removes showIneligible state, always fetches include_ineligible=true |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-16 — Phase 03.2 planned: 6 plans in 4 waves covering filters, search, ineligible toggle, chain thumbnails, session counters*
+*Last updated: 2026-03-17 — Phase 03.2 gap closure plans 07-09 added (runtime/genre data, ChainHistory position, ineligible always-visible)*
