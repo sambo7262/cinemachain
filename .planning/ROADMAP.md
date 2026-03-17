@@ -13,6 +13,7 @@
 - [x] **Phase 2: Data Foundation** — TMDB filmography cache, Plex watch history sync, and manual watch marking operational (completed 2026-03-15)
 - [x] **Phase 3: Movie Game** — Complete actor-chain game loop with session state, eligibility panels, and Radarr request submission (completed 2026-03-15 — full 6-step game loop PASS on live NAS; GAME-04 resolved)
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
+- [ ] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter
 - [ ] **Phase 4: Query Mode** — Actor, title, and genre search with Radarr and Sonarr request submission from search results
 
 ---
@@ -116,6 +117,17 @@ Plans:
 - [ ] 03.1-07-PLAN.md — Wave 6: Docker rebuild + NAS deploy + migration 0004 + human verify checkpoint
 - [ ] 03.1-08-PLAN.md — Wave 5 (gap-closure): Backend — GET /sessions/{id} endpoint, current_movie_title in response, _enrich_steps_watched_at GROUP BY dedup
 - [ ] 03.1-09-PLAN.md — Wave 6 (gap-closure): Frontend — GameSession fetch-by-ID, remove pause/resume/end buttons, movie badge on session cards, standalone Import Chain card
+
+### Phase 03.2: Game UX Enhancements (INSERTED)
+**Goal:** Make movie selection faster and more informed during active gameplay, and surface richer session context. Adds filters, search, and richer display to the game loop without changing game rules.
+**Depends on:** Phase 03.1
+**Requirements:** TBD — to be defined during discuss-phase
+**Success Criteria** (what must be TRUE):
+  1. User can filter eligible movies by genre, runtime, MPAA rating, and TMDB rating (with vote-count floor)
+  2. User can search eligible movies by title after picking an actor
+  3. User can toggle to show ineligible actors alongside eligible ones
+  4. Chain history is displayed at the bottom of the session page with actor and movie thumbnails
+  5. Session page shows a counter for movies watched and total runtime of watched movies
 
 ### Phase 4: Query Mode
 **Goal:** A user can search for any actor, movie, or TV show by name or genre, browse results with sort and filter controls, and queue a selection via Radarr or Sonarr.
