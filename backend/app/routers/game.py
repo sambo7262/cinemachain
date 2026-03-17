@@ -72,9 +72,33 @@ class CSVRow(BaseModel):
     order: int
 
 
+class TMDBSuggestion(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None
+
+
+class UnresolvedRow(BaseModel):
+    row: int          # 0-based index into body.rows
+    csv_title: str
+    suggestions: list[TMDBSuggestion]
+
+
+class CsvValidationResponse(BaseModel):
+    status: str = "validation_required"
+    resolved_count: int
+    unresolved: list[UnresolvedRow]
+
+
+class CsvOverride(BaseModel):
+    row: int
+    tmdb_id: int
+
+
 class ImportCSVRequest(BaseModel):
     rows: list[CSVRow]
     name: str = "Imported Chain"           # NEW — optional with default
+    overrides: list[CsvOverride] = []
 
 
 class PickActorRequest(BaseModel):
@@ -975,8 +999,19 @@ async def get_eligible_actors(
         except Exception:
             pass  # Degrade gracefully — return empty list if TMDB unavailable
 
-        # Re-run the same query now that credits may be populated
-        rows2 = await db.execute(stmt)
+        # Re-run with a FRESH statement after all inserts are committed.
+        # Reusing the pre-built `stmt` may miss newly inserted rows due to
+        # SQLAlchemy async session transaction boundary semantics.
+        fresh_stmt = (
+            select(Actor, Credit)
+            .join(Credit, Credit.actor_id == Actor.id)
+            .join(Movie, Movie.id == Credit.movie_id)
+            .where(Movie.tmdb_id == session.current_movie_tmdb_id)
+        )
+        if picked_ids and not include_ineligible:
+            fresh_stmt = fresh_stmt.where(Actor.tmdb_id.not_in(picked_ids))
+
+        rows2 = await db.execute(fresh_stmt)
         for actor, credit in rows2.all():
             actor_dict = {
                 "tmdb_id": actor.tmdb_id,
