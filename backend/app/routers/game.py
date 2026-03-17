@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import csv
+import json
 import sqlalchemy as sa
 from datetime import datetime as _datetime
 from pydantic import BaseModel
@@ -323,6 +324,47 @@ async def _ensure_actor_credits_in_db(
             ).on_conflict_do_nothing(index_elements=["movie_id", "actor_id"])
             await db.execute(credit_stmt)
     await db.commit()
+
+
+async def _ensure_movie_details_in_db(
+    tmdb_ids: list[int],
+    tmdb: TMDBClient,
+    db: AsyncSession,
+) -> None:
+    """Fetch full movie details (genres + runtime) for any movie stubs missing genre data.
+
+    Movie stubs inserted by _ensure_actor_credits_in_db have genres=None and runtime=None
+    because /person/{id}/movie_credits only returns genre_ids (integers) and no runtime.
+    Full details require a separate GET /movie/{id} call. This helper fetches those details
+    on-demand for movies in the provided tmdb_ids list where genres IS NULL.
+    Errors are swallowed per-movie so a single TMDB failure degrades gracefully.
+    """
+    if not tmdb_ids:
+        return
+
+    rows = await db.execute(
+        select(Movie.tmdb_id).where(
+            Movie.tmdb_id.in_(tmdb_ids),
+            Movie.genres.is_(None),
+        )
+    )
+    needs_fetch = [row[0] for row in rows.all()]
+
+    for tmdb_id in needs_fetch:
+        try:
+            data = await tmdb.fetch_movie(tmdb_id)
+            genres_json = json.dumps([g["name"] for g in data.get("genres", [])])
+            runtime_val = data.get("runtime")
+            await db.execute(
+                sa.update(Movie).where(Movie.tmdb_id == tmdb_id).values(
+                    genres=genres_json,
+                    runtime=runtime_val,
+                )
+            )
+            await db.commit()
+        except Exception:
+            # Degrade gracefully — do not let a single TMDB failure block the page
+            pass
 
 
 async def _prefetch_credits_background(
@@ -1066,6 +1108,21 @@ async def get_eligible_movies(
                         "selectable": movie.tmdb_id not in watched_ids,
                         "via_actor_name": actor.name,
                     }
+
+    # Fetch full movie details (genres + runtime) for any stubs missing genre data.
+    # Must run BEFORE movies = list(...) so sorting and filtering get the updated values.
+    if hasattr(request.app.state, "tmdb_client"):
+        _tmdb2 = request.app.state.tmdb_client
+        await _ensure_movie_details_in_db(list(movies_map.keys()), _tmdb2, db)
+        # Refresh genre + runtime values in movies_map from DB after fetch
+        refreshed = await db.execute(
+            select(Movie.tmdb_id, Movie.genres, Movie.runtime)
+            .where(Movie.tmdb_id.in_(list(movies_map.keys())))
+        )
+        for row in refreshed.all():
+            if row.tmdb_id in movies_map:
+                movies_map[row.tmdb_id]["genres"] = row.genres
+                movies_map[row.tmdb_id]["runtime"] = row.runtime
 
     # Fetch mpaa_rating on-demand for movies where it has never been fetched (mpaa_rating is None)
     # Sequential fetch is acceptable — cold start only; subsequent requests use cached value.
