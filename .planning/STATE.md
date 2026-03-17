@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03.2-05-PLAN.md
-last_updated: "2026-03-17T03:08:16.845Z"
+status: verifying
+stopped_at: Completed 03.2-08-PLAN.md
+last_updated: "2026-03-17T04:00:13Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 53
-  completed_plans: 51
+  total_plans: 56
+  completed_plans: 55
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 03.2 — Game UX Enhancements (plans 01-05 complete; plan 06 if exists is the checkpoint)
-- **Plan:** Completed 03.2-05 (frontend wiring: filter sidebar, search, ineligible toggle, session counters, ChainHistory thumbnails)
-- **Status:** Phase 03.2 frontend complete — Docker rebuild and NAS deploy required before browser verification; Phase 4 (Query Mode) ready to start after deploy
+- **Phase:** Phase 03.2 — Game UX Enhancements (plans 01-07 complete)
+- **Plan:** Completed 03.2-07 (on-demand TMDB movie details fetch: genres JSON + runtime int for stub rows with genres IS NULL)
+- **Status:** Phase 03.2 backend gap closure in progress — 03.2-07 done; 03.2-08 and 03.2-09 remain
 
 ## Progress
 
-`[██████████] 96%` — 51 of 53 plans complete
+`[██████████] 96%` — 54 of 56 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -38,11 +38,12 @@ progress:
 | 2. Data Foundation | Complete (02-01 through 02-05 done) |
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 3.2. Game UX Enhancements | 5 of 6 plans done — 03.2-05 wired frontend; 03.2-06 checkpoint verification pending |
+| 3.2. Game UX Enhancements | 7 of 9 plans done — 03.2-07 adds on-demand movie details fetch; 03.2-08 and 03.2-09 remain |
 | 4. Query Mode | Not started — waiting on Phase 03.2 completion |
 
 ## Recent Decisions
 
+- **2026-03-16:** 03.2-07: _ensure_movie_details_in_db fetches per-movie inside try/except; refresh query re-reads genre+runtime for all movies_map keys after fetch; helper placed between _ensure_actor_credits_in_db and _prefetch_credits_background
 - **2026-03-16:** 03.2-05: eligibleActorsData holds full API result (eligible+ineligible); eligibleActors filtered client-side to is_eligible !== false; ineligible section reads eligibleActorsData directly — avoids double-fetch
 - **2026-03-16:** 03.2-05: filteredMovies computed from allEligibleMovies (current paginated page); Load More pagination unchanged; filters apply within each loaded page
 - **2026-03-16:** 03.2-05: parseGenres utility placed as module-level const in GameSession.tsx (not exported) — avoids coupling without adding a shared utility file
