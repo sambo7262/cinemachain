@@ -1138,8 +1138,14 @@ async def get_eligible_movies(
             detail="Watch the current movie before viewing eligible movies",
         )
 
-    # Watched state: fetch all watched tmdb_ids
-    watched_result = await db.execute(select(WatchEvent.tmdb_id))
+    # Watched state: fetch watched tmdb_ids scoped to THIS session only
+    # (movies watched in other sessions must remain eligible here)
+    session_movie_ids = [s.movie_tmdb_id for s in session.steps]
+    watched_result = await db.execute(
+        select(WatchEvent.tmdb_id).where(
+            WatchEvent.tmdb_id.in_(session_movie_ids)
+        )
+    )
     watched_ids = {row[0] for row in watched_result.all()}
 
     movies_map: dict[int, dict] = {}  # tmdb_id -> movie dict
@@ -1357,15 +1363,21 @@ async def request_movie(
     if session.status == "archived":
         raise HTTPException(status_code=422, detail="Session is archived")
 
-    # Validate: only unwatched movies can be requested
-    watched_result = await db.execute(
-        select(WatchEvent).where(WatchEvent.tmdb_id == body.movie_tmdb_id)
-    )
-    if watched_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=422,
-            detail="Movie is already watched; select an unwatched movie",
+    # Validate: only movies not already watched in THIS session can be requested
+    # (a movie watched in a different session must remain requestable here)
+    session_movie_ids = [s.movie_tmdb_id for s in session.steps]
+    if body.movie_tmdb_id in session_movie_ids:
+        watched_result = await db.execute(
+            select(WatchEvent).where(
+                WatchEvent.tmdb_id == body.movie_tmdb_id,
+                WatchEvent.tmdb_id.in_(session_movie_ids),
+            )
         )
+        if watched_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=422,
+                detail="Movie is already watched in this session; select an unwatched movie",
+            )
 
     # Add step for the chosen movie
     next_order = max((s.step_order for s in session.steps), default=-1) + 1
