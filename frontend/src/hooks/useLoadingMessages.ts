@@ -26,7 +26,7 @@ export function useLoadingMessages(isLoading: boolean): string | null {
     }
     intervalRef.current = setInterval(() => {
       setIndex((i) => (i + 1) % CONCESSION_MESSAGES.length)
-    }, 2000)
+    }, 3000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }

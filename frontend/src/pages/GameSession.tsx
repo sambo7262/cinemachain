@@ -51,12 +51,13 @@ export default function GameSession() {
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
   // Session polling — stops when awaiting_continue
-  const { data: session } = useQuery({
+  const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ["session", sid],
     queryFn: () => api.getSession(sid),    // fetch by ID, not active session
     refetchInterval: (query) =>
       query.state.data?.status === "awaiting_continue" ? false : 5000,
     refetchOnMount: "always",
+    staleTime: 0,
     enabled: !!sid,
   })
 
@@ -611,7 +612,7 @@ export default function GameSession() {
                     )}
 
                     {/* Movies list — compact table */}
-                    {filteredMovies.length === 0 && allEligibleMovies.length === 0 ? (
+                    {filteredMovies.length === 0 && allEligibleMovies.length === 0 && !eligibleMoviesFetching ? (
                       <p className="text-sm text-muted-foreground py-8 text-center">
                         {selectedActor
                           ? `No eligible movies via ${selectedActor.name}.`
