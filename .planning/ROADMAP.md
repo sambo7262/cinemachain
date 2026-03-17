@@ -159,6 +159,7 @@ Plans:
 - [ ] 03.2-25-PLAN.md — Wave 3 (gap-closure round 5): Backend — _ensure_movie_cast_in_db Movie stub upsert + import_csv_session BackgroundTasks pre-fetch
 - [ ] 03.2-26-PLAN.md — Wave 3 (gap-closure round 5): Frontend — session home dead state fix: Continue the chain button covers active+isWatched state
 - [ ] 03.2-27-PLAN.md — Wave 4 (gap-closure round 5): Docker rebuild + NAS deploy + human verify 3 new tests + 9 regression checks
+
 ### Phase 4: Caching, UI/UX Polish, and Session Management
 **Goal:** Eliminate all on-demand TMDB calls through nightly pre-population, polish the UI so images and notifications render correctly throughout the session journey, and add session management actions (delete last step, delete archived sessions).
 **Depends on:** Phase 03.2
@@ -171,7 +172,16 @@ Plans:
   5. Actor and movie images load correctly at every step of the session journey (actor grid, movie grid, chain history)
   6. User can delete the last step of a session to go one move backwards
   7. Archived sessions can be permanently deleted from the DB (removes test/invalid sessions)
-**Plans:** TBD
+**Plans:** 7 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Wave 1: Foundations — test stubs (test_cache.py, test_session_mgmt.py), shadcn Dialog + DropdownMenu primitives, npm/pip installs
+- [ ] 04-02-PLAN.md — Wave 2: Backend cache — APScheduler nightly job, services/cache.py, settings, main.py wiring (CACHE-01, CACHE-02)
+- [ ] 04-03-PLAN.md — Wave 2: Backend session endpoints — DELETE /sessions/{id}/steps/last, DELETE /sessions/{id} (SESSION-01, SESSION-02)
+- [ ] 04-04-PLAN.md — Wave 3: Frontend session home polish — NotificationContext, RadarrBanner, Now Playing poster, layout 1400px, Watch History tab removal (UX-06, UX-07)
+- [ ] 04-05-PLAN.md — Wave 3: Frontend movie enrichment + suggestions — MPAA badge, persistent sidebar, Suggested tab + backend endpoint (UX-08, UX-09)
+- [ ] 04-06-PLAN.md — Wave 4: Frontend destructive actions — Delete Last Step + Delete Archived Session dialogs wired to backend (SESSION-01, SESSION-02)
+- [ ] 04-07-PLAN.md — Wave 5: Docker rebuild + NAS deploy + human verify checkpoint (all 8 requirements)
 
 ### Phase 5: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
@@ -194,7 +204,7 @@ Plans:
 | 3. Movie Game | 29/29 | Complete | 2026-03-16 |
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
-| 4. Caching, UI/UX Polish, Session Mgmt | 0/? | Not started | — |
+| 4. Caching, UI/UX Polish, Session Mgmt | 0/7 | Not started | — |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
@@ -290,7 +300,12 @@ Plans:
 | _ensure_movie_details_in_db + _fetch_mpaa_rating guarded by actor_id (03.2-21) | 03.2-19 live test: combined-view 504 — both enrichment blocks ran for all movies in combined-view path; moving behind actor_id guard eliminates sequential TMDB calls for no-actor tab load |
 | staleTime: 0 on session query (03.2-22) | 03.2-19 live test: Mark as Watched button absent after remount — stale cache with current_movie_watched: true from prior awaiting_continue state served before refetch completed; staleTime: 0 forces immediate replacement |
 | CSV import creates WatchEvent for prior steps (03.2-23) | 03.2-19 live test: session counters showed 0 watched after CSV import — WatchEvent records never created for imported steps; source="csv_import" batch insert closes this gap |
+| Phase 4: _bg_session_factory moved to db.py | Nightly cache job in services/cache.py needs the factory without creating a cross-layer import; single definition in db.py shared by game.py and cache.py |
+| Phase 4: APScheduler pinned to >=3.10.4,<4.0 | APScheduler 4.x introduced breaking API changes (AsyncScheduler vs AsyncIOScheduler); 3.x API is stable and well-documented |
+| Phase 4: Radarr notification lifted to NotificationContext | Notification must survive route changes and render below NavBar regardless of which page called it; React Context is sufficient for one notification slot |
+| Phase 4: Delete last step blocked when 1 step remains | Starting movie step cannot be removed — session becomes invalid with 0 steps; 400 response + disabled UI item guard |
+| Phase 4: Delete archived session returns 204 | Hard delete of archived session; 403 if not archived to prevent accidental active session destruction |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 4 redefined as Caching/UI/UX Polish/Session Management; Phase 5 added for Production Deployment; Query Mode removed from v1.0 scope; Phase 03.2 marked complete (31/31 plans)*
+*Last updated: 2026-03-17 — Phase 4 planned (7 plans, 5 waves); plans 04-01 through 04-07 created*
