@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-01-PLAN.md — Wave 0 foundation (APScheduler, Dialog, DropdownMenu, test stubs)
-last_updated: "2026-03-17T23:47:57.004Z"
+stopped_at: Completed 04-02-PLAN.md — nightly cache job (APScheduler + nightly_cache_job)
+last_updated: "2026-03-17T23:49:50.126Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 83
-  completed_plans: 77
+  completed_plans: 78
 ---
 
 # STATE.md — CinemaChain
@@ -25,8 +25,8 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-03 complete — SESSION-01 (delete last step) and SESSION-02 (delete archived session) endpoints
-- **Status:** 04-03 complete. Two DELETE endpoints added to game.py; test_session_mgmt.py stubs replaced with real integration tests. SESSION-01 and SESSION-02 backend done.
+- **Plan:** 04-02 complete — nightly TMDB cache job (APScheduler wired in lifespan, nightly_cache_job service)
+- **Status:** 04-02 complete. services/cache.py created with nightly_cache_job(); APScheduler wired in lifespan with CronTrigger; _bg_session_factory moved to db.py; test_cache.py stubs replaced with real assertions. Ready for Wave 2 continuation.
 
 ## Progress
 
@@ -39,11 +39,13 @@ progress:
 | 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
 | 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
 | 3.2. Game UX Enhancements | Complete — all 31 plans done; SP-1 South Park regression resolved (2026-03-17); all 12 NAS tests passing |
-| 4. Caching, UI/UX Polish, Session Mgmt | In progress — 04-01 complete (Wave 0 foundation) |
+| 4. Caching, UI/UX Polish, Session Mgmt | In progress — 04-01, 04-02 complete (Wave 0 + nightly cache job) |
 | 5. Production Deployment | Not started |
 
 ## Recent Decisions
 
+- **2026-03-17:** 04-02: deferred import pattern used in test_cache.py — asyncpg not installed locally; try/except ImportError inside each test function matches existing project convention; tests skip locally and pass GREEN in Docker
+- **2026-03-17:** 04-02: .env.example required DB_PASSWORD, TS_AUTHKEY, PUID, PGID in addition to TMDB cache vars — pre-existing test_settings.py assertion required these keys; all added in same .env.example creation
 - **2026-03-17:** 04-03: delete_last_step reverts awaiting_continue to active on step undo — allows user to continue playing after undoing last pick; current_movie_watched set to False so home page CTA reappears
 - **2026-03-17:** 04-03: delete_archived_session explicitly deletes steps before session for FK safety; 403 guard protects non-archived sessions from accidental deletion
 - **2026-03-17:** 04-01: client fixture used in backend test stubs (not async_client) — conftest.py only defines client fixture; using async_client would cause fixture-not-found error
@@ -248,6 +250,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T23:47:07Z
-Stopped at: Completed 04-03-PLAN.md — SESSION-01 delete_last_step, SESSION-02 delete_archived_session
+Last session: 2026-03-17T23:49:50.120Z
+Stopped at: Completed 04-02-PLAN.md — nightly cache job (APScheduler + nightly_cache_job)
 Resume with: 04-03 complete. SESSION-01 and SESSION-02 backend done. Continue with next Wave 2 plan.
