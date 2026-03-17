@@ -104,12 +104,16 @@ export default function GameSession() {
   // Eligible actors: only those with is_eligible !== false (or undefined = eligible)
   const eligibleActors = eligibleActorsData.filter((a) => a.is_eligible !== false)
 
+  // Loading spinner state — shows after 1s of fetching to avoid flash on fast responses
+  const [showMoviesSpinner, setShowMoviesSpinner] = useState(false)
+
   // Eligible movies — scoped to selected actor + sort/filter params
-  const { data: eligibleMoviesData } = useQuery<PaginatedMoviesDTO>({
-    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id, sort, allMovies, moviesPage],
+  // enabled without selectedActor: no actor = combined-view (all eligible movies)
+  const { data: eligibleMoviesData, isFetching: eligibleMoviesFetching } = useQuery<PaginatedMoviesDTO>({
+    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id ?? null, sort, allMovies, moviesPage],
     queryFn: () =>
       api.getEligibleMovies(sid, {
-        actor_id: selectedActor?.tmdb_id,
+        actor_id: selectedActor?.tmdb_id,  // undefined when no actor selected = combined view
         sort,
         all_movies: allMovies,
         page: moviesPage,
@@ -165,6 +169,7 @@ export default function GameSession() {
         setRadarrStatus("Added to Radarr queue.")
       }
       setView("home")
+      queryClient.setQueryData(["session", sid], requestResult.session)
       queryClient.invalidateQueries({ queryKey: ["session", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       setMoviesPage(1)
