@@ -76,6 +76,29 @@ export interface MovieSearchResultDTO {
   poster_path: string | null
 }
 
+export interface CsvSuggestion {
+  tmdb_id: number
+  title: string
+  year: number | null
+}
+
+export interface CsvUnresolvedRow {
+  row: number
+  csv_title: string
+  suggestions: CsvSuggestion[]
+}
+
+export interface CsvValidationResponse {
+  status: "validation_required"
+  resolved_count: number
+  unresolved: CsvUnresolvedRow[]
+}
+
+export interface CsvOverride {
+  row: number
+  tmdb_id: number
+}
+
 // --- Game session API ---
 
 export const api = {
@@ -125,8 +148,15 @@ export const api = {
   markCurrentWatched: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/mark-current-watched`, { method: "POST" }),
 
-  importCsv: (rows: Array<{ movieName: string; actorName: string; order: number }>, name: string) =>
-    apiFetch<GameSessionDTO>("/game/sessions/import-csv", { method: "POST", body: JSON.stringify({ rows, name }) }),
+  importCsv: (
+    rows: Array<{ movieName: string; actorName: string; order: number }>,
+    name: string,
+    overrides?: CsvOverride[],
+  ) =>
+    apiFetch<GameSessionDTO | CsvValidationResponse>("/game/sessions/import-csv", {
+      method: "POST",
+      body: JSON.stringify({ rows, name, overrides: overrides ?? [] }),
+    }),
 
   searchMovies: (q: string) =>
     apiFetch<MovieSearchResultDTO[]>(`/movies/search?q=${encodeURIComponent(q)}`),

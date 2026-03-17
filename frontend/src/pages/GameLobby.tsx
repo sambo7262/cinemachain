@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, type GameSessionDTO } from "@/lib/api"
+import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride } from "@/lib/api"
 import { MovieCard } from "@/components/MovieCard"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -100,6 +100,8 @@ export default function GameLobby() {
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
   const [csvFileName, setCsvFileName] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [validationResult, setValidationResult] = useState<CsvValidationResponse | null>(null)
+  const [overrides, setOverrides] = useState<CsvOverride[]>([])
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +112,8 @@ export default function GameLobby() {
       reader.onload = (ev) => {
         const text = ev.target?.result as string
         setCsvRows(parseCSV(text))
+        setValidationResult(null)
+        setOverrides([])
       }
       reader.readAsText(file)
     },
@@ -132,13 +136,29 @@ export default function GameLobby() {
 
   // Import CSV mutation
   const importMutation = useMutation({
-    mutationFn: () => api.importCsv(csvRows, sessionName.trim() || "Imported Chain"),
-    onSuccess: (session) => {
-      queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
-      navigate(`/game/${session.id}`)
+    mutationFn: () => api.importCsv(csvRows, sessionName.trim() || "Imported Chain", overrides),
+    onSuccess: (result) => {
+      if ("status" in result && result.status === "validation_required") {
+        setValidationResult(result as CsvValidationResponse)
+      } else {
+        const session = result as GameSessionDTO
+        queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
+        navigate(`/game/${session.id}`)
+      }
     },
     onError: () => toast("Failed to import CSV chain."),
   })
+
+  const handleOverridePick = (row: number, tmdb_id: number) => {
+    setOverrides(prev => {
+      const filtered = prev.filter(o => o.row !== row)
+      return [...filtered, { row, tmdb_id }]
+    })
+  }
+
+  const allOverridesResolved = validationResult
+    ? validationResult.unresolved.every(u => overrides.some(o => o.row === u.row))
+    : false
 
   // Archive mutation
   const archiveMutation = useMutation({
@@ -359,6 +379,7 @@ export default function GameLobby() {
                       <Button
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={importMutation.isPending}
                       >
                         {csvFileName ?? "Choose CSV file"}
                       </Button>
@@ -371,7 +392,62 @@ export default function GameLobby() {
                       />
                     </div>
 
-                    {csvRows.length > 0 && (
+                    {/* Loading state */}
+                    {importMutation.isPending && (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        Validating your session history... this may take up to 2 minutes.
+                      </p>
+                    )}
+
+                    {/* Validation report — shown when backend returns validation_required */}
+                    {validationResult && !importMutation.isPending && (
+                      <div className="flex flex-col gap-3">
+                        <p className="text-sm text-amber-400">
+                          {validationResult.resolved_count} row{validationResult.resolved_count !== 1 ? "s" : ""} resolved automatically.
+                          The following {validationResult.unresolved.length} row{validationResult.unresolved.length !== 1 ? "s" : ""} need your input — each row = one movie in the chain.
+                        </p>
+                        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                          {validationResult.unresolved.map((u) => {
+                            const picked = overrides.find(o => o.row === u.row)
+                            return (
+                              <div key={u.row} className="flex flex-col gap-1 rounded bg-muted px-3 py-2">
+                                <span className="text-xs text-muted-foreground">Row {u.row + 1}: <span className="text-foreground font-medium">{u.csv_title}</span></span>
+                                {u.suggestions.length === 0 ? (
+                                  <span className="text-xs text-red-400">No TMDB results found — remove this row from the CSV and re-upload.</span>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {u.suggestions.map(s => (
+                                      <button
+                                        key={s.tmdb_id}
+                                        onClick={() => handleOverridePick(u.row, s.tmdb_id)}
+                                        className={cn(
+                                          "text-xs rounded px-2 py-1 border transition-colors",
+                                          picked?.tmdb_id === s.tmdb_id
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "bg-background border-border hover:border-primary/50"
+                                        )}
+                                      >
+                                        {s.title}{s.year ? ` (${s.year})` : ""}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <Button
+                          className="w-full"
+                          disabled={importMutation.isPending || !allOverridesResolved || !isNameValid}
+                          onClick={() => importMutation.mutate()}
+                        >
+                          {importMutation.isPending ? "Importing..." : "Confirm and Import"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Normal pre-validation row preview */}
+                    {csvRows.length > 0 && !validationResult && !importMutation.isPending && (
                       <div className="flex flex-col gap-2">
                         {csvRows.some(r => !r.isValid) && (
                           <p className="text-xs text-amber-400">Fix invalid rows before importing. Delete rows to fix the sequence.</p>
@@ -395,7 +471,7 @@ export default function GameLobby() {
                                 onClick={() => setCsvRows(rows => rows.filter((_, j) => j !== i))}
                                 className="text-muted-foreground hover:text-foreground ml-2"
                                 aria-label="Remove row"
-                              >×</button>
+                              >x</button>
                             </div>
                           ))}
                         </div>
@@ -404,7 +480,7 @@ export default function GameLobby() {
                           disabled={importMutation.isPending || !isSequenceValid || !isNameValid}
                           onClick={() => importMutation.mutate()}
                         >
-                          {importMutation.isPending ? "Importing..." : "Import Chain"}
+                          Import Chain
                         </Button>
                       </div>
                     )}
