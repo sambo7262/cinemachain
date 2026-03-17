@@ -26,34 +26,21 @@ function parseCSV(text: string): ParsedRow[] {
   const orderIdx = headers.indexOf("order")
   const movieIdx = headers.findIndex(h => h.includes("movie"))
   const actorIdx = headers.findIndex(h => h.includes("actor"))
-  const rows = lines.slice(1)
-    .map(line => {
+  // Each row has order, movie_name, actor_name on the same line.
+  // Validation: every row must have a movie name.
+  return lines.slice(1)
+    .map((line, i) => {
       const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""))
+      const movieName = movieIdx >= 0 ? (cols[movieIdx] ?? "") : ""
+      const actorName = actorIdx >= 0 ? (cols[actorIdx] ?? "") : ""
       return {
-        order: parseInt(cols[orderIdx] ?? "0") || 0,
-        movieName: movieIdx >= 0 ? (cols[movieIdx] ?? "") : "",
-        actorName: actorIdx >= 0 ? (cols[actorIdx] ?? "") : "",
-        isValid: true,
+        order: orderIdx >= 0 ? (parseInt(cols[orderIdx] ?? "") || i + 1) : i + 1,
+        movieName,
+        actorName,
+        isValid: movieName.length > 0,
       }
     })
     .filter(r => r.movieName || r.actorName)
-
-  // Sequence validation: alternate movie→actor→movie→actor
-  let lastType: "movie" | "actor" | null = null
-  return rows.map(r => {
-    const isMovie = !!r.movieName && !r.actorName
-    const isActor = !!r.actorName && !r.movieName
-    let valid = true
-    if (isMovie) {
-      if (lastType === "movie") valid = false  // two consecutive movies
-      lastType = "movie"
-    } else if (isActor) {
-      if (lastType === "actor") valid = false  // two consecutive actors
-      if (lastType === null) valid = false     // chain must start with movie
-      lastType = "actor"
-    }
-    return { ...r, isValid: valid }
-  })
 }
 
 function currentMovieForSession(session: GameSessionDTO): string {

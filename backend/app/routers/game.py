@@ -289,26 +289,48 @@ async def import_csv_session(
 
     tmdb: TMDBClient = request.app.state.tmdb_client
 
+    # Each CSV row has movie_name + actor_name on the same row (new export format).
+    # Expand into the step model: one movie-pick step + one actor-pick step per row.
     steps_data = []
+    step_order = 0
     for row in body.rows:
+        if not row.movieName:
+            continue  # skip actor-only rows from old-format CSVs
         movie_id = await _resolve_movie_tmdb_id(row.movieName, tmdb)
-        actor_id = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+        if movie_id is None:
+            raise HTTPException(status_code=422, detail=f"Could not resolve movie '{row.movieName}' from TMDB")
+        # Movie-pick step
         steps_data.append({
-            "step_order": row.order,
+            "step_order": step_order,
             "movie_tmdb_id": movie_id,
             "movie_title": row.movieName,
-            "actor_tmdb_id": actor_id,
-            "actor_name": row.actorName,
+            "actor_tmdb_id": None,
+            "actor_name": None,
         })
+        step_order += 1
+        # Actor-pick step (only if actor name provided)
+        if row.actorName:
+            actor_id = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+            steps_data.append({
+                "step_order": step_order,
+                "movie_tmdb_id": movie_id,
+                "movie_title": row.movieName,
+                "actor_tmdb_id": actor_id,
+                "actor_name": row.actorName,
+            })
+            step_order += 1
 
-    # First row's movie becomes current_movie_tmdb_id
-    first_movie_id = steps_data[0]["movie_tmdb_id"] if steps_data else None
-    if first_movie_id is None:
-        raise HTTPException(status_code=422, detail="Could not resolve first movie from TMDB")
+    if not steps_data:
+        raise HTTPException(status_code=422, detail="No valid rows found in CSV")
+
+    # current_movie_tmdb_id = last movie in the chain (last movie-pick step)
+    last_movie_id = next(
+        s["movie_tmdb_id"] for s in reversed(steps_data) if s["actor_tmdb_id"] is None
+    )
 
     session = GameSession(
         status="active",
-        current_movie_tmdb_id=first_movie_id,
+        current_movie_tmdb_id=last_movie_id,
         name=body.name,
     )
     db.add(session)
