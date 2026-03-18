@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-02-PLAN.md — nightly cache job (APScheduler + nightly_cache_job)
-last_updated: "2026-03-17T23:58:15.345Z"
+stopped_at: Completed 04-06-PLAN.md — frontend delete actions (GameSession DropdownMenu + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog)
+last_updated: "2026-03-18T00:03:25.047Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 83
-  completed_plans: 79
+  completed_plans: 80
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-04 complete — UX polish: NotificationContext, RadarrNotificationBanner, Now Playing poster, 1400px layout, Watch History tab removed
-- **Status:** 04-04 complete. NotificationContext.tsx and RadarrNotificationBanner.tsx created; App.tsx wraps in NotificationProvider with banner below NavBar; GameSession.tsx migrated radarrStatus to showRadarr() context; Now Playing card has hero poster (120x180px); GameLobby Watch History tab removed; api.ts has deleteLastStep/deleteSession/getSuggestions. Wave 3 UX-06/UX-07 complete.
+- **Plan:** 04-06 complete — frontend delete actions: GameSession DropdownMenu with Export CSV + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog per row
+- **Status:** 04-06 complete. GameSession.tsx has MoreHorizontal DropdownMenu (Export CSV migrated + Delete Last Step with disabled guard); Delete Last Step Dialog uses shadcn Dialog with Keep Step / Delete Step copy; ArchivedSessions.tsx has Delete Session button per row + Dialog with Keep Session / Delete Session copy; both use useMutation + queryClient.invalidateQueries; TypeScript 0 errors.
 
 ## Progress
 
-`[██████████] 95%` — 79 of 83 plans complete
+`[██████████] 96%` — 80 of 83 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -44,6 +44,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04-06: Export CSV migrated from standalone header button into DropdownMenu actions menu alongside Delete Last Step — consolidates session actions under single menu trigger
+- **2026-03-17:** 04-06: deleteSessionId: number | null pattern used in ArchivedSessions — single shared Dialog across all session rows; null = closed, ID = dialog open for that session
 - **2026-03-17:** 04-02: deferred import pattern used in test_cache.py — asyncpg not installed locally; try/except ImportError inside each test function matches existing project convention; tests skip locally and pass GREEN in Docker
 - **2026-03-17:** 04-02: .env.example required DB_PASSWORD, TS_AUTHKEY, PUID, PGID in addition to TMDB cache vars — pre-existing test_settings.py assertion required these keys; all added in same .env.example creation
 - **2026-03-17:** 04-04: showRadarr() uses canonical message strings ('Already in Radarr' / 'Movie Queued for Download'); radarrFallbackFiredRef and fallback useEffect removed; global context handles deduplication via timer reset
@@ -253,6 +255,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T23:57:20Z
-Stopped at: Completed 04-04-PLAN.md — UX polish (NotificationContext, RadarrNotificationBanner, poster, 1400px layout, Watch History removal)
+Last session: 2026-03-18T00:03:25.041Z
+Stopped at: Completed 04-06-PLAN.md — frontend delete actions (GameSession DropdownMenu + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog)
 Resume with: 04-04 complete. UX-06 and UX-07 done. Continue with remaining Wave 3 plans.

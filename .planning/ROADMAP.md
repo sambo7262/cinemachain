@@ -172,7 +172,7 @@ Plans:
   5. Actor and movie images load correctly at every step of the session journey (actor grid, movie grid, chain history)
   6. User can delete the last step of a session to go one move backwards
   7. Archived sessions can be permanently deleted from the DB (removes test/invalid sessions)
-**Plans:** 4/7 plans executed
+**Plans:** 5/7 plans executed
 
 Plans:
 - [ ] 04-01-PLAN.md — Wave 1: Foundations — test stubs (test_cache.py, test_session_mgmt.py), shadcn Dialog + DropdownMenu primitives, npm/pip installs
@@ -204,7 +204,7 @@ Plans:
 | 3. Movie Game | 29/29 | Complete | 2026-03-16 |
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
-| 4. Caching, UI/UX Polish, Session Mgmt | 4/7 | In Progress|  |
+| 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
