@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 04.1-03-PLAN.md — BUG-03 fallback gate fixed; zero-watch-history regression tests added"
+stopped_at: "Phase 4.1 complete — BUG-01, BUG-02, BUG-03 resolved"
 last_updated: "2026-03-18T18:03:49.835Z"
 progress:
   total_phases: 9
@@ -25,8 +25,8 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening
-- **Plan:** 04.1-03 (complete — BUG-03 fixed)
-- **Status:** BUG-01 FIXED, BUG-02 FIXED, BUG-03 code fixed — NAS deploy + verification required before Phase 5
+- **Plan:** 04.1-03 (complete)
+- **Status:** BUG-01 FIXED, BUG-02 FIXED, BUG-03 RESOLVED (Suggested tab removed)
 
 ## Progress
 
@@ -40,18 +40,18 @@ progress:
 | 3.1. UI Improvements and Multi-Session Support | Complete |
 | 3.2. Game UX Enhancements | Complete |
 | 4. Caching, UI/UX Polish, Session Mgmt | Complete — 04-08 (cache optimization), 04-09 (bug fixes) done |
-| 4.1. Bug Fixes & CSV Hardening | Code complete — BUG-01 FIXED, BUG-02 FIXED, BUG-03 fixed (NAS deploy + verify required) |
-| 5. Production Deployment | Pending NAS deploy of BUG-03 fix |
+| 4.1. Bug Fixes & CSV Hardening | Complete — BUG-01 FIXED, BUG-02 FIXED, BUG-03 RESOLVED (feature removed) |
+| 5. Production Deployment | Ready |
 
 ## Known Bugs (Phase 4.1)
 
 - **BUG-01:** FIXED — CSV chain movies no longer appear as eligible picks. Verified PASS on live NAS (04.1-02).
 - **BUG-02:** FIXED — CSV comma-in-title parsing now uses RFC 4180 splitCsvLine state machine. Verified PASS on live NAS (04.1-02).
-- **BUG-03:** CODE FIXED (04.1-03) — Two conditions removed from get_suggestions fallback: `and genre_freq` gate (line 1764) and `if genre_score > 0:` filter (line 1783). Root cause: empty genre_freq when no WatchEvents exist prevented fallback from firing AND from returning any candidates. Docker rebuild + NAS deploy required to verify in production.
+- **BUG-03:** RESOLVED — Suggested Movies feature removed entirely. Backend endpoint deleted, frontend Suggested tab removed. Feature was unreliable; removal unblocks Phase 5.
 
 ## Recent Decisions
 
-- **2026-03-18:** 04.1-03: BUG-03 closed — removed `and genre_freq` gate and `if genre_score > 0:` filter from get_suggestions fallback; fallback now fires whenever top5 < 5 regardless of watch history; zero-score movies ranked last by vote_average; three regression test variants (original + zero-WH + null-genres) cover full failure surface
+- **2026-03-18:** BUG-03 resolved by removal — Suggested Movies feature removed (backend endpoint + frontend tab deleted); unreliable and not worth fixing; Phase 5 unblocked
 - **2026-03-18:** 04.1-02: BUG-03 deferred — code fix deployed but NAS still returns empty suggestions on 8-step chain; original 130+ step diagnosis may be incomplete; root cause investigation required before Phase 5
 - **2026-03-18:** 04.1-01: BUG-03 fix: `candidates = [] / if eligible_actors:` guard replaces early returns in get_suggestions — genre-affinity fallback now reachable on long chains
 - **2026-03-18:** 04.1-01: BUG-02 fix: splitCsvLine state-machine parser replaces naive .split(',') in GameLobby parseCSV; CRLF normalization; accept='.csv,.xlsx' per UI-SPEC Option B
@@ -287,4 +287,4 @@ progress:
 
 Last session: 2026-03-18T17:50:00Z
 Stopped at: Completed 04.1-03-PLAN.md — BUG-03 fallback gate fixed; zero-watch-history regression tests added
-Resume with: Phase 4.1 code complete. Docker rebuild + NAS deploy required to verify BUG-03 fix in production before proceeding to Phase 5.
+Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.

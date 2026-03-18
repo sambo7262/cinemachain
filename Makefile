@@ -7,7 +7,6 @@ rebuild:
 	docker push sambo7262/cinemachain-backend:latest
 	docker build --no-cache -t sambo7262/cinemachain-frontend:latest ./frontend
 	docker push sambo7262/cinemachain-frontend:latest
-	docker compose up -d
 
 # Start the stack (uses existing images — no rebuild)
 up:

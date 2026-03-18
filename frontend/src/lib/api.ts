@@ -189,9 +189,6 @@ export const api = {
   deleteSession: (sessionId: number) =>
     apiFetch<void>(`/game/sessions/${sessionId}`, { method: "DELETE" }),
 
-  getSuggestions: (sessionId: number) =>
-    apiFetch<EligibleMovieDTO[]>(`/game/sessions/${sessionId}/suggestions`),
-
   getPosterWall: (): Promise<PosterWallItem[]> =>
     apiFetch<PosterWallItem[]>("/movies/poster-wall"),
 

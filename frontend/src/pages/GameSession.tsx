@@ -44,7 +44,7 @@ export default function GameSession() {
   const navigate = useNavigate()
 
   // Tab + selection state
-  const [activeTab, setActiveTab] = useState<"actors" | "movies" | "suggested">("actors")
+  const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
   const [sort, setSort] = useState<"rating" | "runtime" | "genre">("rating")
   const [allMovies, setAllMovies] = useState(false)
@@ -129,14 +129,6 @@ export default function GameSession() {
   })
   const allEligibleMovies = eligibleMoviesData?.items ?? []
   const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
-
-  // Suggestions query — only fires when Suggested tab is active
-  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
-    queryKey: ["suggestions", sid],
-    queryFn: () => api.getSuggestions(sid),
-    enabled: !!sid && !!session && view === "tabs" && activeTab === "suggested",
-    staleTime: 30000,
-  })
 
   // Concession-themed loading messages for actors and movies
   const actorsLoadingMessage = useLoadingMessages(eligibleActorsFetching)
@@ -514,9 +506,6 @@ export default function GameSession() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="suggested" className="flex-1">
-              Suggested
-            </TabsTrigger>
           </TabsList>
 
           {/* Eligible Actors tab */}
@@ -825,30 +814,6 @@ export default function GameSession() {
             )}
           </TabsContent>
 
-          {/* Suggested tab */}
-          <TabsContent value="suggested" className="mt-4">
-            {suggestionsLoading && (
-              <p className="text-muted-foreground text-sm text-center py-8">
-                Loading suggestions...
-              </p>
-            )}
-            {!suggestionsLoading && suggestions.length === 0 && (
-              <div className="text-center py-12">
-                <p className="font-medium text-foreground">No suggestions yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Continue the chain to unlock suggestions.</p>
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              {suggestions.map((movie) => (
-                <MovieCard
-                  key={movie.tmdb_id}
-                  {...movie}
-                  selectable={!movie.watched}
-                  onClick={!movie.watched ? () => handleMovieConfirm(movie) : undefined}
-                />
-              ))}
-            </div>
-          </TabsContent>
         </Tabs>}
 
         {/* Chain History — bottom of page */}
