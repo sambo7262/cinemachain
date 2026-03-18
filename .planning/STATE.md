@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-05-PLAN.md — MPAA badge on MovieCard, persistent sidebar, Suggested tab with genre-affinity suggestions endpoint
-last_updated: "2026-03-17T00:20:00Z"
+stopped_at: Phase 4.2 context gathered — poster wall, random pick, dead-end detection, session stats, local poster caching
+last_updated: "2026-03-18T05:21:23.465Z"
 progress:
-  total_phases: 7
+  total_phases: 9
   completed_phases: 4
-  total_plans: 83
-  completed_plans: 81
+  total_plans: 85
+  completed_plans: 82
 ---
 
 # STATE.md — CinemaChain
@@ -24,23 +24,30 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-05 complete — MPAA badge on MovieCard, persistent sidebar in Eligible Movies, Suggested tab with genre-affinity suggestions algorithm
-- **Status:** 04-05 complete. MovieCard.tsx has mpaa_rating prop + always-visible Badge; MovieFilterSidebar refactored to plain div (caller controls width); GameSession.tsx has three-tab view (Eligible Actors / Eligible Movies / Suggested) with persistent desktop sidebar (hidden lg:block), mobile Filters toggle button, and suggestions useQuery; game.py has GET /sessions/{id}/suggestions endpoint (genre affinity + top 5). UX-08 and UX-09 satisfied.
+- **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening (not started)
+- **Plan:** Not yet planned
+- **Status:** Phase 4 complete. Phase 4.1 queued as pre-production bug smash. Next session: poster background + UI improvements (drifting columns, random pick, dead-end detection, session stats), then plan Phase 4.1.
 
 ## Progress
 
-`[██████████] 98%` — 81 of 83 plans complete
+`[██████████] 98%` — 83 of 85 plans complete (04-08, 04-09 added; 04.1 TBD)
 
 | Phase | Status |
 |-------|--------|
 | 1. Infrastructure | Complete |
-| 2. Data Foundation | Complete (02-01 through 02-05 done) |
-| 3. Movie Game | Complete — all 29 plans done; full 6-step game loop PASS on live NAS; GAME-04 confirmed resolved (2026-03-15) |
-| 3.1. UI Improvements and Multi-Session Support | Complete — all 9 plans done (03.1-09: frontend gap closure — getSession(id), movie badge, Import Chain card, Pause/Resume/End removed) |
-| 3.2. Game UX Enhancements | Complete — all 31 plans done; SP-1 South Park regression resolved (2026-03-17); all 12 NAS tests passing |
-| 4. Caching, UI/UX Polish, Session Mgmt | In progress — 04-01, 04-02 complete (Wave 0 + nightly cache job) |
+| 2. Data Foundation | Complete |
+| 3. Movie Game | Complete |
+| 3.1. UI Improvements and Multi-Session Support | Complete |
+| 3.2. Game UX Enhancements | Complete |
+| 4. Caching, UI/UX Polish, Session Mgmt | Complete — 04-08 (cache optimization), 04-09 (bug fixes) done |
+| 4.1. Bug Fixes & CSV Hardening | Not started — 3 known bugs queued |
 | 5. Production Deployment | Not started |
+
+## Known Bugs (Phase 4.1)
+
+- **BUG-01:** CSV chain movies appearing as eligible picks — WatchEvent-only exclusion insufficient; session step movies must be excluded directly. Fix attempted in 04-09 but not resolving on NAS.
+- **BUG-02:** CSV parsing fails on movie titles containing commas — evaluate .xlsx upload as alternative format.
+- **BUG-03:** Suggested movies empty on long chains (130+ movies) — algorithm exhausts eligible actors from current movie; fallback to genre-affinity attempted in 04-09 but not resolving on NAS.
 
 ## Recent Decisions
 
@@ -259,6 +266,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-17T00:20:00Z
-Stopped at: Completed 04-05-PLAN.md — MPAA badge on MovieCard, persistent sidebar, Suggested tab with genre-affinity suggestions endpoint
+Last session: 2026-03-18T05:21:23.455Z
+Stopped at: Phase 4.2 context gathered — poster wall, random pick, dead-end detection, session stats, local poster caching
 Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
