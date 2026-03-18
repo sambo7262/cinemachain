@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: BUG-01 FIXED, BUG-02 FIXED, BUG-03 RESOLVED (Suggested tab removed)
-stopped_at: Completed 04.3-01-PLAN.md — Wave 0 stubs added for BUG-B, BUG-C; SessionCounters test updated (UX-C)
-last_updated: "2026-03-18T19:29:14.412Z"
+status: Wave 0 stubs in place — BUG-B and BUG-C stubs in test_game.py; SessionCounters UX-C test RED
+stopped_at: Completed 04.3-02-PLAN.md — BUG-B enrichment + BUG-C search + UX-A sort_dir added to game.py
+last_updated: "2026-03-18T19:30:10.700Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 99
-  completed_plans: 92
+  completed_plans: 93
 ---
 
 # STATE.md — CinemaChain
@@ -51,6 +51,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-02: sort_dir default is "desc" in eligible-movies — preserves existing highest-rated-first UI expectation; search block placed after sort to preserve order within results; _ensure_actor_credits_in_db in search path gated on actor_id not None (combined-view skips it)
+- **2026-03-18:** 04.3-02: mark_current_watched now calls _enrich_steps_thumbnails + _enrich_steps_runtime before _build_session_response — all response-building endpoints must follow this pattern
 - **2026-03-18:** 04.3-01: Wave 0 stubs appended to test_game.py using asyncpg-skip pattern; stubs skip locally and run in Docker; signals BUG-B poster_path enrichment and BUG-C search param expected behavior for Wave 1 implementation
 - **2026-03-18:** 04.3-01: SessionCounters second test updated to assert Steps/Actors absent using queryByText().toBeNull() — intentionally RED until Wave 2 UX-C removes those blocks from the component
 - **2026-03-18:** BUG-03 resolved by removal — Suggested Movies feature removed (backend endpoint + frontend tab deleted); unreliable and not worth fixing; Phase 5 unblocked
@@ -287,6 +289,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T19:29:14.406Z
-Stopped at: Completed 04.3-01-PLAN.md — Wave 0 stubs added for BUG-B, BUG-C; SessionCounters test updated (UX-C)
+Last session: 2026-03-18T19:30:10.694Z
+Stopped at: Completed 04.3-02-PLAN.md — BUG-B enrichment + BUG-C search + UX-A sort_dir added to game.py
 Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.
