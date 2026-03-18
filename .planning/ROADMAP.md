@@ -189,7 +189,11 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
+- [ ] 04.1-02-PLAN.md — Wave 2: Docker rebuild + NAS deploy + human verify BUG-01, BUG-02, BUG-03
 
 ### Phase 4.2: UI Polish & Local Poster Caching
 **Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
