@@ -33,7 +33,7 @@ export function PosterWall({ posters }: PosterWallProps) {
   const allColumns = distributeColumns(posters, 4)
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+    <div className="fixed inset-0 z-[1] overflow-hidden" aria-hidden="true">
       {/* Dark overlay — must be above poster columns */}
       <div className="absolute inset-0 bg-black/80 z-10" />
 

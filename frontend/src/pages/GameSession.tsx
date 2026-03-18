@@ -282,6 +282,8 @@ export default function GameSession() {
   return (
     <div className={cn("min-h-screen flex flex-col", posterWallData.length < 5 ? "bg-background" : "")}>
       <PosterWall posters={posterWallData} />
+      {/* Content wrapper — z-[2] ensures content sits above PosterWall (z-[1]) */}
+      <div className="relative z-[2] flex flex-col flex-1">
       {/* Header */}
       <header className="border-b border-border px-6 py-3 flex items-center justify-between">
         <div className="flex flex-col gap-1">
@@ -673,7 +675,7 @@ export default function GameSession() {
                     size="sm"
                     className={cn(
                       "ml-auto",
-                      (filteredMovies.length === 0 || !selectedActor) ? "opacity-50 pointer-events-none" : ""
+                      filteredMovies.length === 0 ? "opacity-50 pointer-events-none" : ""
                     )}
                     onClick={handleRandomPick}
                     aria-label="Random pick"
@@ -938,6 +940,7 @@ export default function GameSession() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>{/* end content wrapper */}
     </div>
   )
 }

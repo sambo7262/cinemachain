@@ -17,7 +17,8 @@ function formatRuntime(minutes: number): string {
 function formatSessionAge(createdAt: string): string {
   if (!createdAt) return "—"
   try {
-    const diffMs = Date.now() - new Date(createdAt).getTime()
+    const utcStr = createdAt.endsWith("Z") || createdAt.includes("+") ? createdAt : createdAt + "Z"
+    const diffMs = Date.now() - new Date(utcStr).getTime()
     const diffMinutes = Math.floor(diffMs / 60000)
     if (diffMinutes < 60) return `${diffMinutes}m ago`
     const diffHours = Math.floor(diffMinutes / 60)
