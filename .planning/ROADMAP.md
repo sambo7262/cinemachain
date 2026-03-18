@@ -195,7 +195,15 @@ Plans:
 **Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — enhancement phase)
-**Plans:** TBD
+**Plans:** 6 plans, 4 waves
+
+Plans:
+- [ ] 04.2-01-PLAN.md — Wave 0: Test stubs (Nyquist compliance) — test_static.py, test_game.py additions, PosterWall.test.tsx, SessionCounters.test.tsx
+- [ ] 04.2-02-PLAN.md — Wave 1: Backend foundation — Alembic migration 0006 (poster_local_path), Movie model update, StaticFiles mount in main.py, GameSessionResponse expansion (step_count, unique_actor_count, created_at)
+- [ ] 04.2-03-PLAN.md — Wave 2: Backend features — GET /movies/poster-wall endpoint + nightly poster download pass in cache.py
+- [ ] 04.2-04-PLAN.md — Wave 2: Frontend data layer — api.ts DTO updates, PosterWall.tsx component, CSS keyframes, Tailwind animation config
+- [ ] 04.2-05-PLAN.md — Wave 3: Frontend features — SessionCounters 5-stat expansion, GameSession poster wall + random pick + dead-end, GameLobby session card stats
+- [ ] 04.2-06-PLAN.md — Wave 4: compose.yaml static volume + Docker rebuild + NAS deploy + human verify checkpoint
 
 ### Phase 5: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
@@ -219,6 +227,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
+| 4.2. UI Polish & Local Poster Caching | 0/6 | Not started | — |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
@@ -319,7 +328,11 @@ Plans:
 | Phase 4: Radarr notification lifted to NotificationContext | Notification must survive route changes and render below NavBar regardless of which page called it; React Context is sufficient for one notification slot |
 | Phase 4: Delete last step blocked when 1 step remains | Starting movie step cannot be removed — session becomes invalid with 0 steps; 400 response + disabled UI item guard |
 | Phase 4: Delete archived session returns 204 | Hard delete of archived session; 403 if not archived to prevent accidental active session destruction |
+| Phase 4.2: StaticFiles mounted at /static/ (not /api/static/) | nginx proxy_pass strips /api/ prefix; GET /api/static/... → GET /static/... on backend; no nginx config change needed |
+| Phase 4.2: poster_local_path stores URL-relative path /static/posters/{id}.jpg | Frontend prepends /api to get /api/static/posters/{id}.jpg; avoids baking absolute filesystem paths into DB |
+| Phase 4.2: Poster download uses run_in_executor (not aiofiles) | aiofiles not in requirements.txt; run_in_executor with sync open() is equivalent and avoids a new dependency |
+| Phase 4.2: Dead-end condition requires hasIneligibleActors | eligibleActors.length === 0 alone does not prove dead-end (movie may simply have no credits); must confirm ineligible actors exist to distinguish dead-end from data gap |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 4 planned (7 plans, 5 waves); plans 04-01 through 04-07 created*
+*Last updated: 2026-03-17 — Phase 4.2 planned (6 plans, 4 waves); plans 04.2-01 through 04.2-06 created*
