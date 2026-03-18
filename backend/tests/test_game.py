@@ -793,3 +793,96 @@ async def test_suggestions_long_chain_fallback(client):
     results = resp.json()
     assert len(results) > 0, "Suggestions must not be empty when eligible_actors is exhausted — genre fallback must fire"
     assert all("tmdb_id" in m for m in results)
+
+
+@pytest.mark.asyncio
+async def test_suggestions_no_watch_history(client):
+    """BUG-03 gap: suggestions must fire when eligible_actors is exhausted AND no WatchEvents exist.
+
+    genre_freq is built from (a) WatchEvents and (b) session step Movie.genres.
+    When WatchEvents=0 but chain movie genres ARE populated, source (b) produces genre_freq.
+    This test confirms the fallback runs without any WatchEvents.
+    """
+    try:
+        from app.main import app
+        from app.models import Actor, Credit, Movie, GameSession, GameSessionStep
+        from app.db import async_session_factory
+    except ImportError:
+        pytest.skip("app.main not yet implemented")
+
+    async with async_session_factory() as db:
+        current_movie = Movie(tmdb_id=99020, title="No-WH Current Movie", year=2020, genres='["Thriller"]', vote_count=1000, vote_average=7.5)
+        sole_actor = Actor(tmdb_id=88020, name="No-WH Sole Actor")
+        fallback1 = Movie(tmdb_id=99021, title="No-WH Fallback 1", year=2018, genres='["Thriller"]', vote_count=800, vote_average=7.0, mpaa_rating="R")
+        fallback2 = Movie(tmdb_id=99022, title="No-WH Fallback 2", year=2019, genres='["Thriller"]', vote_count=900, vote_average=7.2, mpaa_rating="PG-13")
+        db.add_all([current_movie, sole_actor, fallback1, fallback2])
+        await db.flush()
+        db.add(Credit(movie_id=current_movie.id, actor_id=sole_actor.id))
+        # NO WatchEvent added — this is the zero-watch-history case
+        session = GameSession(
+            name="No-WH Session",
+            status="awaiting_continue",
+            current_movie_tmdb_id=99020,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+        step1 = GameSessionStep(session_id=session.id, movie_tmdb_id=99020, actor_tmdb_id=None, movie_title="No-WH Current Movie")
+        # sole_actor already picked — exhausts all eligible actors
+        step2 = GameSessionStep(session_id=session.id, movie_tmdb_id=99023, actor_tmdb_id=88020, actor_name="No-WH Sole Actor", movie_title="No-WH Prior Movie")
+        db.add_all([step1, step2])
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/suggestions")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) > 0, "Suggestions must not be empty when eligible_actors exhausted and no WatchEvents exist — genre_freq from session steps should drive fallback"
+    assert all("tmdb_id" in m for m in results)
+
+
+@pytest.mark.asyncio
+async def test_suggestions_no_watch_history_null_genres(client):
+    """BUG-03 gap: suggestions must return results even when chain movie genres=NULL (TMDB not enriched).
+
+    When genres=NULL on chain movies AND no WatchEvents exist, genre_freq is empty dict {}.
+    All fallback candidate genre_scores will be 0.
+    This test confirms genre_score > 0 filter removal allows zero-scored movies through.
+    """
+    try:
+        from app.main import app
+        from app.models import Actor, Credit, Movie, GameSession, GameSessionStep
+        from app.db import async_session_factory
+    except ImportError:
+        pytest.skip("app.main not yet implemented")
+
+    async with async_session_factory() as db:
+        # Chain movie with genres=NULL (not yet TMDB-enriched)
+        current_movie = Movie(tmdb_id=99024, title="Null-Genre Current Movie", year=2020, genres=None, vote_count=1000, vote_average=7.5)
+        sole_actor = Actor(tmdb_id=88021, name="Null-Genre Sole Actor")
+        # Fallback candidates also have genres populated — but genre_freq is empty so score=0
+        fallback1 = Movie(tmdb_id=99025, title="Null-Genre Fallback 1", year=2018, genres='["Action"]', vote_count=800, vote_average=7.0, mpaa_rating="PG-13")
+        fallback2 = Movie(tmdb_id=99026, title="Null-Genre Fallback 2", year=2019, genres='["Action"]', vote_count=900, vote_average=7.2, mpaa_rating="R")
+        db.add_all([current_movie, sole_actor, fallback1, fallback2])
+        await db.flush()
+        db.add(Credit(movie_id=current_movie.id, actor_id=sole_actor.id))
+        # NO WatchEvent; chain movie genres=NULL => genre_freq = {}
+        session = GameSession(
+            name="Null-Genre Session",
+            status="awaiting_continue",
+            current_movie_tmdb_id=99024,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+        step1 = GameSessionStep(session_id=session.id, movie_tmdb_id=99024, actor_tmdb_id=None, movie_title="Null-Genre Current Movie")
+        step2 = GameSessionStep(session_id=session.id, movie_tmdb_id=99027, actor_tmdb_id=88021, actor_name="Null-Genre Sole Actor", movie_title="Null-Genre Prior Movie")
+        db.add_all([step1, step2])
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/suggestions")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) > 0, "Suggestions must not be empty when genre_freq is {} — zero-score fallback candidates must be included"
+    assert all("tmdb_id" in m for m in results)
