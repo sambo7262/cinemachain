@@ -215,7 +215,14 @@ Plans:
 **Goal:** Resolve all known visual bugs and UX friction points before production deployment — background image loading, thumbnail stability, sortable columns replacing filter panel, paginated load-more appending, session stats simplification, full-filmography search, narrow column visual artifact, and home page button color affordances.
 **Depends on:** Phase 4.2
 **Requirements:** (none mapped — bug fix and polish phase)
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 04.3-01-PLAN.md — Wave 0: Test stubs — test_game.py BUG-B and BUG-C stubs; SessionCounters.test.tsx UX-C assertion
+- [ ] 04.3-02-PLAN.md — Wave 1: Backend — BUG-B thumbnail enrichment in mark_current_watched; BUG-C + UX-A search/sort_dir params in eligible-movies
+- [ ] 04.3-03-PLAN.md — Wave 2: Frontend (GameSession.tsx) — BUG-B keepPreviousData, UX-A column sort, UX-B append pagination, UX-C stats removal, BUG-C backend search passthrough; api.ts search/sort_dir params
+- [ ] 04.3-04-PLAN.md — Wave 2: Frontend (PosterWall, App.tsx, GameLobby) — BUG-A null-guard, BUG-D empty row fix + pastel button colors
+- [ ] 04.3-05-PLAN.md — Wave 3: Docker rebuild + NAS deploy + human verify all 7 items (BUG-A, BUG-B, UX-A, UX-B, UX-C, BUG-C, BUG-D)
 
 ---
 
@@ -243,7 +250,7 @@ Plans:
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
-| 4.3. Bug Fixes & UX Refinements | 0/? | Not started | — |
+| 4.3. Bug Fixes & UX Refinements | 0/5 | Planned | — |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
@@ -348,7 +355,12 @@ Plans:
 | Phase 4.2: poster_local_path stores URL-relative path /static/posters/{id}.jpg | Frontend prepends /api to get /api/static/posters/{id}.jpg; avoids baking absolute filesystem paths into DB |
 | Phase 4.2: Poster download uses run_in_executor (not aiofiles) | aiofiles not in requirements.txt; run_in_executor with sync open() is equivalent and avoids a new dependency |
 | Phase 4.2: Dead-end condition requires hasIneligibleActors | eligibleActors.length === 0 alone does not prove dead-end (movie may simply have no credits); must confirm ineligible actors exist to distinguish dead-end from data gap |
+| Phase 4.3: BUG-B — mark_current_watched must call _enrich_steps_thumbnails | Without enrichment, setQueryData(["session", sid], ...) writes null poster_paths into cache; awaiting_continue status disables the 5s poller so images stay blank permanently until navigate-away |
+| Phase 4.3: BUG-C — search moved to backend with _ensure_actor_credits_in_db pre-call | Client-side search only covers the current paginated page; backend search covers full filmography after cache fill |
+| Phase 4.3: UX-A — sort params are sort + sort_dir (two params, not combined) | Cleaner API design; frontend passes sort=year&sort_dir=desc; backend maps (sort, sort_dir) to sort key |
+| Phase 4.3: UX-B — accumulatedMovies client-side state (not cursor pagination) | React Query per-page queryKey pattern returns only one page at a time; client accumulation is simpler than server-side cursors for this use case |
+| Phase 4.3: 04-08 Tasks 2+3 already implemented | cache.py already has nightly actor pre-fetch + stub backfill; confirmed by direct source inspection; no re-implementation needed |
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-18 — Phase 4.1 gap closure plan 04.1-03 created (BUG-03 genre_freq gate fix)*
+*Last updated: 2026-03-18 — Phase 4.3 plans created (5 plans: Wave 0 stubs, Wave 1 backend, Wave 2 frontend ×2, Wave 3 NAS verify)*
