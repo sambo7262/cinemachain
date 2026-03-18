@@ -9,6 +9,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const err = await r.json().catch(() => ({ detail: r.statusText }))
     throw Object.assign(new Error(err.detail ?? r.statusText), { status: r.status })
   }
+  if (r.status === 204) return undefined as unknown as T
   return r.json()
 }
 

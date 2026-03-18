@@ -298,7 +298,7 @@ export default function GameSession() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col gap-4 px-6 py-4 max-w-3xl w-full mx-auto">
+      <div className="flex-1 flex flex-col gap-4 px-6 py-4 max-w-5xl w-full mx-auto">
         {/* Session state panel — shows context-appropriate guidance */}
         {session && (
           <div className="rounded-lg border border-border px-4 py-3 text-sm">
@@ -677,8 +677,10 @@ export default function GameSession() {
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground w-14"></th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Rating</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Year</th>
+                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Rating</th>
+                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Year</th>
+                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell">Runtime</th>
+                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell">Rated</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
@@ -713,11 +715,17 @@ export default function GameSession() {
                                 <td className="px-4 py-2 text-muted-foreground italic hidden sm:table-cell">
                                   {movie.via_actor_name ?? (selectedActor?.name ?? "—")}
                                 </td>
-                                <td className="px-4 py-2 text-right text-amber-400 hidden md:table-cell">
+                                <td className="px-4 py-2 text-right text-amber-400 hidden lg:table-cell">
                                   {movie.vote_average != null ? `★ ${movie.vote_average.toFixed(1)}` : "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden md:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
                                   {movie.year ?? "—"}
+                                </td>
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden xl:table-cell">
+                                  {movie.runtime != null ? `${movie.runtime}m` : "—"}
+                                </td>
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden xl:table-cell">
+                                  {movie.mpaa_rating ?? "—"}
                                 </td>
                               </tr>
                             ))}

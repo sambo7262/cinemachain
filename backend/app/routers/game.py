@@ -1093,18 +1093,27 @@ async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 async def _request_radarr(tmdb_id: int, radarr: RadarrClient) -> dict:
-    """Two-step Radarr add flow: check existence, then lookup + add."""
-    if await radarr.movie_exists(tmdb_id):
-        return {"status": "already_in_radarr"}
-    movie_payload = await radarr.lookup_movie(tmdb_id)
-    if not movie_payload:
-        raise HTTPException(status_code=502, detail="Movie not found in Radarr lookup")
-    movie_payload["monitored"] = True
-    movie_payload["addOptions"] = {"searchForMovie": True}
-    movie_payload["rootFolderPath"] = await radarr.get_root_folder()
-    movie_payload["qualityProfileId"] = await radarr.get_quality_profile_id()
-    await radarr.add_movie(movie_payload)
-    return {"status": "queued"}
+    """Two-step Radarr add flow: check existence, then lookup + add.
+
+    Returns a status dict rather than raising — the session is already committed
+    by the time this is called, so a Radarr failure must not produce a 500.
+    """
+    try:
+        if await radarr.movie_exists(tmdb_id):
+            return {"status": "already_in_radarr"}
+        movie_payload = await radarr.lookup_movie(tmdb_id)
+        if not movie_payload:
+            return {"status": "not_found_in_radarr"}
+        movie_payload["monitored"] = True
+        movie_payload["addOptions"] = {"searchForMovie": True}
+        movie_payload["rootFolderPath"] = await radarr.get_root_folder()
+        movie_payload["qualityProfileId"] = await radarr.get_quality_profile_id()
+        await radarr.add_movie(movie_payload)
+        return {"status": "queued"}
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Radarr request failed for tmdb_id=%s: %s", tmdb_id, exc)
+        return {"status": "error"}
 
 
 # ---------------------------------------------------------------------------
