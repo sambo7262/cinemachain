@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "Phase 4.1 complete — BUG-01, BUG-02, BUG-03 resolved"
-last_updated: "2026-03-18T18:03:49.835Z"
+status: BUG-01 FIXED, BUG-02 FIXED, BUG-03 RESOLVED (Suggested tab removed)
+stopped_at: Completed 04.3-01-PLAN.md — Wave 0 stubs added for BUG-B, BUG-C; SessionCounters test updated (UX-C)
+last_updated: "2026-03-18T19:29:14.412Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 6
-  total_plans: 94
-  completed_plans: 91
+  total_plans: 99
+  completed_plans: 92
 ---
 
 # STATE.md — CinemaChain
@@ -24,9 +24,9 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening
-- **Plan:** 04.1-03 (complete)
-- **Status:** BUG-01 FIXED, BUG-02 FIXED, BUG-03 RESOLVED (Suggested tab removed)
+- **Phase:** Phase 04.3 — Bug Fixes & UX Refinements
+- **Plan:** 04.3-01 (complete)
+- **Status:** Wave 0 stubs in place — BUG-B and BUG-C stubs in test_game.py; SessionCounters UX-C test RED
 
 ## Progress
 
@@ -51,6 +51,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-01: Wave 0 stubs appended to test_game.py using asyncpg-skip pattern; stubs skip locally and run in Docker; signals BUG-B poster_path enrichment and BUG-C search param expected behavior for Wave 1 implementation
+- **2026-03-18:** 04.3-01: SessionCounters second test updated to assert Steps/Actors absent using queryByText().toBeNull() — intentionally RED until Wave 2 UX-C removes those blocks from the component
 - **2026-03-18:** BUG-03 resolved by removal — Suggested Movies feature removed (backend endpoint + frontend tab deleted); unreliable and not worth fixing; Phase 5 unblocked
 - **2026-03-18:** 04.1-02: BUG-03 deferred — code fix deployed but NAS still returns empty suggestions on 8-step chain; original 130+ step diagnosis may be incomplete; root cause investigation required before Phase 5
 - **2026-03-18:** 04.1-01: BUG-03 fix: `candidates = [] / if eligible_actors:` guard replaces early returns in get_suggestions — genre-affinity fallback now reachable on long chains
@@ -285,6 +287,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T17:50:00Z
-Stopped at: Completed 04.1-03-PLAN.md — BUG-03 fallback gate fixed; zero-watch-history regression tests added
+Last session: 2026-03-18T19:29:14.406Z
+Stopped at: Completed 04.3-01-PLAN.md — Wave 0 stubs added for BUG-B, BUG-C; SessionCounters test updated (UX-C)
 Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.
