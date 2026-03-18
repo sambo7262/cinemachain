@@ -17,6 +17,7 @@
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
 - [~] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (BUG-01 FIXED, BUG-02 FIXED, BUG-03 gap closure plan 04.1-03 created)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
+- [ ] **Phase 4.3: Bug Fixes & UX Refinements** — Background image loading fix, thumbnail stability on Mark as Watched, column-header sorting replacing filter panel, load-more append behavior, session stats simplification, full-filmography search, narrow column visual bug, home page button colors
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
@@ -210,6 +211,14 @@ Plans:
 - [ ] 04.2-05-PLAN.md — Wave 3: Frontend features — SessionCounters 5-stat expansion, GameSession poster wall + random pick + dead-end, GameLobby session card stats
 - [ ] 04.2-06-PLAN.md — Wave 4: compose.yaml static volume + Docker rebuild + NAS deploy + human verify checkpoint
 
+### Phase 4.3: Bug Fixes & UX Refinements
+**Goal:** Resolve all known visual bugs and UX friction points before production deployment — background image loading, thumbnail stability, sortable columns replacing filter panel, paginated load-more appending, session stats simplification, full-filmography search, narrow column visual artifact, and home page button color affordances.
+**Depends on:** Phase 4.2
+**Requirements:** (none mapped — bug fix and polish phase)
+**Plans:** TBD
+
+---
+
 ### Phase 5: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
 **Depends on:** Phase 4
@@ -234,6 +243,7 @@ Plans:
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
+| 4.3. Bug Fixes & UX Refinements | 0/? | Not started | — |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
