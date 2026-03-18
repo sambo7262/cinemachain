@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO } from "@/lib/api"
 import { ChainHistory } from "@/components/ChainHistory"
+import { MovieCard } from "@/components/MovieCard"
 import { MovieFilterSidebar, FilterState, DEFAULT_FILTER_STATE } from "@/components/MovieFilterSidebar"
 import { SessionCounters } from "@/components/SessionCounters"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -42,12 +43,13 @@ export default function GameSession() {
   const location = useLocation()
 
   // Tab + selection state
-  const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
+  const [activeTab, setActiveTab] = useState<"actors" | "movies" | "suggested">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
   const [sort, setSort] = useState<"rating" | "runtime" | "genre">("rating")
   const [allMovies, setAllMovies] = useState(false)
   const [moviesPage, setMoviesPage] = useState(1)
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [view, setView] = useState<"home" | "tabs">("home")
   const { showRadarr } = useNotification()
   const [deleteStepOpen, setDeleteStepOpen] = useState(false)
@@ -110,6 +112,14 @@ export default function GameSession() {
   })
   const allEligibleMovies = eligibleMoviesData?.items ?? []
   const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
+
+  // Suggestions query — only fires when Suggested tab is active
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
+    queryKey: ["suggestions", sid],
+    queryFn: () => api.getSuggestions(sid),
+    enabled: !!sid && !!session && view === "tabs" && activeTab === "suggested",
+    staleTime: 30000,
+  })
 
   // Concession-themed loading messages for actors and movies
   const actorsLoadingMessage = useLoadingMessages(eligibleActorsFetching)
@@ -450,10 +460,10 @@ export default function GameSession() {
           </div>
         )}
 
-        {/* Two-tab panel — only shown when in tabs view */}
+        {/* Three-tab panel — only shown when in tabs view */}
         {view === "tabs" && <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "actors" | "movies")}
+          onValueChange={(v) => setActiveTab(v as "actors" | "movies" | "suggested")}
           className="flex-1"
         >
           <TabsList className="w-full">
@@ -467,6 +477,9 @@ export default function GameSession() {
                   via {selectedActor.name}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="suggested" className="flex-1">
+              Suggested
             </TabsTrigger>
           </TabsList>
 
@@ -609,13 +622,27 @@ export default function GameSession() {
                   className="mb-3"
                 />
 
+                {/* Mobile: Filters toggle button */}
+                <div className="lg:hidden mb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  >
+                    Filters
+                  </Button>
+                </div>
+
                 {/* Filter sidebar + movie list flex row */}
-                <div className="flex flex-row gap-4">
-                  <MovieFilterSidebar
-                    genres={availableGenres}
-                    filters={filters}
-                    onChange={setFilters}
-                  />
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Sidebar: always visible on lg+, toggle-visible on mobile */}
+                  <aside className={cn("w-full lg:w-[200px] lg:flex-shrink-0", showMobileFilters ? "block" : "hidden lg:block")}>
+                    <MovieFilterSidebar
+                      genres={availableGenres}
+                      filters={filters}
+                      onChange={setFilters}
+                    />
+                  </aside>
 
                   <div className="flex-1 min-w-0">
                     {/* Concession-themed loading message */}
@@ -716,6 +743,31 @@ export default function GameSession() {
                 </div>
               </>
             )}
+          </TabsContent>
+
+          {/* Suggested tab */}
+          <TabsContent value="suggested" className="mt-4">
+            {suggestionsLoading && (
+              <p className="text-muted-foreground text-sm text-center py-8">
+                Loading suggestions...
+              </p>
+            )}
+            {!suggestionsLoading && suggestions.length === 0 && (
+              <div className="text-center py-12">
+                <p className="font-medium text-foreground">No suggestions yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Continue the chain to unlock suggestions.</p>
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              {suggestions.map((movie) => (
+                <MovieCard
+                  key={movie.tmdb_id}
+                  {...movie}
+                  selectable={!movie.watched}
+                  onClick={!movie.watched ? () => handleMovieConfirm(movie) : undefined}
+                />
+              ))}
+            </div>
           </TabsContent>
         </Tabs>}
 
