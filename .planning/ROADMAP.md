@@ -16,7 +16,7 @@
 - [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
 - [ ] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains
-- [ ] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback
+- [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
@@ -195,7 +195,7 @@ Plans:
 **Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — enhancement phase)
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 - [ ] 04.2-01-PLAN.md — Wave 0: Test stubs (Nyquist compliance) — test_static.py, test_game.py additions, PosterWall.test.tsx, SessionCounters.test.tsx
@@ -227,7 +227,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
-| 4.2. UI Polish & Local Poster Caching | 5/6 | In Progress|  |
+| 4.2. UI Polish & Local Poster Caching | 6/6 | Complete   | 2026-03-18 |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---

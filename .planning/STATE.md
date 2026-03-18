@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2-05-PLAN.md
-last_updated: "2026-03-18T06:19:26.654Z"
+stopped_at: Completed 04.2-06-PLAN.md
+last_updated: "2026-03-18T06:38:00.976Z"
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 91
-  completed_plans: 87
+  completed_plans: 88
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4.2 — UI Polish and Local Poster Caching
-- **Plan:** 04.2-06 (next)
-- **Status:** Phase 4.2 in progress. Plans 01-05 complete. Continuing with remaining plans.
+- **Plan:** 04.2-06 (complete)
+- **Status:** Phase 4.2 complete. All 6 plans done. Verification partial — 2 fails (poster wall, random pick button) and 2 bugs (Started timezone, GameLobby stats) deferred to bug smashing. Continuing with Phase 4.1 bug fixes or next phase.
 
 ## Progress
 
-`[██████████] 96%` — 87 of 91 plans complete
+`[██████████] 97%` — 88 of 91 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04.2-06: NAS verification partial — poster wall (5a) FAIL, random pick button (5c) FAIL, Started timezone bug (5b), GameLobby stats refinement (5e); dead-end (5d) waived; all failures/bugs deferred to bug smashing
 - **2026-03-17:** 04.2-05: PosterWall mounted in GameSession root div with cn() conditional bg-background (< 5 posters keeps bg-background, 5+ posters uses PosterWall dark overlay)
 - **2026-03-17:** 04.2-05: dead-end detection (isDeadEnd) replaces entire actors tab content per UI-SPEC.md — checked after isWatched and not-fetching gates
 - **2026-03-17:** 04.2-05: Random Pick selects from filteredMovies (not allEligibleMovies) to respect active search/filter state
@@ -279,6 +280,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:19:26.644Z
-Stopped at: Completed 04.2-05-PLAN.md
+Last session: 2026-03-18T06:38:00.970Z
+Stopped at: Completed 04.2-06-PLAN.md
 Resume with: 04.2-05 complete. SessionCounters 5-stat, PosterWall, random pick, dead-end, GameLobby stats line all done. Continue with remaining Phase 4.2 plans.
