@@ -215,7 +215,7 @@ Plans:
 **Goal:** Resolve all known visual bugs and UX friction points before production deployment — background image loading, thumbnail stability, sortable columns replacing filter panel, paginated load-more appending, session stats simplification, full-filmography search, narrow column visual artifact, and home page button color affordances.
 **Depends on:** Phase 4.2
 **Requirements:** (none mapped — bug fix and polish phase)
-**Plans:** 8/8 plans (5 executed + 3 gap closure plans for BUG-A and UX-A)
+**Plans:** 7/8 plans executed
 
 Plans:
 - [x] 04.3-01-PLAN.md — Wave 0: Test stubs — test_game.py BUG-B and BUG-C stubs; SessionCounters.test.tsx UX-C assertion
@@ -253,7 +253,7 @@ Plans:
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
-| 4.3. Bug Fixes & UX Refinements | 5/8 | Partial — gap closure plans 06/07/08 created | 2026-03-18 |
+| 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
