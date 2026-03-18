@@ -242,8 +242,9 @@ export default function GameLobby() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
+                          className="bg-red-100 text-red-800 border border-red-200 hover:bg-red-200"
                           onClick={(e) => {
                             e.stopPropagation()
                             archiveMutation.mutate(session.id)
@@ -252,7 +253,12 @@ export default function GameLobby() {
                         >
                           Archive
                         </Button>
-                        <Button size="sm" onClick={() => navigate(`/game/${session.id}`)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-green-100 text-green-800 border border-green-200 hover:bg-green-200"
+                          onClick={() => navigate(`/game/${session.id}`)}
+                        >
                           Continue →
                         </Button>
                       </div>

@@ -9,10 +9,10 @@ import { NotificationProvider } from "./contexts/NotificationContext"
 export default function App() {
   return (
     <NotificationProvider>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
         <NavBar />
         <RadarrNotificationBanner />
-        <div className="max-w-[1400px] mx-auto px-6">
+        <div className="max-w-[1400px] mx-auto px-6 w-full flex-1">
           <Routes>
             <Route path="/" element={<GameLobby />} />
             <Route path="/game/:sessionId" element={<GameSession />} />
