@@ -175,12 +175,12 @@ Plans:
 **Plans:** 5/7 plans executed
 
 Plans:
-- [ ] 04-01-PLAN.md — Wave 1: Foundations — test stubs (test_cache.py, test_session_mgmt.py), shadcn Dialog + DropdownMenu primitives, npm/pip installs
-- [ ] 04-02-PLAN.md — Wave 2: Backend cache — APScheduler nightly job, services/cache.py, settings, main.py wiring (CACHE-01, CACHE-02)
-- [ ] 04-03-PLAN.md — Wave 2: Backend session endpoints — DELETE /sessions/{id}/steps/last, DELETE /sessions/{id} (SESSION-01, SESSION-02)
-- [ ] 04-04-PLAN.md — Wave 3: Frontend session home polish — NotificationContext, RadarrBanner, Now Playing poster, layout 1400px, Watch History tab removal (UX-06, UX-07)
-- [ ] 04-05-PLAN.md — Wave 3: Frontend movie enrichment + suggestions — MPAA badge, persistent sidebar, Suggested tab + backend endpoint (UX-08, UX-09)
-- [ ] 04-06-PLAN.md — Wave 4: Frontend destructive actions — Delete Last Step + Delete Archived Session dialogs wired to backend (SESSION-01, SESSION-02)
+- [x] 04-01-PLAN.md — Wave 1: Foundations — test stubs (test_cache.py, test_session_mgmt.py), shadcn Dialog + DropdownMenu primitives, npm/pip installs
+- [x] 04-02-PLAN.md — Wave 2: Backend cache — APScheduler nightly job, services/cache.py, settings, main.py wiring (CACHE-01, CACHE-02)
+- [x] 04-03-PLAN.md — Wave 2: Backend session endpoints — DELETE /sessions/{id}/steps/last, DELETE /sessions/{id} (SESSION-01, SESSION-02)
+- [x] 04-04-PLAN.md — Wave 3: Frontend session home polish — NotificationContext, RadarrBanner, Now Playing poster, layout 1400px, Watch History tab removal (UX-06, UX-07)
+- [x] 04-05-PLAN.md — Wave 3: Frontend movie enrichment + suggestions — MPAA badge, persistent sidebar, Suggested tab + backend endpoint (UX-08, UX-09)
+- [x] 04-06-PLAN.md — Wave 4: Frontend destructive actions — Delete Last Step + Delete Archived Session dialogs wired to backend (SESSION-01, SESSION-02)
 - [ ] 04-07-PLAN.md — Wave 5: Docker rebuild + NAS deploy + human verify checkpoint (all 8 requirements)
 
 ### Phase 5: Production Deployment

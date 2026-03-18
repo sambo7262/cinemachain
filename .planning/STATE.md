@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-06-PLAN.md — frontend delete actions (GameSession DropdownMenu + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog)
-last_updated: "2026-03-18T00:03:25.047Z"
+stopped_at: Completed 04-05-PLAN.md — MPAA badge on MovieCard, persistent sidebar, Suggested tab with genre-affinity suggestions endpoint
+last_updated: "2026-03-17T00:20:00Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 83
-  completed_plans: 80
+  completed_plans: 81
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4 — Caching, UI/UX Polish, and Session Management (in progress)
-- **Plan:** 04-06 complete — frontend delete actions: GameSession DropdownMenu with Export CSV + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog per row
-- **Status:** 04-06 complete. GameSession.tsx has MoreHorizontal DropdownMenu (Export CSV migrated + Delete Last Step with disabled guard); Delete Last Step Dialog uses shadcn Dialog with Keep Step / Delete Step copy; ArchivedSessions.tsx has Delete Session button per row + Dialog with Keep Session / Delete Session copy; both use useMutation + queryClient.invalidateQueries; TypeScript 0 errors.
+- **Plan:** 04-05 complete — MPAA badge on MovieCard, persistent sidebar in Eligible Movies, Suggested tab with genre-affinity suggestions algorithm
+- **Status:** 04-05 complete. MovieCard.tsx has mpaa_rating prop + always-visible Badge; MovieFilterSidebar refactored to plain div (caller controls width); GameSession.tsx has three-tab view (Eligible Actors / Eligible Movies / Suggested) with persistent desktop sidebar (hidden lg:block), mobile Filters toggle button, and suggestions useQuery; game.py has GET /sessions/{id}/suggestions endpoint (genre affinity + top 5). UX-08 and UX-09 satisfied.
 
 ## Progress
 
-`[██████████] 96%` — 80 of 83 plans complete
+`[██████████] 98%` — 81 of 83 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -44,6 +44,10 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04-05: MovieFilterSidebar top-level changed from w-56 shrink-0 to flex flex-col gap-4 p-4 — width/visibility now entirely caller-controlled via hidden lg:block aside in GameSession
+- **2026-03-17:** 04-05: suggestions useQuery enabled only when activeTab === 'suggested' — avoids eager fetch on tab load; staleTime 30s reduces redundant refetches
+- **2026-03-17:** 04-05: Suggestions algorithm: 500 vote_count floor, genre affinity from WatchEvents + session steps genres, tie-break by vote_average desc, deduplicate same movie via multiple actors by keeping highest-scored actor attribution
+- **2026-03-17:** 04-05: showMobileFilters local boolean state toggles aside visibility on mobile; lg:hidden Button triggers toggle — no URL state or context needed for this transient UI state
 - **2026-03-17:** 04-06: Export CSV migrated from standalone header button into DropdownMenu actions menu alongside Delete Last Step — consolidates session actions under single menu trigger
 - **2026-03-17:** 04-06: deleteSessionId: number | null pattern used in ArchivedSessions — single shared Dialog across all session rows; null = closed, ID = dialog open for that session
 - **2026-03-17:** 04-02: deferred import pattern used in test_cache.py — asyncpg not installed locally; try/except ImportError inside each test function matches existing project convention; tests skip locally and pass GREEN in Docker
@@ -255,6 +259,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T00:03:25.041Z
-Stopped at: Completed 04-06-PLAN.md — frontend delete actions (GameSession DropdownMenu + Delete Last Step Dialog; ArchivedSessions Delete Session Dialog)
-Resume with: 04-04 complete. UX-06 and UX-07 done. Continue with remaining Wave 3 plans.
+Last session: 2026-03-17T00:20:00Z
+Stopped at: Completed 04-05-PLAN.md — MPAA badge on MovieCard, persistent sidebar, Suggested tab with genre-affinity suggestions endpoint
+Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
