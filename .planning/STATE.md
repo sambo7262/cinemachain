@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Wave 0 stubs in place — BUG-B and BUG-C stubs in test_game.py; SessionCounters UX-C test RED
-stopped_at: Completed 04.3-02-PLAN.md — BUG-B enrichment + BUG-C search + UX-A sort_dir added to game.py
-last_updated: "2026-03-18T19:30:10.700Z"
+stopped_at: Completed 04.3-04-PLAN.md — BUG-A PosterWall null-guard, BUG-D empty row fix, BUG-D pastel buttons
+last_updated: "2026-03-18T19:34:19.379Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 99
-  completed_plans: 93
+  completed_plans: 94
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 04.3 — Bug Fixes & UX Refinements
-- **Plan:** 04.3-01 (complete)
-- **Status:** Wave 0 stubs in place — BUG-B and BUG-C stubs in test_game.py; SessionCounters UX-C test RED
+- **Plan:** 04.3-04 (complete)
+- **Status:** BUG-A PosterWall null-guard done; BUG-D empty row + pastel buttons done; BUG-B/BUG-C frontend and UX-C remaining
 
 ## Progress
 
-`[██████████] 97%` — 91 of 94 plans complete
+`[██████████] 95%` — 94 of 99 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-04: posterUrl returns string | null — TypeScript enforces callers guard; renderablePosters filter precedes length check so minimum-5 threshold counts only renderable items
+- **2026-03-18:** 04.3-04: App.tsx flex flex-col eliminates empty row below NavBar — block-layout RadarrNotificationBanner null slot caused gap; flex collapses it to zero height
+- **2026-03-18:** 04.3-04: variant=outline + className pattern for pastel GameLobby buttons — provides correct interactive states while overriding colors
 - **2026-03-18:** 04.3-02: sort_dir default is "desc" in eligible-movies — preserves existing highest-rated-first UI expectation; search block placed after sort to preserve order within results; _ensure_actor_credits_in_db in search path gated on actor_id not None (combined-view skips it)
 - **2026-03-18:** 04.3-02: mark_current_watched now calls _enrich_steps_thumbnails + _enrich_steps_runtime before _build_session_response — all response-building endpoints must follow this pattern
 - **2026-03-18:** 04.3-01: Wave 0 stubs appended to test_game.py using asyncpg-skip pattern; stubs skip locally and run in Docker; signals BUG-B poster_path enrichment and BUG-C search param expected behavior for Wave 1 implementation
@@ -289,6 +292,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T19:30:10.694Z
-Stopped at: Completed 04.3-02-PLAN.md — BUG-B enrichment + BUG-C search + UX-A sort_dir added to game.py
+Last session: 2026-03-18T19:34:19.372Z
+Stopped at: Completed 04.3-04-PLAN.md — BUG-A PosterWall null-guard, BUG-D empty row fix, BUG-D pastel buttons
 Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.
