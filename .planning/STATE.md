@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-07: Removed vote_count.isnot(None) from poster-wall supplement query; added nullslast() ordering so fresh-NAS movie stubs with vote_count=NULL appear as fallback ordered after cached popular movies
 - **2026-03-18:** 04.3-06: Two-pass null-stable sort replaces buggy tuple comparator in get_eligible_movies — null items always land last regardless of sort direction for all five sort columns (rating, runtime, genre, year, mpaa); the (is_none_bool, value) tuple pattern failed under reverse=True because True > False flipped the null position
 - **2026-03-18:** 04.3-05: NAS verification partial — 5/7 items PASS (BUG-B, BUG-C, BUG-D, UX-B, UX-C); BUG-A poster images not visible anywhere on NAS (static file serving or CDN fallback issue); UX-A rating sort produces wrong order despite direction toggle working (sort comparator bug — numeric vs string comparison suspected)
 - **2026-03-18:** 04.3-03: sortCol default 'rating' with sortDir 'desc' preserves existing highest-rated-first UI behavior; new column direction defaults desc for rating, asc for year/runtime/mpaa; Load More hidden when debouncedSearch truthy; SessionCounters stepCount/uniqueActorCount removed (3-stat)
