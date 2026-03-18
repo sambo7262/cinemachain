@@ -319,7 +319,7 @@ export default function GameSession() {
       {/* Content wrapper — z-[2] ensures content sits above PosterWall (z-[1]) */}
       <div className="relative z-[2] flex flex-col flex-1">
       {/* Header */}
-      <header className="border-b border-border px-6 py-3 flex items-center justify-between">
+      <header className="border-b border-border bg-background px-6 py-3 flex items-center justify-between">
         <div className="flex flex-col gap-1">
           {session?.name && (
             <p className="text-base font-semibold text-foreground">{session.name}</p>
@@ -370,7 +370,10 @@ export default function GameSession() {
       <div className="flex-1 flex flex-col gap-4 px-6 py-4 max-w-5xl w-full mx-auto">
         {/* Session state panel — shows context-appropriate guidance */}
         {session && (
-          <div className="rounded-lg border border-border px-4 py-3 text-sm">
+          (isStartingMovie && !isWatched) ||
+          (session.status === "active" && isMovieSelected && !isWatched)
+        ) && (
+          <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
             {isStartingMovie && !isWatched && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -543,7 +546,7 @@ export default function GameSession() {
           </TabsList>
 
           {/* Eligible Actors tab */}
-          <TabsContent value="actors" className="mt-3">
+          <TabsContent value="actors" className="mt-3 rounded-lg bg-card p-4">
             {!isWatched ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
                 <Clock className="w-8 h-8 text-muted-foreground" />
@@ -651,7 +654,7 @@ export default function GameSession() {
           </TabsContent>
 
           {/* Eligible Movies tab */}
-          <TabsContent value="movies" className="mt-3">
+          <TabsContent value="movies" className="mt-3 rounded-lg bg-card p-4">
             {!isWatched ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
                 <Clock className="w-8 h-8 text-muted-foreground" />
