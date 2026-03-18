@@ -15,6 +15,8 @@
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
 - [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
+- [ ] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains
+- [ ] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
@@ -182,6 +184,18 @@ Plans:
 - [x] 04-05-PLAN.md — Wave 3: Frontend movie enrichment + suggestions — MPAA badge, persistent sidebar, Suggested tab + backend endpoint (UX-08, UX-09)
 - [x] 04-06-PLAN.md — Wave 4: Frontend destructive actions — Delete Last Step + Delete Archived Session dialogs wired to backend (SESSION-01, SESSION-02)
 - [ ] 04-07-PLAN.md — Wave 5: Docker rebuild + NAS deploy + human verify checkpoint (all 8 requirements)
+
+### Phase 4.1: Bug Fixes & CSV Hardening
+**Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
+**Depends on:** Phase 4
+**Requirements:** (none mapped — pre-production hardening)
+**Plans:** TBD
+
+### Phase 4.2: UI Polish & Local Poster Caching
+**Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
+**Depends on:** Phase 4
+**Requirements:** (none mapped — enhancement phase)
+**Plans:** TBD
 
 ### Phase 5: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
