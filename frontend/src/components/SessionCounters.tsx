@@ -1,8 +1,6 @@
 interface SessionCountersProps {
   watchedCount: number
   watchedRuntimeMinutes: number
-  stepCount: number
-  uniqueActorCount: number
   createdAt: string  // ISO 8601 timestamp
 }
 
@@ -36,8 +34,6 @@ function formatSessionAge(createdAt: string): string {
 export function SessionCounters({
   watchedCount,
   watchedRuntimeMinutes,
-  stepCount,
-  uniqueActorCount,
   createdAt,
 }: SessionCountersProps) {
   return (
@@ -52,16 +48,6 @@ export function SessionCounters({
         <dd className="text-sm font-semibold text-foreground">
           {watchedCount === 0 ? "—" : formatRuntime(watchedRuntimeMinutes)}
         </dd>
-      </div>
-      <div className="h-8 w-px bg-border" aria-hidden="true" />
-      <div className="flex flex-col items-center">
-        <dt className="text-xs text-muted-foreground uppercase tracking-wide">Steps</dt>
-        <dd className="text-sm font-semibold text-foreground">{stepCount}</dd>
-      </div>
-      <div className="h-8 w-px bg-border" aria-hidden="true" />
-      <div className="flex flex-col items-center">
-        <dt className="text-xs text-muted-foreground uppercase tracking-wide">Actors</dt>
-        <dd className="text-sm font-semibold text-foreground">{uniqueActorCount}</dd>
       </div>
       <div className="h-8 w-px bg-border" aria-hidden="true" />
       <div className="flex flex-col items-center">

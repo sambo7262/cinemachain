@@ -332,8 +332,6 @@ export default function GameSession() {
             <SessionCounters
               watchedCount={session.watched_count ?? 0}
               watchedRuntimeMinutes={session.watched_runtime_minutes ?? 0}
-              stepCount={session.step_count ?? 0}
-              uniqueActorCount={session.unique_actor_count ?? 0}
               createdAt={session.created_at ?? ""}
             />
           )}
