@@ -1413,41 +1413,35 @@ async def get_eligible_movies(
             return None
         return m.get("vote_average")
 
-    # Sort — supports rating, runtime, genre (existing), plus year and mpaa (new)
-    # sort_dir: "asc" | "desc" — applied after primary sort key
+    # Sort — null-stable two-pass approach: separate nulls first, sort each group, then concat.
+    # Nulls always land at the end regardless of sort direction.
     _desc = (sort_dir or "desc") == "desc"
     if sort == "rating":
-        movies.sort(
-            key=lambda m: (_effective_rating(m) is None, _effective_rating(m) or 0),
-            reverse=_desc,
-        )
+        rated = [m for m in movies if _effective_rating(m) is not None]
+        unrated = [m for m in movies if _effective_rating(m) is None]
+        rated.sort(key=lambda m: _effective_rating(m) or 0, reverse=_desc)
+        movies = rated + unrated
     elif sort == "runtime":
-        movies.sort(
-            key=lambda m: (m["runtime"] is None, m["runtime"] or 0),
-            reverse=_desc,
-        )
+        with_runtime = [m for m in movies if m.get("runtime") is not None]
+        without_runtime = [m for m in movies if m.get("runtime") is None]
+        with_runtime.sort(key=lambda m: m["runtime"], reverse=_desc)
+        movies = with_runtime + without_runtime
     elif sort == "genre":
-        movies.sort(
-            key=lambda m: (
-                m["genres"] is None or m["genres"] == "",
-                m["genres"] or "",
-            ),
-            reverse=_desc,
-        )
+        with_genre = [m for m in movies if m.get("genres") and m["genres"] != ""]
+        without_genre = [m for m in movies if not m.get("genres") or m["genres"] == ""]
+        with_genre.sort(key=lambda m: m["genres"] or "", reverse=_desc)
+        movies = with_genre + without_genre
     elif sort == "year":
-        movies.sort(
-            key=lambda m: (m.get("year") is None, m.get("year") or 0),
-            reverse=_desc,
-        )
+        with_year = [m for m in movies if m.get("year") is not None]
+        without_year = [m for m in movies if m.get("year") is None]
+        with_year.sort(key=lambda m: m.get("year") or 0, reverse=_desc)
+        movies = with_year + without_year
     elif sort == "mpaa":
         _mpaa_order = {"G": 0, "PG": 1, "PG-13": 2, "R": 3, "NC-17": 4}
-        movies.sort(
-            key=lambda m: (
-                m.get("mpaa_rating") is None or m.get("mpaa_rating") == "",
-                _mpaa_order.get(m.get("mpaa_rating") or "", 99),
-            ),
-            reverse=_desc,
-        )
+        with_mpaa = [m for m in movies if m.get("mpaa_rating") and m.get("mpaa_rating") != ""]
+        without_mpaa = [m for m in movies if not m.get("mpaa_rating") or m.get("mpaa_rating") == ""]
+        with_mpaa.sort(key=lambda m: _mpaa_order.get(m.get("mpaa_rating") or "", 99), reverse=_desc)
+        movies = with_mpaa + without_mpaa
 
     # Search — when provided, filter by title (case-insensitive) and bypass pagination.
     # Calls _ensure_actor_credits_in_db to guarantee full filmography coverage (no-op if cached).
