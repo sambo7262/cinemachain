@@ -702,3 +702,94 @@ def test_poster_wall_endpoint_returns_list(client):
 def test_game_session_response_includes_step_count(client):
     """GameSessionResponse includes step_count, unique_actor_count, created_at (Phase 4.2 stub)."""
     pytest.skip("Requires active session — validated in integration tests")
+
+
+# ---------------------------------------------------------------------------
+# Phase 4.1 regression tests — BUG-01 and BUG-03
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_eligible_movies_excludes_chain_movies(client):
+    """BUG-01: Movies already in the session chain must not appear in eligible-movies."""
+    try:
+        from app.main import app
+        from app.models import Actor, Credit, Movie, GameSession, GameSessionStep
+        from app.db import async_session_factory
+    except ImportError:
+        pytest.skip("app.main not yet implemented")
+
+    async with async_session_factory() as db:
+        # Insert two movies
+        m1 = Movie(tmdb_id=99001, title="Chain Movie 1", year=2000)
+        m2 = Movie(tmdb_id=99002, title="Chain Movie 2", year=2001)
+        actor = Actor(tmdb_id=88001, name="Test Actor BUG01")
+        db.add_all([m1, m2, actor])
+        await db.flush()
+        # Actor appears in both movies
+        db.add(Credit(movie_id=m1.id, actor_id=actor.id))
+        db.add(Credit(movie_id=m2.id, actor_id=actor.id))
+        # Session: chain is m1 (start) -> actor -> m2
+        session = GameSession(
+            name="BUG01 Test Session",
+            status="awaiting_continue",
+            current_movie_tmdb_id=99002,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+        step1 = GameSessionStep(session_id=session.id, movie_tmdb_id=99001, actor_tmdb_id=None, movie_title="Chain Movie 1")
+        step2 = GameSessionStep(session_id=session.id, movie_tmdb_id=99002, actor_tmdb_id=88001, actor_name="Test Actor BUG01", movie_title="Chain Movie 2")
+        db.add_all([step1, step2])
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/eligible-movies?all_movies=true&actor_id=88001")
+    assert resp.status_code == 200
+    tmdb_ids = [m["tmdb_id"] for m in resp.json()]
+    assert 99001 not in tmdb_ids, "Chain movie 1 must not appear in eligible movies"
+    assert 99002 not in tmdb_ids, "Chain movie 2 must not appear in eligible movies"
+
+
+@pytest.mark.asyncio
+async def test_suggestions_long_chain_fallback(client):
+    """BUG-03: suggestions endpoint must return genre-affinity fallback when all eligible actors are picked."""
+    try:
+        from app.main import app
+        from app.models import Actor, Credit, Movie, GameSession, GameSessionStep, WatchEvent
+        from app.db import async_session_factory
+    except ImportError:
+        pytest.skip("app.main not yet implemented")
+
+    async with async_session_factory() as db:
+        # Current movie with one cast member
+        current_movie = Movie(tmdb_id=99010, title="Current Movie BUG03", year=2020, genres='["Drama"]', vote_count=1000, vote_average=7.5)
+        sole_actor = Actor(tmdb_id=88010, name="Sole Actor BUG03")
+        # Fallback candidate movies (in DB, with matching genre, vote_count >= 500)
+        fallback1 = Movie(tmdb_id=99011, title="Fallback Drama 1", year=2018, genres='["Drama"]', vote_count=800, vote_average=7.0, mpaa_rating="PG-13")
+        fallback2 = Movie(tmdb_id=99012, title="Fallback Drama 2", year=2019, genres='["Drama"]', vote_count=900, vote_average=7.2, mpaa_rating="R")
+        db.add_all([current_movie, sole_actor, fallback1, fallback2])
+        await db.flush()
+        db.add(Credit(movie_id=current_movie.id, actor_id=sole_actor.id))
+        # WatchEvent for current movie so genre_freq has Drama entries
+        db.add(WatchEvent(tmdb_id=99010))
+        # Session: sole_actor already picked (long-chain exhaustion simulated)
+        session = GameSession(
+            name="BUG03 Long Chain Session",
+            status="awaiting_continue",
+            current_movie_tmdb_id=99010,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+        step1 = GameSessionStep(session_id=session.id, movie_tmdb_id=99010, actor_tmdb_id=None, movie_title="Current Movie BUG03")
+        # sole_actor already picked — this exhausts all eligible actors
+        step2 = GameSessionStep(session_id=session.id, movie_tmdb_id=99013, actor_tmdb_id=88010, actor_name="Sole Actor BUG03", movie_title="Some Prior Movie")
+        db.add_all([step1, step2])
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/suggestions")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) > 0, "Suggestions must not be empty when eligible_actors is exhausted — genre fallback must fire"
+    assert all("tmdb_id" in m for m in results)
