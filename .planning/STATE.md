@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 4.1 UI-SPEC approved
-last_updated: "2026-03-18T14:07:19.836Z"
+stopped_at: Completed 04.1-01-PLAN.md
+last_updated: "2026-03-18T15:01:23.299Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 91
-  completed_plans: 88
+  total_plans: 93
+  completed_plans: 89
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4.2 — UI Polish and Local Poster Caching
-- **Plan:** 04.2-06 (complete)
-- **Status:** Ready to plan
+- **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening
+- **Plan:** 04.1-01 (complete)
+- **Status:** Ready to execute 04.1-02
 
 ## Progress
 
-`[██████████] 97%` — 88 of 91 plans complete
+`[██████████] 96%` — 89 of 93 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.1-01: BUG-03 fix: `candidates = [] / if eligible_actors:` guard replaces early returns in get_suggestions — genre-affinity fallback now reachable on long chains
+- **2026-03-18:** 04.1-01: BUG-02 fix: splitCsvLine state-machine parser replaces naive .split(',') in GameLobby parseCSV; CRLF normalization; accept='.csv,.xlsx' per UI-SPEC Option B
+- **2026-03-18:** 04.1-01: Regression tests use asyncpg-skip pattern (skip locally, GREEN in Docker); test_eligible_movies_excludes_chain_movies and test_suggestions_long_chain_fallback appended to test_game.py
 - **2026-03-17:** 04.2-06: NAS verification partial — poster wall (5a) FAIL, random pick button (5c) FAIL, Started timezone bug (5b), GameLobby stats refinement (5e); dead-end (5d) waived; all failures/bugs deferred to bug smashing
 - **2026-03-17:** 04.2-05: PosterWall mounted in GameSession root div with cn() conditional bg-background (< 5 posters keeps bg-background, 5+ posters uses PosterWall dark overlay)
 - **2026-03-17:** 04.2-05: dead-end detection (isDeadEnd) replaces entire actors tab content per UI-SPEC.md — checked after isWatched and not-fetching gates
@@ -280,6 +283,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T14:07:19.821Z
-Stopped at: Phase 4.1 UI-SPEC approved
+Last session: 2026-03-18T15:01:23.293Z
+Stopped at: Completed 04.1-01-PLAN.md
 Resume with: 04.2-05 complete. SessionCounters 5-stat, PosterWall, random pick, dead-end, GameLobby stats line all done. Continue with remaining Phase 4.2 plans.

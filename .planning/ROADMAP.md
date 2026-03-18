@@ -189,7 +189,7 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
