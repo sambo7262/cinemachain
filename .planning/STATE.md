@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04.2-02-PLAN.md
-last_updated: "2026-03-18T06:03:21.121Z"
+stopped_at: Completed 04.2-01-PLAN.md
+last_updated: "2026-03-18T06:04:45.953Z"
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 91
-  completed_plans: 83
+  completed_plans: 84
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening (not started)
-- **Plan:** Not yet planned
-- **Status:** Phase 4 complete. Phase 4.1 queued as pre-production bug smash. Next session: poster background + UI improvements (drifting columns, random pick, dead-end detection, session stats), then plan Phase 4.1.
+- **Phase:** Phase 4.2 — UI Polish and Local Poster Caching
+- **Plan:** 04.2-02 (next)
+- **Status:** Phase 4.2 in progress. Plan 01 (Wave 0 test stubs) complete. Plan 02 previously complete. Continuing with remaining plans.
 
 ## Progress
 
-`[██████████] 98%` — 83 of 85 plans complete (04-08, 04-09 added; 04.1 TBD)
+`[█████████░] 92%` — 84 of 91 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,8 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04.2-01: PosterWall.test.tsx uses const POSTER_WALL_PATH variable for dynamic import — Vite resolves string literals at build time even inside try/catch; variable path bypasses static analysis and lets try/catch handle runtime failure
+- **2026-03-17:** 04.2-01: SessionCounters.test.tsx is intentionally RED — references stepCount, uniqueActorCount, createdAt props not yet in component; expected failure for TDD RED phase, activates in Plan 05
 - **2026-03-17:** 04-05: MovieFilterSidebar top-level changed from w-56 shrink-0 to flex flex-col gap-4 p-4 — width/visibility now entirely caller-controlled via hidden lg:block aside in GameSession
 - **2026-03-17:** 04-05: suggestions useQuery enabled only when activeTab === 'suggested' — avoids eager fetch on tab load; staleTime 30s reduces redundant refetches
 - **2026-03-17:** 04-05: Suggestions algorithm: 500 vote_count floor, genre affinity from WatchEvents + session steps genres, tie-break by vote_average desc, deduplicate same movie via multiple actors by keeping highest-scored actor attribution
@@ -266,6 +268,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:03:21.113Z
-Stopped at: Completed 04.2-02-PLAN.md
+Last session: 2026-03-18T06:04:45.947Z
+Stopped at: Completed 04.2-01-PLAN.md
 Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
