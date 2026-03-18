@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO } from "@/lib/api"
+import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO, PosterWallItem } from "@/lib/api"
 import { ChainHistory } from "@/components/ChainHistory"
 import { MovieCard } from "@/components/MovieCard"
 import { MovieFilterSidebar, FilterState, DEFAULT_FILTER_STATE } from "@/components/MovieFilterSidebar"
 import { SessionCounters } from "@/components/SessionCounters"
+import { PosterWall } from "@/components/PosterWall"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +20,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import { X, Clock, MoreHorizontal } from "lucide-react"
+import { X, Clock, MoreHorizontal, Shuffle } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -40,6 +41,7 @@ export default function GameSession() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const sid = Number(sessionId)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies" | "suggested">("actors")
@@ -52,6 +54,11 @@ export default function GameSession() {
   const [view, setView] = useState<"home" | "tabs">("home")
   const { showRadarr } = useNotification()
   const [deleteStepOpen, setDeleteStepOpen] = useState(false)
+
+  // Random pick state
+  const [randomPickOpen, setRandomPickOpen] = useState(false)
+  const [randomPickMovie, setRandomPickMovie] = useState<EligibleMovieDTO | null>(null)
+  const [randomPickError, setRandomPickError] = useState<string | null>(null)
 
   // Filter and search state — Eligible Movies
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE)
@@ -67,6 +74,13 @@ export default function GameSession() {
     refetchOnMount: "always",
     staleTime: 0,
     enabled: !!sid,
+  })
+
+  // Poster wall query — staleTime 5 minutes (posters change infrequently)
+  const { data: posterWallData = [] } = useQuery<PosterWallItem[]>({
+    queryKey: ["posterWall"],
+    queryFn: api.getPosterWall,
+    staleTime: 5 * 60 * 1000,
   })
 
   // Derive watched state from session
@@ -94,6 +108,10 @@ export default function GameSession() {
   })
   // Eligible actors: only those with is_eligible !== false (or undefined = eligible)
   const eligibleActors = eligibleActorsData.filter((a) => a.is_eligible !== false)
+
+  // Dead-end condition: watched, not loading, no eligible actors, but ineligible actors exist
+  const hasIneligibleActors = eligibleActorsData.filter((a) => a.is_eligible === false).length > 0
+  const isDeadEnd = isWatched && !eligibleActorsFetching && eligibleActors.length === 0 && hasIneligibleActors
 
   // Eligible movies — scoped to selected actor + sort/filter params
   // enabled without selectedActor: no actor = combined-view (all eligible movies)
@@ -141,6 +159,15 @@ export default function GameSession() {
     setSelectedActor(actor)
     setMoviesPage(1)
     setActiveTab("movies")
+  }
+
+  // Random pick handler — selects from filteredMovies (respects active filters)
+  const handleRandomPick = () => {
+    if (filteredMovies.length === 0) return
+    const idx = Math.floor(Math.random() * filteredMovies.length)
+    setRandomPickMovie(filteredMovies[idx])
+    setRandomPickError(null)
+    setRandomPickOpen(true)
   }
 
   // Movie selection: confirm -> pick-actor -> request-movie with error recovery
@@ -253,7 +280,8 @@ export default function GameSession() {
     lastStep?.actor_tmdb_id === null
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className={cn("min-h-screen flex flex-col", posterWallData.length < 5 ? "bg-background" : "")}>
+      <PosterWall posters={posterWallData} />
       {/* Header */}
       <header className="border-b border-border px-6 py-3 flex items-center justify-between">
         <div className="flex flex-col gap-1">
@@ -267,6 +295,9 @@ export default function GameSession() {
             <SessionCounters
               watchedCount={session.watched_count ?? 0}
               watchedRuntimeMinutes={session.watched_runtime_minutes ?? 0}
+              stepCount={session.step_count ?? 0}
+              uniqueActorCount={session.unique_actor_count ?? 0}
+              createdAt={session.created_at ?? ""}
             />
           )}
         </div>
@@ -495,6 +526,29 @@ export default function GameSession() {
                   Watch <span className="font-semibold text-foreground">{currentMovieTitle}</span> to unlock eligible actors.
                 </p>
               </div>
+            ) : isDeadEnd ? (
+              <div className="flex flex-col items-center gap-4 py-12 text-center">
+                <p className="text-lg font-semibold text-foreground">Chain dead end</p>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  All actors from this movie have been used in this session.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteStepOpen(true)}
+                  >
+                    Delete Last Step
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      api.archiveSession(sid).then(() => navigate("/"))
+                    }}
+                  >
+                    End Session
+                  </Button>
+                </div>
+              </div>
             ) : (
               <>
                 {actorsLoadingMessage && (
@@ -502,7 +556,7 @@ export default function GameSession() {
                     {actorsLoadingMessage}
                   </p>
                 )}
-                {eligibleActors.length === 0 && eligibleActorsData.filter((a) => a.is_eligible === false).length === 0 ? (
+                {eligibleActors.length === 0 && !hasIneligibleActors ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">No eligible actors found.</p>
                 ) : (
                   <div className="rounded-md border border-border overflow-hidden">
@@ -609,11 +663,24 @@ export default function GameSession() {
                       variant="ghost"
                       size="sm"
                       onClick={() => { setSelectedActor(null); setMoviesPage(1) }}
-                      className="ml-auto text-muted-foreground"
+                      className="text-muted-foreground"
                     >
                       Show all eligible movies
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "ml-auto",
+                      (filteredMovies.length === 0 || !selectedActor) ? "opacity-50 pointer-events-none" : ""
+                    )}
+                    onClick={handleRandomPick}
+                    aria-label="Random pick"
+                  >
+                    <Shuffle className="w-4 h-4 mr-1" />
+                    Random
+                  </Button>
                 </div>
 
                 {/* Search input — full width above the movie panel */}
@@ -814,6 +881,59 @@ export default function GameSession() {
               disabled={deleteLastStepMutation.isPending}
             >
               {deleteLastStepMutation.isPending ? "Deleting..." : "Delete Step"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Random Pick Dialog */}
+      <Dialog open={randomPickOpen} onOpenChange={setRandomPickOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Random Pick</DialogTitle>
+          </DialogHeader>
+          {randomPickMovie && (
+            <div className="flex items-start gap-4 py-2">
+              {randomPickMovie.poster_path ? (
+                <img
+                  src={`https://image.tmdb.org/t/p/w185${randomPickMovie.poster_path}`}
+                  alt={randomPickMovie.title}
+                  className="w-16 h-24 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-24 rounded bg-muted flex-shrink-0" />
+              )}
+              <div className="flex flex-col gap-1">
+                <p className="text-lg font-semibold text-foreground">{randomPickMovie.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {[randomPickMovie.year, randomPickMovie.runtime != null ? `${randomPickMovie.runtime}m` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
+            </div>
+          )}
+          {randomPickError && (
+            <p className="text-sm text-destructive">{randomPickError}</p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRandomPickOpen(false)}>
+              Keep Browsing
+            </Button>
+            <Button
+              variant="default"
+              onClick={async () => {
+                if (!randomPickMovie) return
+                setRandomPickError(null)
+                try {
+                  await handleMovieConfirm(randomPickMovie)
+                  setRandomPickOpen(false)
+                } catch {
+                  setRandomPickError("Failed to request movie. Try again.")
+                }
+              }}
+            >
+              Request This Movie
             </Button>
           </DialogFooter>
         </DialogContent>
