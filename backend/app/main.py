@@ -18,6 +18,7 @@ from app.services.tmdb import TMDBClient
 from app.services.radarr import RadarrClient
 from app.settings import settings
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
