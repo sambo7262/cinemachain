@@ -227,7 +227,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
-| 4.2. UI Polish & Local Poster Caching | 6/6 | Complete   | 2026-03-18 |
+| 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
