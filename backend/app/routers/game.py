@@ -1523,9 +1523,13 @@ async def request_movie(
     )
     session = result.scalar_one()
 
-    # Trigger Radarr
+    # Trigger Radarr — outer guard mirrors create_session; session is already committed
+    # so a Radarr failure must never surface as a 500.
     radarr: RadarrClient = request.app.state.radarr_client
-    radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
+    try:
+        radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
+    except Exception:
+        radarr_result = {"status": "error"}
 
     wa_map = await _enrich_steps_watched_at(session.steps, db)
     return {
