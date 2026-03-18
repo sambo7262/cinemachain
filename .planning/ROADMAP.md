@@ -17,7 +17,7 @@
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
 - [~] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (BUG-01 FIXED, BUG-02 FIXED, BUG-03 gap closure plan 04.1-03 created)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
-- [ ] **Phase 4.3: Bug Fixes & UX Refinements** — Background image loading fix, thumbnail stability on Mark as Watched, column-header sorting replacing filter panel, load-more append behavior, session stats simplification, full-filmography search, narrow column visual bug, home page button colors
+- [x] **Phase 4.3: Bug Fixes & UX Refinements** — All 7 items verified PASS on NAS (completed 2026-03-18)
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---

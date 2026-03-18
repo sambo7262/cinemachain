@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 04.3-07-PLAN.md — BUG-A poster-wall supplement query broadened; vote_count filter removed; nullslast ordering added
+stopped_at: Completed 04.3-08-PLAN.md — Phase 4.3 fully verified PASS on NAS (UX-A sort + BUG-A poster wall + 4 additional fixes); Phase 5 ready
 last_updated: "2026-03-18T20:36:51.808Z"
 progress:
   total_phases: 10
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 04.3 — Bug Fixes & UX Refinements
-- **Plan:** 04.3-06 (complete — UX-A sort fix)
-- **Status:** Phase 4.3 gap closure in progress. UX-A sort fix complete. BUG-A (poster wall images on NAS) is the only remaining gap before Phase 5.
+- **Phase:** Phase 5 — Production Deployment
+- **Plan:** 04.3-08 (complete — NAS gap closure verification; Phase 4.3 fully done)
+- **Status:** Phase 4.3 complete — all 7 items verified PASS on NAS. Phase 5 (Production Deployment) is now unblocked and ready to begin.
 
 ## Progress
 
-`[██████████] 96%` — 96 of 99 plans complete
+`[██████████] 99%` — 99 of 99 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-08: Phase 4.3 gap closure NAS verification PASS — UX-A rating sort (highest-rated first, nulls always last) and BUG-A poster wall (blurred poster images visible on session pages) both confirmed on live NAS; additional fixes in same build: poster blur 6px/60% overlay, solid bg-card on content areas, empty container removed from CSV sessions, CSV poster backfill background task
 - **2026-03-18:** 04.3-07: Removed vote_count.isnot(None) from poster-wall supplement query; added nullslast() ordering so fresh-NAS movie stubs with vote_count=NULL appear as fallback ordered after cached popular movies
 - **2026-03-18:** 04.3-06: Two-pass null-stable sort replaces buggy tuple comparator in get_eligible_movies — null items always land last regardless of sort direction for all five sort columns (rating, runtime, genre, year, mpaa); the (is_none_bool, value) tuple pattern failed under reverse=True because True > False flipped the null position
 - **2026-03-18:** 04.3-05: NAS verification partial — 5/7 items PASS (BUG-B, BUG-C, BUG-D, UX-B, UX-C); BUG-A poster images not visible anywhere on NAS (static file serving or CDN fallback issue); UX-A rating sort produces wrong order despite direction toggle working (sort comparator bug — numeric vs string comparison suspected)
