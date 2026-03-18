@@ -105,6 +105,21 @@ class PickActorRequest(BaseModel):
 
 class RequestMovieRequest(BaseModel):
     movie_tmdb_id: int
+
+
+class EligibleMovieResponse(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None = None
+    poster_path: str | None = None
+    vote_average: float | None = None
+    genres: str | None = None
+    runtime: int | None = None
+    vote_count: int | None = None
+    mpaa_rating: str | None = None
+    via_actor_name: str | None = None
+    watched: bool = False
+    selectable: bool = True
     movie_title: str
 
 
