@@ -1,13 +1,21 @@
 import json
 from datetime import datetime
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models import Actor, Credit, Movie, WatchEvent
+
+
+class PosterWallItem(BaseModel):
+    tmdb_id: int
+    poster_path: str
+    poster_local_path: str | None = None
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
@@ -54,6 +62,55 @@ async def get_watched_movies(db: AsyncSession = Depends(get_db)):
         }
         for m in movies
     ]
+
+
+@router.get("/poster-wall", response_model=list[PosterWallItem])
+async def get_poster_wall(
+    limit: int = 40,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return poster URLs sourced from watched movies + popular movies supplement.
+
+    Priority 1: Movies the user has watched (WatchEvent -> Movie join), filtered to
+    those with poster_path IS NOT NULL.
+    Priority 2: If fewer than 20 results, supplement from movies table ordered by
+    vote_count DESC (popular movies already in DB cache), excluding already-collected IDs.
+    Returns at most `limit` items.
+    """
+    # Step 1: collect from WatchEvents
+    we_result = await db.execute(
+        select(Movie.tmdb_id, Movie.poster_path, Movie.poster_local_path)
+        .join(WatchEvent, WatchEvent.tmdb_id == Movie.tmdb_id)
+        .where(Movie.poster_path.isnot(None))
+        .order_by(Movie.tmdb_id)
+        .limit(limit)
+    )
+    rows = we_result.all()
+    collected = [
+        PosterWallItem(tmdb_id=r[0], poster_path=r[1], poster_local_path=r[2])
+        for r in rows
+    ]
+
+    # Step 2: supplement from popular DB movies if fewer than 20 from watch history
+    if len(collected) < 20:
+        already_ids = {item.tmdb_id for item in collected}
+        needed = limit - len(collected)
+        pop_result = await db.execute(
+            select(Movie.tmdb_id, Movie.poster_path, Movie.poster_local_path)
+            .where(
+                Movie.poster_path.isnot(None),
+                Movie.vote_count.isnot(None),
+                ~Movie.tmdb_id.in_(already_ids) if already_ids else sa.true(),
+            )
+            .order_by(Movie.vote_count.desc())
+            .limit(needed)
+        )
+        for r in pop_result.all():
+            collected.append(
+                PosterWallItem(tmdb_id=r[0], poster_path=r[1], poster_local_path=r[2])
+            )
+
+    return collected
 
 
 @router.get("/{tmdb_id}")
