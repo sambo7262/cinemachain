@@ -215,7 +215,7 @@ Plans:
 **Goal:** Resolve all known visual bugs and UX friction points before production deployment — background image loading, thumbnail stability, sortable columns replacing filter panel, paginated load-more appending, session stats simplification, full-filmography search, narrow column visual artifact, and home page button color affordances.
 **Depends on:** Phase 4.2
 **Requirements:** (none mapped — bug fix and polish phase)
-**Plans:** 5/5 plans executed (partial NAS results — gap closure needed for BUG-A and UX-A)
+**Plans:** 8/8 plans (5 executed + 3 gap closure plans for BUG-A and UX-A)
 
 Plans:
 - [x] 04.3-01-PLAN.md — Wave 0: Test stubs — test_game.py BUG-B and BUG-C stubs; SessionCounters.test.tsx UX-C assertion
@@ -223,6 +223,9 @@ Plans:
 - [x] 04.3-03-PLAN.md — Wave 2: Frontend (GameSession.tsx) — BUG-B keepPreviousData, UX-A column sort, UX-B append pagination, UX-C stats removal, BUG-C backend search passthrough; api.ts search/sort_dir params
 - [x] 04.3-04-PLAN.md — Wave 2: Frontend (PosterWall, App.tsx, GameLobby) — BUG-A null-guard, BUG-D empty row fix + pastel button colors
 - [x] 04.3-05-PLAN.md — Wave 3: Docker rebuild + NAS deploy + human verify all 7 items (BUG-A, BUG-B, UX-A, UX-B, UX-C, BUG-C, BUG-D) — PARTIAL: 5 PASS, BUG-A FAIL, UX-A PARTIAL FAIL
+- [ ] 04.3-06-PLAN.md — Wave 1 (gap-closure): Backend — UX-A sort null-stable two-pass fix for rating, year, runtime, mpaa in game.py
+- [ ] 04.3-07-PLAN.md — Wave 1 (gap-closure): Backend — BUG-A poster-wall supplement query broadened (remove vote_count filter, add nullslast ordering)
+- [ ] 04.3-08-PLAN.md — Wave 2 (gap-closure): Docker rebuild + NAS deploy + human verify BUG-A poster images and UX-A sort order
 
 ---
 
@@ -250,7 +253,7 @@ Plans:
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
-| 4.3. Bug Fixes & UX Refinements | 5/5 | Partial — gap closure needed (BUG-A, UX-A) | 2026-03-18 |
+| 4.3. Bug Fixes & UX Refinements | 5/8 | Partial — gap closure plans 06/07/08 created | 2026-03-18 |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
@@ -363,4 +366,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-18 — Phase 4.3 NAS verification complete: 5/7 items PASS; BUG-A and UX-A require gap closure before Phase 5*
+*Last updated: 2026-03-18 — Phase 4.3 gap closure: plans 06/07/08 created for BUG-A (poster-wall query) and UX-A (sort null-stable fix)*
