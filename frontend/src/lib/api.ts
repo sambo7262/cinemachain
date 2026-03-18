@@ -26,6 +26,9 @@ export interface GameSessionDTO {
   current_movie_title: string | null    // resolved by backend from Movie table
   watched_count: number
   watched_runtime_minutes: number
+  step_count: number           // actor picks made (steps where actor_tmdb_id IS NOT NULL)
+  unique_actor_count: number   // distinct actors used
+  created_at: string           // ISO 8601 session creation timestamp
 }
 
 export interface PaginatedMoviesDTO {
@@ -98,6 +101,12 @@ export interface CsvValidationResponse {
 export interface CsvOverride {
   row: number
   tmdb_id: number
+}
+
+export interface PosterWallItem {
+  tmdb_id: number
+  poster_path: string
+  poster_local_path: string | null
 }
 
 // --- Game session API ---
@@ -182,6 +191,9 @@ export const api = {
 
   getSuggestions: (sessionId: number) =>
     apiFetch<EligibleMovieDTO[]>(`/game/sessions/${sessionId}/suggestions`),
+
+  getPosterWall: (): Promise<PosterWallItem[]> =>
+    apiFetch<PosterWallItem[]>("/movies/poster-wall"),
 
   exportCsv: (sessionId: number, sessionName: string) => {
     fetch(`${BASE}/game/sessions/${sessionId}/export-csv`)
