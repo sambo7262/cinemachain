@@ -413,12 +413,6 @@ export default function GameSession() {
               </div>
             )}
 
-            {session.status === "active" && !isMovieSelected && session.steps.length > 1 && (
-              <p className="text-muted-foreground">
-                Pick your next actor from the Eligible Actors tab to continue the chain.
-              </p>
-            )}
-
           </div>
         )}
 
