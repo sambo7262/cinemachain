@@ -1,10 +1,12 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.db import engine
@@ -65,6 +67,11 @@ async def lifespan(app: FastAPI):
     if settings.tmdb_cache_run_on_startup:
         logger.info("TMDB_CACHE_RUN_ON_STARTUP=true — triggering cache job now")
         asyncio.create_task(nightly_cache_job(tmdb=tmdb_client, top_n=settings.tmdb_cache_top_n))
+
+    # 6. Static files — ensure /static/posters/ exists and mount it
+    os.makedirs("static/posters", exist_ok=True)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    logger.info("StaticFiles mounted at /static/")
 
     yield
 

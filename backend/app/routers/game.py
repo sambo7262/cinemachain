@@ -49,6 +49,9 @@ class GameSessionResponse(BaseModel):
     current_movie_title: str | None = None    # title of current movie from Movie table
     watched_count: int = 0                    # NEW — count of watched movie steps
     watched_runtime_minutes: int = 0          # NEW — sum of runtime for watched movie steps
+    step_count: int = 0          # count of steps where actor_tmdb_id IS NOT NULL (actor picks only)
+    unique_actor_count: int = 0  # count of distinct actors used across all steps
+    created_at: _datetime | None = None  # session creation timestamp
 
     model_config = {"from_attributes": True}
 
@@ -105,6 +108,7 @@ class PickActorRequest(BaseModel):
 
 class RequestMovieRequest(BaseModel):
     movie_tmdb_id: int
+    movie_title: str | None = None
 
 
 class EligibleMovieResponse(BaseModel):
@@ -259,6 +263,9 @@ def _build_session_response(
             runtime = (runtime_map or {}).get(s.movie_tmdb_id)
             if runtime is not None:
                 watched_runtime_minutes += runtime
+    # Compute new Phase 4.2 stats
+    step_count = sum(1 for s in session.steps if s.actor_tmdb_id is not None)
+    unique_actor_count = len({s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None})
     return GameSessionResponse(
         id=session.id,
         name=session.name,
@@ -270,6 +277,9 @@ def _build_session_response(
         current_movie_title=current_movie_title,
         watched_count=watched_count,
         watched_runtime_minutes=watched_runtime_minutes,
+        step_count=step_count,
+        unique_actor_count=unique_actor_count,
+        created_at=session.created_at,
     )
 
 
@@ -298,7 +308,24 @@ async def _ensure_actor_credits_in_db(
 
     Called before eligible-movies DB query to ensure on-demand filmography is populated.
     Uses on_conflict_do_nothing so repeated calls are safe (idempotent).
+    Short-circuits if Credit rows already exist for this actor — avoids TMDB call.
     """
+    existing = await db.execute(
+        select(_func.count()).select_from(Credit)
+        .join(Actor, Actor.id == Credit.actor_id)
+        .where(Actor.tmdb_id == actor_tmdb_id)
+    )
+    if existing.scalar_one() > 0:
+        # Also check for blank-title stubs — if any exist, fall through to backfill them
+        blank = await db.execute(
+            select(_func.count()).select_from(Movie)
+            .join(Credit, Credit.movie_id == Movie.id)
+            .join(Actor, Actor.id == Credit.actor_id)
+            .where(Actor.tmdb_id == actor_tmdb_id, Movie.title == "")
+        )
+        if blank.scalar_one() == 0:
+            return
+
     try:
         data = await tmdb.fetch_actor_credits(actor_tmdb_id)
     except Exception:
@@ -1253,9 +1280,12 @@ async def get_eligible_movies(
             detail="Watch the current movie before viewing eligible movies",
         )
 
-    # Watched state: fetch watched tmdb_ids scoped to THIS session only
-    # (movies watched in other sessions must remain eligible here)
+    # Movies already in this session's chain — always ineligible regardless of WatchEvent
     session_movie_ids = [s.movie_tmdb_id for s in session.steps]
+    chain_movie_ids = set(session_movie_ids)
+
+    # Watched state: scoped to THIS session only
+    # (movies watched in other sessions remain eligible here)
     watched_result = await db.execute(
         select(WatchEvent.tmdb_id).where(
             WatchEvent.tmdb_id.in_(session_movie_ids)
@@ -1291,7 +1321,7 @@ async def get_eligible_movies(
                     "genres": movie.genres,
                     "runtime": movie.runtime,
                     "watched": movie.tmdb_id in watched_ids,
-                    "selectable": movie.tmdb_id not in watched_ids,
+                    "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                     "via_actor_name": actor.name,
                 }
     else:
@@ -1331,7 +1361,7 @@ async def get_eligible_movies(
                         "genres": movie.genres,
                         "runtime": movie.runtime,
                         "watched": movie.tmdb_id in watched_ids,
-                        "selectable": movie.tmdb_id not in watched_ids,
+                        "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                         "via_actor_name": actor.name,
                     }
 
@@ -1361,7 +1391,8 @@ async def get_eligible_movies(
 
     movies = list(movies_map.values())
 
-    # Filter: default only unwatched
+    # Filter: exclude chain movies always; default only unwatched
+    movies = [m for m in movies if m["tmdb_id"] not in chain_movie_ids]
     if not all_movies:
         movies = [m for m in movies if not m["watched"]]
 
@@ -1731,8 +1762,40 @@ async def get_suggestions(
                 "rating": rating,
             }
 
-    # Step 6: sort by (genre_score desc, vote_average desc) and return top 5
+    # Step 6: sort by (genre_score desc, vote_average desc), take top 5
     top5 = sorted(best.values(), key=lambda x: (x["genre_score"], x["rating"]), reverse=True)[:5]
+
+    # Fallback: if <5 game-mechanic results, fill with top genre-affinity movies from full DB
+    if len(top5) < 5 and genre_freq:
+        existing_ids = {m["tmdb_id"] for m in top5} | picked_movie_ids
+        fallback_rows = await db.execute(
+            select(Movie.tmdb_id, Movie.title, Movie.year, Movie.poster_path,
+                   Movie.vote_average, Movie.genres, Movie.runtime, Movie.vote_count, Movie.mpaa_rating)
+            .where(
+                Movie.tmdb_id.notin_(existing_ids),
+                Movie.vote_count >= 500,
+                Movie.genres.isnot(None),
+                Movie.title != "",
+            )
+        )
+        fallback_scored = []
+        for row in fallback_rows.all():
+            try:
+                movie_genres = json.loads(row.genres or "[]")
+            except Exception:
+                movie_genres = []
+            genre_score = sum(genre_freq.get(g, 0) for g in movie_genres)
+            if genre_score > 0:
+                fallback_scored.append({
+                    "tmdb_id": row.tmdb_id, "title": row.title, "year": row.year,
+                    "poster_path": row.poster_path, "vote_average": row.vote_average,
+                    "genres": row.genres, "runtime": row.runtime, "vote_count": row.vote_count,
+                    "mpaa_rating": row.mpaa_rating, "via_actor_name": None,
+                    "genre_score": genre_score, "rating": row.vote_average or 0.0,
+                })
+        fallback_scored.sort(key=lambda x: (x["genre_score"], x["rating"]), reverse=True)
+        needed = 5 - len(top5)
+        top5 = top5 + fallback_scored[:needed]
 
     # Session-scoped watched check
     session_watched_tmdb_ids = await db.execute(
