@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Wave 0 stubs in place — BUG-B and BUG-C stubs in test_game.py; SessionCounters UX-C test RED
-stopped_at: Completed 04.3-04-PLAN.md — BUG-A PosterWall null-guard, BUG-D empty row fix, BUG-D pastel buttons
-last_updated: "2026-03-18T19:34:19.379Z"
+status: completed
+stopped_at: Completed 04.3-03-PLAN.md — frontend BUG-B/BUG-C/UX-A/UX-B/UX-C fixes in GameSession.tsx, api.ts, SessionCounters.tsx
+last_updated: "2026-03-18T19:37:13.401Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 99
-  completed_plans: 94
+  completed_plans: 95
 ---
 
 # STATE.md — CinemaChain
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-03: sortCol default 'rating' with sortDir 'desc' preserves existing highest-rated-first UI behavior; new column direction defaults desc for rating, asc for year/runtime/mpaa; Load More hidden when debouncedSearch truthy; SessionCounters stepCount/uniqueActorCount removed (3-stat)
 - **2026-03-18:** 04.3-04: posterUrl returns string | null — TypeScript enforces callers guard; renderablePosters filter precedes length check so minimum-5 threshold counts only renderable items
 - **2026-03-18:** 04.3-04: App.tsx flex flex-col eliminates empty row below NavBar — block-layout RadarrNotificationBanner null slot caused gap; flex collapses it to zero height
 - **2026-03-18:** 04.3-04: variant=outline + className pattern for pastel GameLobby buttons — provides correct interactive states while overriding colors
@@ -292,6 +293,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T19:34:19.372Z
-Stopped at: Completed 04.3-04-PLAN.md — BUG-A PosterWall null-guard, BUG-D empty row fix, BUG-D pastel buttons
+Last session: 2026-03-18T19:37:13.395Z
+Stopped at: Completed 04.3-03-PLAN.md — frontend BUG-B/BUG-C/UX-A/UX-B/UX-C fixes in GameSession.tsx, api.ts, SessionCounters.tsx
 Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.
