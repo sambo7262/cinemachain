@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef } from "react"
 
 interface NotificationContextValue {
   radarrMessage: string | null
-  showRadarr: (msg: "Already in Radarr" | "Movie Queued for Download") => void
+  showRadarr: (msg: string) => void
   dismissRadarr: () => void
 }
 

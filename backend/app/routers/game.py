@@ -327,10 +327,11 @@ async def _ensure_actor_credits_in_db(
 
     # Upsert movie stubs from filmography
     for credit_data in data.get("cast", []):
+        _year = int(credit_data["release_date"][:4]) if credit_data.get("release_date") else None
         movie_stmt = pg_insert(Movie).values(
             tmdb_id=credit_data["id"],
             title=credit_data.get("title", ""),
-            year=int(credit_data["release_date"][:4]) if credit_data.get("release_date") else None,
+            year=_year,
             poster_path=credit_data.get("poster_path"),
             vote_average=credit_data.get("vote_average"),
             vote_count=credit_data.get("vote_count"),
@@ -338,6 +339,11 @@ async def _ensure_actor_credits_in_db(
         ).on_conflict_do_update(
             index_elements=["tmdb_id"],
             set_={
+                # Always refresh these fields — stubs inserted by _ensure_movie_cast_in_db
+                # use title="" and year=None; backfill them here from actor-credits data.
+                "title": credit_data.get("title", ""),
+                "year": _year,
+                "poster_path": credit_data.get("poster_path"),
                 "vote_count": credit_data.get("vote_count"),
                 "vote_average": credit_data.get("vote_average"),
             }

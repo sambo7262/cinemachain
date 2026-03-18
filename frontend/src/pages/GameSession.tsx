@@ -166,6 +166,10 @@ export default function GameSession() {
         showRadarr("Already in Radarr")
       } else if (requestResult?.status === "queued") {
         showRadarr("Movie Queued for Download")
+      } else if (requestResult?.status === "not_found_in_radarr") {
+        showRadarr("Movie not found in Radarr — add it manually")
+      } else if (requestResult?.status === "error") {
+        showRadarr("Radarr unavailable — movie saved to session")
       }
       setView("home")
       queryClient.setQueryData(["session", sid], requestResult.session)
