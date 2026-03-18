@@ -18,7 +18,15 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import { X, Clock } from "lucide-react"
+import { X, Clock, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog, DialogContent, DialogHeader, DialogFooter,
+  DialogTitle, DialogDescription,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { useLoadingMessages } from "@/hooks/useLoadingMessages"
 import { useNotification } from "@/contexts/NotificationContext"
@@ -42,6 +50,7 @@ export default function GameSession() {
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
   const [view, setView] = useState<"home" | "tabs">("home")
   const { showRadarr } = useNotification()
+  const [deleteStepOpen, setDeleteStepOpen] = useState(false)
 
   // Filter and search state — Eligible Movies
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE)
@@ -176,6 +185,19 @@ export default function GameSession() {
     },
   })
 
+  // Delete last step mutation
+  const deleteLastStepMutation = useMutation({
+    mutationFn: () => api.deleteLastStep(sid),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["session", sid], data)
+      queryClient.invalidateQueries({ queryKey: ["session", sid] })
+      setDeleteStepOpen(false)
+    },
+    onError: () => {
+      // Error is displayed inline in the dialog
+    },
+  })
+
   // Continue the chain after watched confirmation.
   // CRITICAL: must call continueChain (not resumeSession) — continueChain preserves
   // current_movie_watched=True so eligible tabs remain unlocked.
@@ -236,14 +258,34 @@ export default function GameSession() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => api.exportCsv(sid, session?.name ?? String(sid))}
-            disabled={!session}
-          >
-            Export CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Session actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  api.exportCsv(sid, session?.name ?? String(sid))
+                }}
+              >
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                disabled={!session || session.steps.length <= 1}
+                onClick={() => setDeleteStepOpen(true)}
+              >
+                Delete Last Step
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -682,6 +724,37 @@ export default function GameSession() {
           <ChainHistory steps={session.steps} />
         )}
       </div>
+
+      {/* Delete Last Step Dialog */}
+      <Dialog open={deleteStepOpen} onOpenChange={setDeleteStepOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Last Step</DialogTitle>
+            <DialogDescription>
+              This will remove the most recent step and revert the session to the previous movie. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteLastStepMutation.isError && (
+            <p className="text-sm text-destructive">Could not delete step. Try again.</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteStepOpen(false)}
+              disabled={deleteLastStepMutation.isPending}
+            >
+              Keep Step
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteLastStepMutation.mutate()}
+              disabled={deleteLastStepMutation.isPending}
+            >
+              {deleteLastStepMutation.isPending ? "Deleting..." : "Delete Step"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
