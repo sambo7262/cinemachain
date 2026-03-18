@@ -57,3 +57,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Phase 4.2 — Poster wall infinite scroll animations */
+@keyframes poster-scroll-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+@keyframes poster-scroll-down {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}

@@ -44,6 +44,10 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      animation: {
+        'poster-up':   'poster-scroll-up 75s linear infinite',
+        'poster-down': 'poster-scroll-down 75s linear infinite',
+      },
     },
   },
   plugins: [],
