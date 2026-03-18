@@ -886,3 +886,142 @@ async def test_suggestions_no_watch_history_null_genres(client):
     results = resp.json()
     assert len(results) > 0, "Suggestions must not be empty when genre_freq is {} — zero-score fallback candidates must be included"
     assert all("tmdb_id" in m for m in results)
+
+
+@pytest.mark.asyncio
+async def test_mark_watched_returns_poster_paths(client):
+    """BUG-B: mark_current_watched response must include poster_path on steps.
+
+    The mark_current_watched endpoint must call _enrich_steps_thumbnails and
+    _enrich_steps_runtime before building its response. Without this, setQueryData
+    in the frontend overwrites the cache with null poster_paths, causing blank images
+    that persist until the user navigates away (refetch poller is disabled in
+    awaiting_continue state).
+
+    STUB — will be RED until Wave 1 backend fix adds enrichment to the endpoint.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    # Create an active session with a current movie that has a poster_path
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+
+    async with AsyncSession(engine) as db:
+        movie = Movie(
+            tmdb_id=88001,
+            title="BUG-B Test Movie",
+            poster_path="/bugb_poster.jpg",
+        )
+        db.add(movie)
+        await db.flush()
+
+        session = GameSession(
+            name="BUG-B Session",
+            status="active",
+            current_movie_tmdb_id=88001,
+            current_movie_watched=False,
+        )
+        db.add(session)
+        await db.flush()
+
+        step = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=88001,
+            actor_tmdb_id=None,
+            movie_title="BUG-B Test Movie",
+            step_order=0,
+        )
+        db.add(step)
+        await db.commit()
+        sid = session.id
+
+    # Mark as watched
+    resp = await client.post(f"/game/sessions/{sid}/mark-current-watched")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # The response steps must include poster_path from Movie table
+    # (not null, which would indicate _enrich_steps_thumbnails was not called)
+    steps = data.get("steps", [])
+    assert len(steps) > 0, "Response must include steps"
+    current_step = steps[0]
+    assert current_step.get("poster_path") == "/bugb_poster.jpg", (
+        "mark_current_watched must call _enrich_steps_thumbnails — "
+        f"got poster_path={current_step.get('poster_path')!r}, expected '/bugb_poster.jpg'"
+    )
+
+
+@pytest.mark.asyncio
+async def test_eligible_movies_search_param(client):
+    """BUG-C: eligible-movies endpoint must accept a 'search' query param.
+
+    When search is provided:
+    - Returns only movies whose title contains the search string (case-insensitive)
+    - Returns all matches (no pagination): has_more=False
+    - page_size in response equals total result count
+
+    STUB — will be RED until Wave 1 backend fix adds search param to the endpoint.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        # Create two movies — only one matches search term
+        m1 = Movie(tmdb_id=88010, title="Action Hero Spectacular", poster_path="/ah.jpg")
+        m2 = Movie(tmdb_id=88011, title="Romantic Comedy Dreams", poster_path="/rc.jpg")
+        actor = Actor(tmdb_id=88010, name="Search Test Actor")
+        db.add_all([m1, m2, actor])
+        await db.flush()
+
+        from app.models import Credit as CreditModel
+        c1 = CreditModel(movie_id=m1.id, actor_id=actor.id, character="Hero")
+        c2 = CreditModel(movie_id=m2.id, actor_id=actor.id, character="Lead")
+        db.add_all([c1, c2])
+
+        session = GameSession(
+            name="BUG-C Search Session",
+            status="active",
+            current_movie_tmdb_id=88010,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=88010,
+            actor_tmdb_id=None,
+            movie_title="Action Hero Spectacular",
+            step_order=0,
+        )
+        db.add(step)
+
+        from app.models import WatchEvent
+        we = WatchEvent(tmdb_id=88010, source="manual")
+        db.add(we)
+        await db.commit()
+        sid = session.id
+
+    # Search for "romantic" — should match only movie 88011
+    resp = await client.get(
+        f"/game/sessions/{sid}/eligible-movies",
+        params={"actor_id": 88010, "search": "romantic"}
+    )
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    items = data.get("items", [])
+    assert len(items) == 1, f"Expected 1 search result, got {len(items)}: {items}"
+    assert items[0]["title"] == "Romantic Comedy Dreams"
+    assert data.get("has_more") is False, "Search results must not paginate (has_more must be False)"
