@@ -49,6 +49,24 @@ function currentMovieForSession(session: GameSessionDTO): string {
   return step?.movie_title ?? session.steps[0]?.movie_title ?? "(untitled)"
 }
 
+function formatSessionAge(createdAt: string): string {
+  if (!createdAt) return "—"
+  try {
+    const diffMs = Date.now() - new Date(createdAt).getTime()
+    const diffMinutes = Math.floor(diffMs / 60000)
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    const diffHours = Math.floor(diffMinutes / 60)
+    const remainingMinutes = diffMinutes % 60
+    if (diffHours < 24) {
+      return remainingMinutes === 0 ? `${diffHours}h ago` : `${diffHours}h ${remainingMinutes}m ago`
+    }
+    const diffDays = Math.floor(diffHours / 24)
+    return `${diffDays}d ago`
+  } catch {
+    return "—"
+  }
+}
+
 export default function GameLobby() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -201,6 +219,9 @@ export default function GameLobby() {
                             {session.steps.length} step{session.steps.length !== 1 ? "s" : ""}
                           </span>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {session.watched_count} watched · {session.step_count ?? 0} steps · started {formatSessionAge(session.created_at ?? "")}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
