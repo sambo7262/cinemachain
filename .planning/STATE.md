@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2-03-PLAN.md
-last_updated: "2026-03-18T06:09:18.529Z"
+stopped_at: Completed 04.2-04-PLAN.md
+last_updated: "2026-03-18T06:10:13.849Z"
 progress:
   total_phases: 9
   completed_phases: 4
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4.2 — UI Polish and Local Poster Caching
-- **Plan:** 04.2-02 (next)
-- **Status:** Phase 4.2 in progress. Plan 01 (Wave 0 test stubs) complete. Plan 02 previously complete. Continuing with remaining plans.
+- **Plan:** 04.2-05 (next)
+- **Status:** Phase 4.2 in progress. Plans 01-04 complete. Continuing with remaining plans.
 
 ## Progress
 
-`[█████████░] 92%` — 84 of 91 plans complete
+`[██████████] 95%` — 86 of 91 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,10 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.2-04: posterUrl prepends /api to poster_local_path — nginx proxies /api/static/posters/ to backend; TMDB w185 CDN fallback when null
+- **2026-03-18:** 04.2-04: PosterWall blur-[20px] on column container (not per-image) — avoids per-image GPU compositing on NAS hardware per UI-SPEC.md
+- **2026-03-18:** 04.2-04: distributeColumns round-robin across 4 columns — even distribution regardless of poster count; no empty-column edge cases
+- **2026-03-18:** 04.2-04: PosterWall returns null when posters.length < 5 — caller keeps bg-background; avoids empty-column visual artifacts
 - **2026-03-17:** 04.2-03: PosterWallItem poster_local_path: str | None = None — None signals poster not yet downloaded; frontend falls back to TMDB CDN path
 - **2026-03-17:** 04.2-03: _download_posters_pass uses run_in_executor for file writes (aiofiles absent from requirements.txt); race condition guard handles file-exists-but-DB-not-updated state
 - **2026-03-17:** 04.2-03: poster-wall route declared before /{tmdb_id} catch-all — FastAPI matches in declaration order; "poster-wall" would be cast as integer causing 422 without this guard
@@ -271,6 +275,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:09:15.600Z
-Stopped at: Completed 04.2-03-PLAN.md
+Last session: 2026-03-18T06:10:13.843Z
+Stopped at: Completed 04.2-04-PLAN.md
 Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
