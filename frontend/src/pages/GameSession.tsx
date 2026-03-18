@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
+import { useQuery, useQueryClient, useMutation, keepPreviousData } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO, PosterWallItem } from "@/lib/api"
 import { ChainHistory } from "@/components/ChainHistory"
@@ -13,13 +13,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
 import { X, Clock, MoreHorizontal, Shuffle } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -46,7 +39,11 @@ export default function GameSession() {
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
-  const [sort, setSort] = useState<"rating" | "runtime" | "genre">("rating")
+  const [sortCol, setSortCol] = useState<"rating" | "year" | "runtime" | "mpaa">("rating")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  const [accumulatedMovies, setAccumulatedMovies] = useState<EligibleMovieDTO[]>([])
+  const firstNewResultRef = useRef<HTMLTableRowElement>(null)
+  const prevAccumulatedCountRef = useRef(0)
   const [allMovies, setAllMovies] = useState(false)
   const [moviesPage, setMoviesPage] = useState(1)
   const [movieRequestError, setMovieRequestError] = useState<string | null>(null)
@@ -73,6 +70,7 @@ export default function GameSession() {
       query.state.data?.status === "awaiting_continue" ? false : 5000,
     refetchOnMount: "always",
     staleTime: 0,
+    placeholderData: keepPreviousData,
     enabled: !!sid,
   })
 
@@ -100,6 +98,27 @@ export default function GameSession() {
     return () => clearTimeout(t)
   }, [searchQuery])
 
+  // Sort click handler — toggle direction on same column, reset direction on new column
+  const handleSortClick = (col: "rating" | "year" | "runtime" | "mpaa") => {
+    if (col === sortCol) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortCol(col)
+      setSortDir(col === "rating" ? "desc" : "asc")
+    }
+    setMoviesPage(1)
+    setAccumulatedMovies([])
+  }
+
+  const sortIndicator = (col: "rating" | "year" | "runtime" | "mpaa") =>
+    sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : ""
+
+  // Reset accumulated movies when actor, sort, filter, or search changes
+  useEffect(() => {
+    setAccumulatedMovies([])
+    setMoviesPage(1)
+  }, [selectedActor?.tmdb_id, sortCol, sortDir, allMovies, debouncedSearch])
+
   // Eligible actors for the current movie
   const { data: eligibleActorsData = [], isFetching: eligibleActorsFetching } = useQuery({
     queryKey: ["eligibleActors", sid, session?.current_movie_tmdb_id],
@@ -116,27 +135,49 @@ export default function GameSession() {
   // Eligible movies — scoped to selected actor + sort/filter params
   // enabled without selectedActor: no actor = combined-view (all eligible movies)
   const { data: eligibleMoviesData, isFetching: eligibleMoviesFetching } = useQuery<PaginatedMoviesDTO>({
-    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id ?? null, sort, allMovies, moviesPage],
+    queryKey: ["eligibleMovies", sid, selectedActor?.tmdb_id ?? null, sortCol, sortDir, allMovies, debouncedSearch, moviesPage],
     queryFn: () =>
       api.getEligibleMovies(sid, {
         actor_id: selectedActor?.tmdb_id,  // undefined when no actor selected = combined view
-        sort,
+        sort: sortCol,
+        sort_dir: sortDir,
         all_movies: allMovies,
+        search: debouncedSearch || undefined,
         page: moviesPage,
         page_size: 20,
       }),
     enabled: !!sid && !!session && isWatched,
   })
-  const allEligibleMovies = eligibleMoviesData?.items ?? []
+  const allEligibleMovies = accumulatedMovies
   const eligibleMoviesHasMore = eligibleMoviesData?.has_more ?? false
+
+  // Append new page results to accumulated list (or replace on page 1)
+  useEffect(() => {
+    if (eligibleMoviesData?.items) {
+      if (moviesPage === 1) {
+        prevAccumulatedCountRef.current = 0
+        setAccumulatedMovies(eligibleMoviesData.items)
+      } else {
+        prevAccumulatedCountRef.current = accumulatedMovies.length
+        setAccumulatedMovies((prev) => [...prev, ...eligibleMoviesData.items])
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligibleMoviesData])
+
+  // Scroll to first new result after append
+  useEffect(() => {
+    if (moviesPage > 1 && firstNewResultRef.current) {
+      firstNewResultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [accumulatedMovies])
 
   // Concession-themed loading messages for actors and movies
   const actorsLoadingMessage = useLoadingMessages(eligibleActorsFetching)
   const moviesLoadingMessage = useLoadingMessages(eligibleMoviesFetching)
 
-  // Client-side filtering: search + sidebar filters applied simultaneously (AND relationship)
+  // Client-side filtering: sidebar filters applied (search is now handled by backend)
   const filteredMovies = allEligibleMovies
-    .filter((m) => debouncedSearch === "" || m.title.toLowerCase().includes(debouncedSearch.toLowerCase()))
     .filter((m) => filters.genres.length === 0 || parseGenres(m.genres).some((g) => filters.genres.includes(g)))
     .filter((m) => filters.mpaaRatings.length === 0 || filters.mpaaRatings.includes(m.mpaa_rating ?? "NR"))
     .filter((m) => {
@@ -214,6 +255,8 @@ export default function GameSession() {
       queryClient.setQueryData(["session", sid], updatedSession)
       queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
       queryClient.invalidateQueries({ queryKey: ["eligibleMovies", sid] })
+      setMoviesPage(1)
+      setAccumulatedMovies([])
     },
   })
 
@@ -629,19 +672,6 @@ export default function GameSession() {
               <>
                 {/* Sort + filter controls */}
                 <div className="flex items-center gap-2 mb-3">
-                  <Select
-                    value={sort}
-                    onValueChange={(v) => setSort(v as "rating" | "runtime" | "genre")}
-                  >
-                    <SelectTrigger className="w-36">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="rating">By Rating</SelectItem>
-                      <SelectItem value="runtime">By Runtime</SelectItem>
-                      <SelectItem value="genre">By Genre</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Button
                     variant={allMovies ? "default" : "outline"}
                     size="sm"
@@ -739,16 +769,37 @@ export default function GameSession() {
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground w-14"></th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Rating</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Year</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell">Runtime</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell">Rated</th>
+                              <th
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                onClick={() => handleSortClick("rating")}
+                              >
+                                Rating{sortIndicator("rating")}
+                              </th>
+                              <th
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                onClick={() => handleSortClick("year")}
+                              >
+                                Year{sortIndicator("year")}
+                              </th>
+                              <th
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell cursor-pointer select-none hover:text-foreground"
+                                onClick={() => handleSortClick("runtime")}
+                              >
+                                Runtime{sortIndicator("runtime")}
+                              </th>
+                              <th
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell cursor-pointer select-none hover:text-foreground"
+                                onClick={() => handleSortClick("mpaa")}
+                              >
+                                Rated{sortIndicator("mpaa")}
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
-                            {filteredMovies.map((movie) => (
+                            {filteredMovies.map((movie, idx) => (
                               <tr
                                 key={movie.tmdb_id}
+                                ref={idx === prevAccumulatedCountRef.current && moviesPage > 1 ? firstNewResultRef : undefined}
                                 onClick={movie.selectable ? () => handleMovieConfirm(movie) : undefined}
                                 className={cn(
                                   "transition-colors",
@@ -796,8 +847,8 @@ export default function GameSession() {
                       </div>
                     ) : null}
 
-                    {/* Load More pagination — always based on full list, not filtered */}
-                    {eligibleMoviesHasMore && (
+                    {/* Load More pagination — hidden during search or when all pages loaded */}
+                    {eligibleMoviesHasMore && !debouncedSearch && (
                       <div className="flex justify-center mt-4">
                         <Button
                           variant="outline"
