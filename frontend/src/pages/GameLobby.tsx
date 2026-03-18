@@ -21,17 +21,34 @@ interface ParsedRow {
   isValid: boolean
 }
 
+function splitCsvLine(line: string): string[] {
+  const result: string[] = []
+  let current = ""
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }  // escaped quote ""
+      else { inQuotes = !inQuotes }
+    } else if (ch === "," && !inQuotes) {
+      result.push(current.trim()); current = ""
+    } else {
+      current += ch
+    }
+  }
+  result.push(current.trim())
+  return result
+}
+
 function parseCSV(text: string): ParsedRow[] {
-  const lines = text.trim().split("\n")
-  const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/^"|"$/g, ""))
+  const lines = text.replace(/\r\n/g, "\n").trim().split("\n")
+  const headers = splitCsvLine(lines[0]).map(h => h.trim().toLowerCase())
   const orderIdx = headers.indexOf("order")
   const movieIdx = headers.findIndex(h => h.includes("movie"))
   const actorIdx = headers.findIndex(h => h.includes("actor"))
-  // Each row has order, movie_name, actor_name on the same line.
-  // Validation: every row must have a movie name.
   return lines.slice(1)
     .map((line, i) => {
-      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""))
+      const cols = splitCsvLine(line)
       const movieName = movieIdx >= 0 ? (cols[movieIdx] ?? "") : ""
       const actorName = actorIdx >= 0 ? (cols[actorIdx] ?? "") : ""
       return {
@@ -361,7 +378,7 @@ export default function GameLobby() {
                   <div className="flex flex-col gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Upload a CSV with columns: order, movie_name, actor_name
+                        Upload a CSV or Excel file with columns: order, movie_name, actor_name
                       </p>
                       <Button
                         variant="outline"
@@ -373,7 +390,7 @@ export default function GameLobby() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv"
+                        accept=".csv,.xlsx"
                         className="hidden"
                         onChange={handleFileChange}
                       />
