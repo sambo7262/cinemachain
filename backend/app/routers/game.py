@@ -528,6 +528,46 @@ async def _prefetch_credits_background(
         pass
 
 
+async def _backfill_movie_posters_background(
+    movie_tmdb_ids: list[int],
+    tmdb: TMDBClient,
+) -> None:
+    """Background task: fetch /movie/{id} details for each imported movie and upsert poster_path.
+
+    CSV-imported sessions create GameSessionStep rows but never run the normal TMDB search
+    or actor-filmography paths that populate Movie.poster_path. This task backfills poster_path
+    (and title/year as a bonus) so the poster wall can render imported sessions correctly.
+    """
+    async with _bg_session_factory() as db:
+        for tmdb_id in movie_tmdb_ids:
+            try:
+                r = await tmdb._client.get(f"/movie/{tmdb_id}")
+                r.raise_for_status()
+                data = r.json()
+                stmt = pg_insert(Movie).values(
+                    tmdb_id=tmdb_id,
+                    title=data.get("title", ""),
+                    year=int(data["release_date"][:4]) if data.get("release_date") else None,
+                    poster_path=data.get("poster_path"),
+                    vote_average=data.get("vote_average"),
+                    vote_count=data.get("vote_count"),
+                    genres=None,
+                ).on_conflict_do_update(
+                    index_elements=["tmdb_id"],
+                    set_={
+                        "title": data.get("title", ""),
+                        "year": int(data["release_date"][:4]) if data.get("release_date") else None,
+                        "poster_path": data.get("poster_path"),
+                        "vote_average": data.get("vote_average"),
+                        "vote_count": data.get("vote_count"),
+                    },
+                )
+                await db.execute(stmt)
+                await db.commit()
+            except Exception:
+                continue  # degrade gracefully — poster wall falls back to CDN or skips
+
+
 import re as _re
 
 
@@ -732,6 +772,12 @@ async def import_csv_session(
     # Mirrors create_session — ensures eligible actors are populated without waiting
     # for the on-demand fallback, which requires a Movie record to already exist.
     background_tasks.add_task(_prefetch_credits_background, last_movie_id, tmdb)
+
+    # Backfill poster_path for all imported movies via /movie/{id}.
+    # CSV import bypasses the normal TMDB search/filmography paths that populate poster_path,
+    # leaving Movie stubs with poster_path=NULL and breaking the poster wall.
+    all_movie_ids = list({s["movie_tmdb_id"] for s in steps_data})
+    background_tasks.add_task(_backfill_movie_posters_background, all_movie_ids, tmdb)
 
     # Re-fetch with steps loaded
     result = await db.execute(
