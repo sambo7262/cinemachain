@@ -1076,7 +1076,15 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
+    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    runtime_map = await _enrich_steps_runtime(session.steps, db)
+    return _build_session_response(
+        session, wa_map,
+        current_movie_title=_resolve_current_movie_title(session),
+        poster_map=poster_map,
+        profile_map=profile_map,
+        runtime_map=runtime_map,
+    )
 
 
 @router.post("/sessions/{session_id}/continue-chain", response_model=GameSessionResponse)
