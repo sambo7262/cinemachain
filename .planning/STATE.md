@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04.3-03-PLAN.md — frontend BUG-B/BUG-C/UX-A/UX-B/UX-C fixes in GameSession.tsx, api.ts, SessionCounters.tsx
-last_updated: "2026-03-18T19:37:13.401Z"
+stopped_at: Completed 04.3-05-PLAN.md — NAS verification: 5 PASS (BUG-B, BUG-C, BUG-D, UX-B, UX-C), 2 gap closure needed (BUG-A poster images, UX-A rating sort order)
+last_updated: "2026-03-18T20:30:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 99
-  completed_plans: 95
+  completed_plans: 96
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 04.3 — Bug Fixes & UX Refinements
-- **Plan:** 04.3-04 (complete)
-- **Status:** BUG-A PosterWall null-guard done; BUG-D empty row + pastel buttons done; BUG-B/BUG-C frontend and UX-C remaining
+- **Plan:** 04.3-05 (complete — partial NAS results)
+- **Status:** Phase 4.3 verification complete with partial results. 5/7 items PASS. Gap closure required for BUG-A (poster wall images) and UX-A (rating sort order) before Phase 5.
 
 ## Progress
 
-`[██████████] 95%` — 94 of 99 plans complete
+`[██████████] 96%` — 96 of 99 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.3-05: NAS verification partial — 5/7 items PASS (BUG-B, BUG-C, BUG-D, UX-B, UX-C); BUG-A poster images not visible anywhere on NAS (static file serving or CDN fallback issue); UX-A rating sort produces wrong order despite direction toggle working (sort comparator bug — numeric vs string comparison suspected)
 - **2026-03-18:** 04.3-03: sortCol default 'rating' with sortDir 'desc' preserves existing highest-rated-first UI behavior; new column direction defaults desc for rating, asc for year/runtime/mpaa; Load More hidden when debouncedSearch truthy; SessionCounters stepCount/uniqueActorCount removed (3-stat)
 - **2026-03-18:** 04.3-04: posterUrl returns string | null — TypeScript enforces callers guard; renderablePosters filter precedes length check so minimum-5 threshold counts only renderable items
 - **2026-03-18:** 04.3-04: App.tsx flex flex-col eliminates empty row below NavBar — block-layout RadarrNotificationBanner null slot caused gap; flex collapses it to zero height
@@ -293,6 +294,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T19:37:13.395Z
-Stopped at: Completed 04.3-03-PLAN.md — frontend BUG-B/BUG-C/UX-A/UX-B/UX-C fixes in GameSession.tsx, api.ts, SessionCounters.tsx
-Resume with: Phase 4.1 complete. Run make rebuild + deploy to NAS, then proceed to Phase 5.
+Last session: 2026-03-18T20:30:00.000Z
+Stopped at: Completed 04.3-05-PLAN.md — NAS verification: 5 PASS (BUG-B, BUG-C, BUG-D, UX-B, UX-C), gap closure needed for BUG-A and UX-A
+Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.
