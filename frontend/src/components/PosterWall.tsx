@@ -5,15 +5,18 @@ interface PosterWallProps {
   posters: PosterWallItem[]
 }
 
-/** Returns the display URL for a poster item.
+/** Returns the display URL for a poster item, or null when both paths are absent.
  * poster_local_path is stored as "/static/posters/{id}.jpg" on the backend.
  * nginx proxies /api/ to backend:8000/ so the frontend accesses it as "/api/static/posters/{id}.jpg".
  */
-function posterUrl(item: PosterWallItem): string {
+function posterUrl(item: PosterWallItem): string | null {
   if (item.poster_local_path) {
     return `/api${item.poster_local_path}`
   }
-  return `https://image.tmdb.org/t/p/w185${item.poster_path}`
+  if (item.poster_path) {
+    return `https://image.tmdb.org/t/p/w185${item.poster_path}`
+  }
+  return null  // Both paths absent — skip this poster
 }
 
 /** Distributes an array round-robin into `count` columns. */
@@ -24,13 +27,16 @@ function distributeColumns<T>(items: T[], count: number): T[][] {
 }
 
 export function PosterWall({ posters }: PosterWallProps) {
-  // Fallback: fewer than 5 posters → render nothing; caller keeps bg-background
-  if (posters.length < 5) return null
+  // Filter to only posters with renderable URLs before any layout logic
+  const renderablePosters = posters.filter((p) => p.poster_local_path || p.poster_path)
+
+  // Fallback: fewer than 5 renderable posters → render nothing; caller keeps bg-background
+  if (renderablePosters.length < 5) return null
 
   // Responsive column counts: 4 on lg+, 3 on md, 2 on sm
   // Use CSS grid/flex — column count per breakpoint handled via Tailwind classes on children
   // Simple approach: always build 4 columns; hide col 3+4 on smaller viewports via CSS
-  const allColumns = distributeColumns(posters, 4)
+  const allColumns = distributeColumns(renderablePosters, 4)
 
   return (
     <div className="fixed inset-0 z-[1] overflow-hidden" aria-hidden="true">
@@ -57,15 +63,23 @@ export function PosterWall({ posters }: PosterWallProps) {
               )}
               style={{ willChange: "transform" }}
             >
-              {duplicated.map((poster, j) => (
-                <img
-                  key={j}
-                  src={posterUrl(poster)}
-                  alt=""
-                  className="w-full object-cover bg-muted"
-                  loading="lazy"
-                />
-              ))}
+              {duplicated.map((poster, j) => {
+                const url = posterUrl(poster)
+                if (!url) return null
+                return (
+                  <img
+                    key={j}
+                    src={url}
+                    alt=""
+                    className="w-full object-cover bg-muted"
+                    loading="lazy"
+                    onError={(e) => {
+                      // Hide broken images rather than showing broken image icon
+                      ;(e.target as HTMLImageElement).style.display = "none"
+                    }}
+                  />
+                )
+              })}
             </div>
           )
         })}
