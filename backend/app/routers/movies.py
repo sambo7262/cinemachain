@@ -91,7 +91,10 @@ async def get_poster_wall(
         for r in rows
     ]
 
-    # Step 2: supplement from popular DB movies if fewer than 20 from watch history
+    # Step 2: supplement from any DB movies with a poster_path if fewer than 20 from watch history
+    # Removed vote_count IS NOT NULL filter — on a fresh NAS the nightly cache may not have run,
+    # so most movie stubs have vote_count=None. Order by vote_count DESC NULLS LAST so cached
+    # popular movies appear first when available, with uncounted movies as fallback.
     if len(collected) < 20:
         already_ids = {item.tmdb_id for item in collected}
         needed = limit - len(collected)
@@ -99,10 +102,9 @@ async def get_poster_wall(
             select(Movie.tmdb_id, Movie.poster_path, Movie.poster_local_path)
             .where(
                 Movie.poster_path.isnot(None),
-                Movie.vote_count.isnot(None),
                 ~Movie.tmdb_id.in_(already_ids) if already_ids else sa.true(),
             )
-            .order_by(Movie.vote_count.desc())
+            .order_by(Movie.vote_count.desc().nullslast(), Movie.tmdb_id)
             .limit(needed)
         )
         for r in pop_result.all():
