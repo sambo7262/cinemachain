@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 04.2-01-PLAN.md
-last_updated: "2026-03-18T06:04:45.953Z"
+status: executing
+stopped_at: Completed 04.2-03-PLAN.md
+last_updated: "2026-03-18T06:09:18.529Z"
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 91
-  completed_plans: 84
+  completed_plans: 86
 ---
 
 # STATE.md — CinemaChain
@@ -51,6 +51,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04.2-03: PosterWallItem poster_local_path: str | None = None — None signals poster not yet downloaded; frontend falls back to TMDB CDN path
+- **2026-03-17:** 04.2-03: _download_posters_pass uses run_in_executor for file writes (aiofiles absent from requirements.txt); race condition guard handles file-exists-but-DB-not-updated state
+- **2026-03-17:** 04.2-03: poster-wall route declared before /{tmdb_id} catch-all — FastAPI matches in declaration order; "poster-wall" would be cast as integer causing 422 without this guard
 - **2026-03-17:** 04.2-01: PosterWall.test.tsx uses const POSTER_WALL_PATH variable for dynamic import — Vite resolves string literals at build time even inside try/catch; variable path bypasses static analysis and lets try/catch handle runtime failure
 - **2026-03-17:** 04.2-01: SessionCounters.test.tsx is intentionally RED — references stepCount, uniqueActorCount, createdAt props not yet in component; expected failure for TDD RED phase, activates in Plan 05
 - **2026-03-17:** 04-05: MovieFilterSidebar top-level changed from w-56 shrink-0 to flex flex-col gap-4 p-4 — width/visibility now entirely caller-controlled via hidden lg:block aside in GameSession
@@ -268,6 +271,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:04:45.947Z
-Stopped at: Completed 04.2-01-PLAN.md
+Last session: 2026-03-18T06:09:15.600Z
+Stopped at: Completed 04.2-03-PLAN.md
 Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
