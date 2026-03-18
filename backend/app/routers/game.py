@@ -1264,6 +1264,8 @@ async def get_eligible_movies(
     sort: str | None = Query(default=None),
     all_movies: bool = Query(default=False),
     page: int = Query(default=1, ge=1),
+    sort_dir: str | None = Query(default="desc"),
+    search: str | None = Query(default=None),
     page_size: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1411,16 +1413,59 @@ async def get_eligible_movies(
             return None
         return m.get("vote_average")
 
-    # Sort
+    # Sort — supports rating, runtime, genre (existing), plus year and mpaa (new)
+    # sort_dir: "asc" | "desc" — applied after primary sort key
+    _desc = (sort_dir or "desc") == "desc"
     if sort == "rating":
-        movies.sort(key=lambda m: (_effective_rating(m) is None, -(_effective_rating(m) or 0)))
+        movies.sort(
+            key=lambda m: (_effective_rating(m) is None, _effective_rating(m) or 0),
+            reverse=_desc,
+        )
     elif sort == "runtime":
-        movies.sort(key=lambda m: (m["runtime"] is None, m["runtime"] or 0))
+        movies.sort(
+            key=lambda m: (m["runtime"] is None, m["runtime"] or 0),
+            reverse=_desc,
+        )
     elif sort == "genre":
-        movies.sort(key=lambda m: (
-            m["genres"] is None or m["genres"] == "",
-            m["genres"] or "",
-        ))
+        movies.sort(
+            key=lambda m: (
+                m["genres"] is None or m["genres"] == "",
+                m["genres"] or "",
+            ),
+            reverse=_desc,
+        )
+    elif sort == "year":
+        movies.sort(
+            key=lambda m: (m.get("year") is None, m.get("year") or 0),
+            reverse=_desc,
+        )
+    elif sort == "mpaa":
+        _mpaa_order = {"G": 0, "PG": 1, "PG-13": 2, "R": 3, "NC-17": 4}
+        movies.sort(
+            key=lambda m: (
+                m.get("mpaa_rating") is None or m.get("mpaa_rating") == "",
+                _mpaa_order.get(m.get("mpaa_rating") or "", 99),
+            ),
+            reverse=_desc,
+        )
+
+    # Search — when provided, filter by title (case-insensitive) and bypass pagination.
+    # Calls _ensure_actor_credits_in_db to guarantee full filmography coverage (no-op if cached).
+    if search:
+        search_lower = search.lower()
+        # Ensure full filmography is in DB for the actor (short-circuits if already cached)
+        if actor_id is not None and hasattr(request.app.state, "tmdb_client"):
+            tmdb_for_search: TMDBClient = request.app.state.tmdb_client
+            await _ensure_actor_credits_in_db(actor_id, tmdb_for_search, db)
+        movies = [m for m in movies if search_lower in m["title"].lower()]
+        total = len(movies)
+        return {
+            "items": movies,
+            "total": total,
+            "page": 1,
+            "page_size": total,
+            "has_more": False,
+        }
 
     total = len(movies)
     offset = (page - 1) * page_size
