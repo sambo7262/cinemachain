@@ -64,7 +64,7 @@ export function MovieFilterSidebar({ genres, filters, onChange }: MovieFilterSid
   }
 
   return (
-    <div className="w-56 shrink-0 border border-border rounded-md bg-card p-3 space-y-1">
+    <div className="flex flex-col gap-4 p-4 border border-border rounded-md bg-card">
       {/* Header */}
       <div className="flex items-center justify-between pb-2">
         <span className="text-sm font-semibold">Filters</span>

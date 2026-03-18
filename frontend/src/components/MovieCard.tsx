@@ -14,6 +14,7 @@ interface MovieCardProps {
   watched?: boolean
   selectable?: boolean
   via_actor_name?: string | null
+  mpaa_rating?: string | null
   onClick?: () => void
 }
 
@@ -29,6 +30,7 @@ export function MovieCard({
   watched,
   selectable,
   via_actor_name,
+  mpaa_rating,
   onClick,
 }: MovieCardProps) {
   const poster = poster_path ? `${TMDB_IMG}${poster_path}` : null
@@ -78,6 +80,11 @@ export function MovieCard({
               {g}
             </Badge>
           ))}
+          {mpaa_rating && (
+            <Badge variant="outline" className="text-xs">
+              {mpaa_rating}
+            </Badge>
+          )}
           {watched && (
             <Badge
               variant="outline"
