@@ -1761,7 +1761,7 @@ async def get_suggestions(
     top5 = sorted(best.values(), key=lambda x: (x["genre_score"], x["rating"]), reverse=True)[:5]
 
     # Fallback: if <5 game-mechanic results, fill with top genre-affinity movies from full DB
-    if len(top5) < 5 and genre_freq:
+    if len(top5) < 5:
         existing_ids = {m["tmdb_id"] for m in top5} | picked_movie_ids
         fallback_rows = await db.execute(
             select(Movie.tmdb_id, Movie.title, Movie.year, Movie.poster_path,
@@ -1780,14 +1780,13 @@ async def get_suggestions(
             except Exception:
                 movie_genres = []
             genre_score = sum(genre_freq.get(g, 0) for g in movie_genres)
-            if genre_score > 0:
-                fallback_scored.append({
-                    "tmdb_id": row.tmdb_id, "title": row.title, "year": row.year,
-                    "poster_path": row.poster_path, "vote_average": row.vote_average,
-                    "genres": row.genres, "runtime": row.runtime, "vote_count": row.vote_count,
-                    "mpaa_rating": row.mpaa_rating, "via_actor_name": None,
-                    "genre_score": genre_score, "rating": row.vote_average or 0.0,
-                })
+            fallback_scored.append({
+                "tmdb_id": row.tmdb_id, "title": row.title, "year": row.year,
+                "poster_path": row.poster_path, "vote_average": row.vote_average,
+                "genres": row.genres, "runtime": row.runtime, "vote_count": row.vote_count,
+                "mpaa_rating": row.mpaa_rating, "via_actor_name": None,
+                "genre_score": genre_score, "rating": row.vote_average or 0.0,
+            })
         fallback_scored.sort(key=lambda x: (x["genre_score"], x["rating"]), reverse=True)
         needed = 5 - len(top5)
         top5 = top5 + fallback_scored[:needed]
