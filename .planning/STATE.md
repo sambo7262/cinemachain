@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2-04-PLAN.md
-last_updated: "2026-03-18T06:10:13.849Z"
+stopped_at: Completed 04.2-05-PLAN.md
+last_updated: "2026-03-18T06:19:26.654Z"
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 91
-  completed_plans: 86
+  completed_plans: 87
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4.2 — UI Polish and Local Poster Caching
-- **Plan:** 04.2-05 (next)
-- **Status:** Phase 4.2 in progress. Plans 01-04 complete. Continuing with remaining plans.
+- **Plan:** 04.2-06 (next)
+- **Status:** Phase 4.2 in progress. Plans 01-05 complete. Continuing with remaining plans.
 
 ## Progress
 
-`[██████████] 95%` — 86 of 91 plans complete
+`[██████████] 96%` — 87 of 91 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,10 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-17:** 04.2-05: PosterWall mounted in GameSession root div with cn() conditional bg-background (< 5 posters keeps bg-background, 5+ posters uses PosterWall dark overlay)
+- **2026-03-17:** 04.2-05: dead-end detection (isDeadEnd) replaces entire actors tab content per UI-SPEC.md — checked after isWatched and not-fetching gates
+- **2026-03-17:** 04.2-05: Random Pick selects from filteredMovies (not allEligibleMovies) to respect active search/filter state
+- **2026-03-17:** 04.2-05: formatSessionAge duplicated in GameLobby.tsx — no shared util to avoid coupling; function is pure and small
 - **2026-03-18:** 04.2-04: posterUrl prepends /api to poster_local_path — nginx proxies /api/static/posters/ to backend; TMDB w185 CDN fallback when null
 - **2026-03-18:** 04.2-04: PosterWall blur-[20px] on column container (not per-image) — avoids per-image GPU compositing on NAS hardware per UI-SPEC.md
 - **2026-03-18:** 04.2-04: distributeColumns round-robin across 4 columns — even distribution regardless of poster count; no empty-column edge cases
@@ -275,6 +279,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:10:13.843Z
-Stopped at: Completed 04.2-04-PLAN.md
-Resume with: 04-05 complete. UX-08 and UX-09 done. 04-06 previously complete. Continue with remaining Phase 4 plans (04-07 onwards) or Phase 5.
+Last session: 2026-03-18T06:19:26.644Z
+Stopped at: Completed 04.2-05-PLAN.md
+Resume with: 04.2-05 complete. SessionCounters 5-stat, PosterWall, random pick, dead-end, GameLobby stats line all done. Continue with remaining Phase 4.2 plans.

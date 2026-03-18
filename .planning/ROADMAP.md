@@ -195,7 +195,7 @@ Plans:
 **Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — enhancement phase)
-**Plans:** 4/6 plans executed
+**Plans:** 5/6 plans executed
 
 Plans:
 - [ ] 04.2-01-PLAN.md — Wave 0: Test stubs (Nyquist compliance) — test_static.py, test_game.py additions, PosterWall.test.tsx, SessionCounters.test.tsx
@@ -227,7 +227,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
-| 4.2. UI Polish & Local Poster Caching | 4/6 | In Progress|  |
+| 4.2. UI Polish & Local Poster Caching | 5/6 | In Progress|  |
 | 5. Production Deployment | 0/? | Not started | — |
 
 ---
