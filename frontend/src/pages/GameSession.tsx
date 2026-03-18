@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react"
-import { useParams, useLocation } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useParams } from "react-router-dom"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO } from "@/lib/api"
@@ -40,7 +40,6 @@ export default function GameSession() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const sid = Number(sessionId)
   const queryClient = useQueryClient()
-  const location = useLocation()
 
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies" | "suggested">("actors")
