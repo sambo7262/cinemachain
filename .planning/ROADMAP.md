@@ -189,7 +189,7 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
@@ -232,7 +232,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
-| 4.1. Bug Fixes & CSV Hardening | 2/3 | In Progress |  |
+| 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 5. Production Deployment | 0/? | Not started | — |
 
