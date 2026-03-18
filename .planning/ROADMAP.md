@@ -15,7 +15,7 @@
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
 - [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
-- [x] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (completed 2026-03-18)
+- [~] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (BUG-01 FIXED, BUG-02 FIXED, BUG-03 gap closure plan 04.1-03 created)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
@@ -189,11 +189,12 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** 2/2 plans complete
+**Plans:** 2/3 plans complete
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
 - [ ] 04.1-02-PLAN.md — Wave 2: Docker rebuild + NAS deploy + human verify BUG-01, BUG-02, BUG-03
+- [ ] 04.1-03-PLAN.md — Wave 3: BUG-03 gap closure — remove genre_freq gate from fallback, add zero-watch-history regression tests
 
 ### Phase 4.2: UI Polish & Local Poster Caching
 **Goal:** Elevate the visual experience with a poster-as-background effect on session pages, add quality-of-life game controls (random pick, dead-end detection), surface session stats, fix drifting column alignment, and eliminate runtime dependency on TMDB CDN by caching poster images locally during the nightly sync.
@@ -231,6 +232,7 @@ Plans:
 | 03.1. UI + Multi-Session | 9/9 | Complete | 2026-03-17 |
 | 03.2. Game UX Enhancements | 31/31 | Complete | 2026-03-17 |
 | 4. Caching, UI/UX Polish, Session Mgmt | 5/7 | In Progress|  |
+| 4.1. Bug Fixes & CSV Hardening | 2/3 | In Progress |  |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 5. Production Deployment | 0/? | Not started | — |
 
@@ -339,4 +341,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-14*
-*Last updated: 2026-03-17 — Phase 4.2 planned (6 plans, 4 waves); plans 04.2-01 through 04.2-06 created*
+*Last updated: 2026-03-18 — Phase 4.1 gap closure plan 04.1-03 created (BUG-03 genre_freq gate fix)*
