@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react"
 import { SessionCounters } from "../SessionCounters"
 
 describe("SessionCounters", () => {
-  it("renders watched count and runtime (existing behavior)", () => {
+  it("renders Watched count and Runtime (core stats)", () => {
     render(
       <SessionCounters
         watchedCount={3}
@@ -17,9 +17,14 @@ describe("SessionCounters", () => {
     expect(screen.getByText("3")).toBeTruthy()
     // Runtime: 3h
     expect(screen.getByText("3h")).toBeTruthy()
+    // Started label is present
+    expect(screen.getByText("Started")).toBeTruthy()
   })
 
-  it("renders new stats: Steps, Actors, Started labels", () => {
+  it("does NOT render Steps or Actors stats (UX-C simplification)", () => {
+    // UX-C: SessionCounters shows only Watched, Runtime, Started.
+    // Steps and Actors have been removed. This test will be RED until
+    // Wave 2 removes the Steps and Actors <div> blocks from the component.
     render(
       <SessionCounters
         watchedCount={2}
@@ -29,10 +34,12 @@ describe("SessionCounters", () => {
         createdAt={new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
       />
     )
-    expect(screen.getByText("Steps")).toBeTruthy()
-    expect(screen.getByText("6")).toBeTruthy()
-    expect(screen.getByText("Actors")).toBeTruthy()
-    expect(screen.getByText("5")).toBeTruthy()
+    // These labels must NOT appear
+    expect(screen.queryByText("Steps")).toBeNull()
+    expect(screen.queryByText("Actors")).toBeNull()
+    // Core stats must still be present
+    expect(screen.getByText("Watched")).toBeTruthy()
+    expect(screen.getByText("Runtime")).toBeTruthy()
     expect(screen.getByText("Started")).toBeTruthy()
   })
 })
