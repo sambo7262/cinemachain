@@ -127,11 +127,13 @@ export const api = {
     return apiFetch<EligibleActorDTO[]>(`/game/sessions/${sessionId}/eligible-actors?${q}`)
   },
 
-  getEligibleMovies: (sessionId: number, params?: { actor_id?: number; sort?: string; all_movies?: boolean; page?: number; page_size?: number }) => {
+  getEligibleMovies: (sessionId: number, params?: { actor_id?: number; sort?: string; sort_dir?: string; all_movies?: boolean; search?: string; page?: number; page_size?: number }) => {
     const q = new URLSearchParams()
     if (params?.actor_id) q.set("actor_id", String(params.actor_id))
     if (params?.sort) q.set("sort", params.sort)
+    if (params?.sort_dir) q.set("sort_dir", params.sort_dir)
     if (params?.all_movies) q.set("all_movies", "true")
+    if (params?.search) q.set("search", params.search)
     if (params?.page != null) q.set("page", String(params.page))
     if (params?.page_size != null) q.set("page_size", String(params.page_size))
     return apiFetch<PaginatedMoviesDTO>(`/game/sessions/${sessionId}/eligible-movies?${q}`)
