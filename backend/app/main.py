@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -58,6 +59,11 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     app.state.scheduler = scheduler
     logger.info("APScheduler started — nightly cache at %02d:%02d UTC", cache_hour, cache_minute)
+
+    # 5. Optional startup cache run (set TMDB_CACHE_RUN_ON_STARTUP=true to trigger immediately)
+    if settings.tmdb_cache_run_on_startup:
+        logger.info("TMDB_CACHE_RUN_ON_STARTUP=true — triggering cache job now")
+        asyncio.create_task(nightly_cache_job(tmdb=tmdb_client, top_n=settings.tmdb_cache_top_n))
 
     yield
 
