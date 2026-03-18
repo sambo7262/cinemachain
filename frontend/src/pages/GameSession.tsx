@@ -4,7 +4,6 @@ import { useQuery, useQueryClient, useMutation, keepPreviousData } from "@tansta
 import { api } from "@/lib/api"
 import type { EligibleActorDTO, EligibleMovieDTO, PaginatedMoviesDTO, PosterWallItem } from "@/lib/api"
 import { ChainHistory } from "@/components/ChainHistory"
-import { MovieCard } from "@/components/MovieCard"
 import { MovieFilterSidebar, FilterState, DEFAULT_FILTER_STATE } from "@/components/MovieFilterSidebar"
 import { SessionCounters } from "@/components/SessionCounters"
 import { PosterWall } from "@/components/PosterWall"
@@ -532,7 +531,7 @@ export default function GameSession() {
         {/* Three-tab panel — only shown when in tabs view */}
         {view === "tabs" && <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "actors" | "movies" | "suggested")}
+          onValueChange={(v) => setActiveTab(v as "actors" | "movies")}
           className="flex-1"
         >
           <TabsList className="w-full">

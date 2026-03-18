@@ -8,8 +8,6 @@ describe("SessionCounters", () => {
       <SessionCounters
         watchedCount={3}
         watchedRuntimeMinutes={180}
-        stepCount={5}
-        uniqueActorCount={4}
         createdAt={new Date(Date.now() - 90 * 60 * 1000).toISOString()}
       />
     )
@@ -29,8 +27,6 @@ describe("SessionCounters", () => {
       <SessionCounters
         watchedCount={2}
         watchedRuntimeMinutes={120}
-        stepCount={6}
-        uniqueActorCount={5}
         createdAt={new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
       />
     )
