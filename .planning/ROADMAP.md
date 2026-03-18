@@ -15,7 +15,7 @@
 - [ ] **Phase 03.1: UI Improvements and Multi-Session Support** — Multi-session support, session naming, archive/unarchive, home page session grid, chain history table, TMDB ID fix, CSV export/import validation
 - [~] **Phase 03.2: Game UX Enhancements** — Movie filters (genre, runtime, MPAA rating, TMDB rating with vote floor), movie name search within eligible movies, ineligible actor toggle, chain history moved to bottom, actor/movie thumbnails in chain, session watched-count and runtime counter (gap closure round 4: batch actor credits fetch, combined-view TMDB skip, Mark as Watched staleTime fix, CSV WatchEvent for prior steps — plans 20-24 created)
 - [ ] **Phase 4: Caching, UI/UX Polish, and Session Management** — Nightly TMDB cache pre-population, UI refinements (Radarr notification positioning, image thumbnails on session home, full image coverage across session journey), delete last session step to go backwards, delete archived sessions from DB
-- [ ] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains
+- [x] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (completed 2026-03-18)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [ ] **Phase 5: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
@@ -189,7 +189,7 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser

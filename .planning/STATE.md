@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 04.1-01-PLAN.md
-last_updated: "2026-03-18T15:01:23.299Z"
+status: executing
+stopped_at: "Completed 04.1-02-PLAN.md — partial pass: BUG-01 PASS, BUG-02 PASS, BUG-03 FAIL (deferred)"
+last_updated: "2026-03-18T17:36:43.726Z"
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 93
-  completed_plans: 89
+  completed_plans: 90
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 4.1 — Bug Fixes & CSV Hardening
-- **Plan:** 04.1-01 (complete)
-- **Status:** Ready to execute 04.1-02
+- **Plan:** 04.1-02 (complete — partial pass)
+- **Status:** BUG-03 unresolved; Phase 5 blocked until BUG-03 fixed
 
 ## Progress
 
-`[██████████] 96%` — 89 of 93 plans complete
+`[██████████] 97%` — 90 of 93 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -40,17 +40,18 @@ progress:
 | 3.1. UI Improvements and Multi-Session Support | Complete |
 | 3.2. Game UX Enhancements | Complete |
 | 4. Caching, UI/UX Polish, Session Mgmt | Complete — 04-08 (cache optimization), 04-09 (bug fixes) done |
-| 4.1. Bug Fixes & CSV Hardening | Not started — 3 known bugs queued |
-| 5. Production Deployment | Not started |
+| 4.1. Bug Fixes & CSV Hardening | Partial — BUG-01 FIXED, BUG-02 FIXED, BUG-03 still failing on NAS (deferred) |
+| 5. Production Deployment | Blocked — BUG-03 unresolved |
 
 ## Known Bugs (Phase 4.1)
 
-- **BUG-01:** CSV chain movies appearing as eligible picks — WatchEvent-only exclusion insufficient; session step movies must be excluded directly. Fix attempted in 04-09 but not resolving on NAS.
-- **BUG-02:** CSV parsing fails on movie titles containing commas — evaluate .xlsx upload as alternative format.
-- **BUG-03:** Suggested movies empty on long chains (130+ movies) — algorithm exhausts eligible actors from current movie; fallback to genre-affinity attempted in 04-09 but not resolving on NAS.
+- **BUG-01:** FIXED — CSV chain movies no longer appear as eligible picks. Verified PASS on live NAS (04.1-02).
+- **BUG-02:** FIXED — CSV comma-in-title parsing now uses RFC 4180 splitCsvLine state machine. Verified PASS on live NAS (04.1-02).
+- **BUG-03:** OPEN — Suggestions empty on long chains. 04.1-01 code fix deployed but not resolving on NAS (tested on 8-step chain). Originally diagnosed as 130+ step issue; may affect shorter chains too. Root cause requires further investigation before Phase 5.
 
 ## Recent Decisions
 
+- **2026-03-18:** 04.1-02: BUG-03 deferred — code fix deployed but NAS still returns empty suggestions on 8-step chain; original 130+ step diagnosis may be incomplete; root cause investigation required before Phase 5
 - **2026-03-18:** 04.1-01: BUG-03 fix: `candidates = [] / if eligible_actors:` guard replaces early returns in get_suggestions — genre-affinity fallback now reachable on long chains
 - **2026-03-18:** 04.1-01: BUG-02 fix: splitCsvLine state-machine parser replaces naive .split(',') in GameLobby parseCSV; CRLF normalization; accept='.csv,.xlsx' per UI-SPEC Option B
 - **2026-03-18:** 04.1-01: Regression tests use asyncpg-skip pattern (skip locally, GREEN in Docker); test_eligible_movies_excludes_chain_movies and test_suggestions_long_chain_fallback appended to test_game.py
@@ -283,6 +284,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-18T15:01:23.293Z
-Stopped at: Completed 04.1-01-PLAN.md
+Last session: 2026-03-18T17:36:43.718Z
+Stopped at: Completed 04.1-02-PLAN.md — partial pass: BUG-01 PASS, BUG-02 PASS, BUG-03 FAIL (deferred)
 Resume with: 04.2-05 complete. SessionCounters 5-stat, PosterWall, random pick, dead-end, GameLobby stats line all done. Continue with remaining Phase 4.2 plans.
