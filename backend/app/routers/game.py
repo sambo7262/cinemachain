@@ -1683,29 +1683,24 @@ async def get_suggestions(
     )
     eligible_actors = eligible_actor_rows.all()
 
-    if not eligible_actors:
-        return []
-
-    # Build actor_id -> tmdb_id map
-    eligible_actor_db_ids = [row.id for row in eligible_actors]
-
-    # Step 3: get candidate movies reachable via eligible actors (excluding picked movies)
-    candidate_rows = await db.execute(
-        select(Movie.tmdb_id, Movie.title, Movie.year, Movie.poster_path,
-               Movie.vote_average, Movie.genres, Movie.runtime, Movie.vote_count,
-               Movie.mpaa_rating, Actor.tmdb_id.label("actor_tmdb_id"), Actor.name.label("actor_name"))
-        .join(Credit, Credit.movie_id == Movie.id)
-        .join(Actor, Actor.id == Credit.actor_id)
-        .where(
-            Credit.actor_id.in_(eligible_actor_db_ids),
-            Movie.tmdb_id.notin_(picked_movie_ids),
-            Movie.vote_count >= 500,
+    # Step 3: get candidate movies reachable via eligible actors (only when eligible actors exist)
+    candidates = []
+    if eligible_actors:
+        eligible_actor_db_ids = [row.id for row in eligible_actors]
+        candidate_rows = await db.execute(
+            select(Movie.tmdb_id, Movie.title, Movie.year, Movie.poster_path,
+                   Movie.vote_average, Movie.genres, Movie.runtime, Movie.vote_count,
+                   Movie.mpaa_rating, Actor.tmdb_id.label("actor_tmdb_id"), Actor.name.label("actor_name"))
+            .join(Credit, Credit.movie_id == Movie.id)
+            .join(Actor, Actor.id == Credit.actor_id)
+            .where(
+                Credit.actor_id.in_(eligible_actor_db_ids),
+                Movie.tmdb_id.notin_(picked_movie_ids),
+                Movie.vote_count >= 500,
+            )
         )
-    )
-    candidates = candidate_rows.all()
-
-    if not candidates:
-        return []
+        candidates = candidate_rows.all()
+    # No early return — fall through to genre-affinity fallback when candidates is empty
 
     # Step 4: build genre affinity from WatchEvents joined to Movie
     watch_genres_rows = await db.execute(
