@@ -41,7 +41,7 @@ export function PosterWall({ posters }: PosterWallProps) {
   return (
     <div className="fixed inset-0 z-[1] overflow-hidden" aria-hidden="true">
       {/* Dark overlay — must be above poster columns */}
-      <div className="absolute inset-0 bg-black/80 z-10" />
+      <div className="absolute inset-0 bg-black/60 z-10" />
 
       {/* Poster columns container */}
       <div className="flex h-full">
@@ -59,7 +59,7 @@ export function PosterWall({ posters }: PosterWallProps) {
                 "flex-1 flex-col",
                 isUp ? "animate-poster-up" : "animate-poster-down",
                 // Apply blur to the column container — NOT individual images (NAS GPU optimization)
-                "blur-[20px]",
+                "blur-[6px]",
               )}
               style={{ willChange: "transform" }}
             >
