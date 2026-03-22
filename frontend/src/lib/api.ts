@@ -142,8 +142,8 @@ export const api = {
   pickActor: (sessionId: number, body: { actor_tmdb_id: number; actor_name: string }) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/pick-actor`, { method: "POST", body: JSON.stringify(body) }),
 
-  requestMovie: (sessionId: number, body: { movie_tmdb_id: number; movie_title: string }) =>
-    apiFetch<{ status: string; session: GameSessionDTO }>(`/game/sessions/${sessionId}/request-movie`, { method: "POST", body: JSON.stringify(body) }),
+  requestMovie: (sessionId: number, body: { movie_tmdb_id: number; movie_title: string; skip_actor?: boolean }) =>
+    apiFetch<{ status: string; candidates?: Array<{tmdb_id: number; name: string}>; session: GameSessionDTO }>(`/game/sessions/${sessionId}/request-movie`, { method: "POST", body: JSON.stringify(body) }),
 
   pauseSession: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/pause`, { method: "POST" }),

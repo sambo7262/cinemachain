@@ -56,6 +56,11 @@ export default function GameSession() {
   const [randomPickMovie, setRandomPickMovie] = useState<EligibleMovieDTO | null>(null)
   const [randomPickError, setRandomPickError] = useState<string | null>(null)
 
+  // BUG-1: Disambiguation dialog state
+  const [disambigOpen, setDisambigOpen] = useState(false)
+  const [disambigCandidates, setDisambigCandidates] = useState<Array<{tmdb_id: number; name: string}>>([])
+  const [disambigPendingMovie, setDisambigPendingMovie] = useState<EligibleMovieDTO | null>(null)
+
   // Filter and search state — Eligible Movies
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE)
   const [searchQuery, setSearchQuery] = useState("")
@@ -221,6 +226,15 @@ export default function GameSession() {
         movie_tmdb_id: movie.tmdb_id,
         movie_title: movie.title,
       })
+      if (requestResult?.status === "disambiguation_required") {
+        // Multiple actors connect this pick — show disambiguation dialog.
+        // Session is NOT advanced yet. Store pending movie for re-submission after user picks.
+        setDisambigCandidates(requestResult.candidates ?? [])
+        setDisambigPendingMovie(movie)
+        setDisambigOpen(true)
+        queryClient.setQueryData(["session", sid], requestResult.session)
+        return  // do not advance view or show Radarr notification yet
+      }
       if (requestResult?.status === "already_in_radarr") {
         showRadarr("Already in Radarr")
       } else if (requestResult?.status === "queued") {
@@ -243,6 +257,72 @@ export default function GameSession() {
         err instanceof Error
           ? err.message
           : "Failed to request movie. Try selecting the movie again."
+      setMovieRequestError(msg)
+    }
+  }
+
+  // BUG-1: Handle actor pick from disambiguation dialog
+  const handleDisambigActorPick = async (candidate: {tmdb_id: number; name: string}) => {
+    if (!disambigPendingMovie) return
+    setDisambigOpen(false)
+    setMovieRequestError(null)
+    try {
+      await api.pickActor(sid, {
+        actor_tmdb_id: candidate.tmdb_id,
+        actor_name: candidate.name,
+      })
+      const requestResult = await api.requestMovie(sid, {
+        movie_tmdb_id: disambigPendingMovie.tmdb_id,
+        movie_title: disambigPendingMovie.title,
+      })
+      if (requestResult?.status === "already_in_radarr") {
+        showRadarr("Already in Radarr")
+      } else if (requestResult?.status === "queued") {
+        showRadarr("Movie Queued for Download")
+      } else if (requestResult?.status === "not_found_in_radarr") {
+        showRadarr("Movie not found in Radarr — add it manually")
+      } else if (requestResult?.status === "error") {
+        showRadarr("Radarr unavailable — movie saved to session")
+      }
+      setView("home")
+      queryClient.setQueryData(["session", sid], requestResult.session)
+      queryClient.invalidateQueries({ queryKey: ["session", sid] })
+      queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+      setMoviesPage(1)
+      setSelectedActor(null)
+      setDisambigPendingMovie(null)
+      setDisambigCandidates([])
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to request movie."
+      setMovieRequestError(msg)
+    }
+  }
+
+  // BUG-1: Handle skip from disambiguation dialog — passes skip_actor: true to backend
+  const handleDisambigSkip = async () => {
+    if (!disambigPendingMovie) return
+    setDisambigOpen(false)
+    setMovieRequestError(null)
+    try {
+      const requestResult = await api.requestMovie(sid, {
+        movie_tmdb_id: disambigPendingMovie.tmdb_id,
+        movie_title: disambigPendingMovie.title,
+        skip_actor: true,  // tells backend: skip auto-resolve, proceed without actor step
+      })
+      if (requestResult?.status === "already_in_radarr") showRadarr("Already in Radarr")
+      else if (requestResult?.status === "queued") showRadarr("Movie Queued for Download")
+      else if (requestResult?.status === "not_found_in_radarr") showRadarr("Movie not found in Radarr — add it manually")
+      else if (requestResult?.status === "error") showRadarr("Radarr unavailable — movie saved to session")
+      setView("home")
+      queryClient.setQueryData(["session", sid], requestResult.session)
+      queryClient.invalidateQueries({ queryKey: ["session", sid] })
+      queryClient.invalidateQueries({ queryKey: ["eligibleActors", sid] })
+      setMoviesPage(1)
+      setSelectedActor(null)
+      setDisambigPendingMovie(null)
+      setDisambigCandidates([])
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to request movie."
       setMovieRequestError(msg)
     }
   }
@@ -893,6 +973,35 @@ export default function GameSession() {
               disabled={deleteLastStepMutation.isPending}
             >
               {deleteLastStepMutation.isPending ? "Deleting..." : "Delete Step"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* BUG-1: Actor disambiguation dialog */}
+      <Dialog open={disambigOpen} onOpenChange={setDisambigOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Who are you following?</DialogTitle>
+            <DialogDescription>
+              Multiple actors connect this pick. Choose which one to record in your chain.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            {disambigCandidates.map((candidate) => (
+              <Button
+                key={candidate.tmdb_id}
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleDisambigActorPick(candidate)}
+              >
+                {candidate.name}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="w-full" onClick={handleDisambigSkip}>
+              Skip (leave actor unrecorded)
             </Button>
           </DialogFooter>
         </DialogContent>
