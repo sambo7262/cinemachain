@@ -15,10 +15,6 @@ const emptyForm: SettingsDTO = {
   radarr_url: "",
   radarr_api_key: "",
   radarr_quality_profile: "",
-  sonarr_url: "",
-  sonarr_api_key: "",
-  plex_token: "",
-  plex_url: "",
   tmdb_cache_time: "",
   tmdb_cache_top_n: "",
   mdblist_api_key: "",
@@ -177,60 +173,6 @@ export function Settings() {
               onChange={handleChange("radarr_quality_profile")}
             />
             <p className="text-xs text-muted-foreground">Default quality profile for new downloads (e.g., HD+)</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sonarr */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Sonarr</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="sonarr-url" className="text-xs">Sonarr URL</label>
-            <Input
-              id="sonarr-url"
-              value={formData.sonarr_url ?? ""}
-              onChange={handleChange("sonarr_url")}
-            />
-            <p className="text-xs text-muted-foreground">Sonarr server URL (e.g., http://localhost:8989)</p>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="sonarr-api-key" className="text-xs">Sonarr API Key</label>
-            <Input
-              id="sonarr-api-key"
-              value={formData.sonarr_api_key ?? ""}
-              onChange={handleChange("sonarr_api_key")}
-            />
-            <p className="text-xs text-muted-foreground">Found in Sonarr under Settings &gt; General &gt; API Key</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Plex */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Plex</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="plex-token" className="text-xs">Plex Token</label>
-            <Input
-              id="plex-token"
-              value={formData.plex_token ?? ""}
-              onChange={handleChange("plex_token")}
-            />
-            <p className="text-xs text-muted-foreground">Your Plex authentication token</p>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="plex-url" className="text-xs">Plex URL</label>
-            <Input
-              id="plex-url"
-              value={formData.plex_url ?? ""}
-              onChange={handleChange("plex_url")}
-            />
-            <p className="text-xs text-muted-foreground">Plex server URL (e.g., http://localhost:32400)</p>
           </div>
         </CardContent>
       </Card>

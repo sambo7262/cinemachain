@@ -137,10 +137,6 @@ export interface SettingsDTO {
   radarr_url: string | null
   radarr_api_key: string | null
   radarr_quality_profile: string | null
-  sonarr_url: string | null
-  sonarr_api_key: string | null
-  plex_token: string | null
-  plex_url: string | null
   tmdb_cache_time: string | null
   tmdb_cache_top_n: string | null
   mdblist_api_key: string | null
