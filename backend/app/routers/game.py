@@ -1644,6 +1644,11 @@ async def get_eligible_movies(
         without_mpaa = [m for m in movies if not m.get("mpaa_rating") or m.get("mpaa_rating") == ""]
         with_mpaa.sort(key=lambda m: _mpaa_order.get(m.get("mpaa_rating") or "", 99), reverse=_desc)
         movies = with_mpaa + without_mpaa
+    elif sort == "rt":
+        with_rt = [m for m in movies if m.get("rt_score") is not None]
+        without_rt = [m for m in movies if m.get("rt_score") is None]
+        with_rt.sort(key=lambda m: m.get("rt_score") or 0, reverse=_desc)
+        movies = with_rt + without_rt
 
     # Search — when provided, filter by title (case-insensitive) and bypass pagination.
     # Calls _ensure_actor_credits_in_db to guarantee full filmography coverage (no-op if cached).

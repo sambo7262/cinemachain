@@ -72,6 +72,7 @@ export interface EligibleMovieDTO {
   vote_count: number | null
   mpaa_rating: string | null
   overview: string | null  // NEW — TMDB plot summary
+  rt_score: number | null
 }
 
 export interface MovieSearchResultDTO {

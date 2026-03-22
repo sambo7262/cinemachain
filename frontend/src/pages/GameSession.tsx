@@ -596,6 +596,9 @@ export default function GameSession() {
                             {currentMovie.vote_average.toFixed(1)}
                           </span>
                         )}
+                        {currentMovie.rt_score && (
+                          <span>🍅 {currentMovie.rt_score}%</span>
+                        )}
                       </div>
                     )
                   })()}
@@ -943,6 +946,12 @@ export default function GameSession() {
                               >
                                 Rated{sortIndicator("mpaa")}
                               </th>
+                              <th
+                                className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
+                                onClick={() => handleSortClick("rt")}  // TODO: backend sort by rt_score
+                              >
+                                RT{sortIndicator("rt")}
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
@@ -1001,6 +1010,9 @@ export default function GameSession() {
                                 </td>
                                 <td className="px-4 py-2 text-right text-muted-foreground">
                                   {movie.mpaa_rating ?? "—"}
+                                </td>
+                                <td className="text-right px-4 py-2 text-muted-foreground">
+                                  {movie.rt_score ? `🍅 ${movie.rt_score}%` : ""}
                                 </td>
                               </tr>
                             ))}
@@ -1068,6 +1080,11 @@ export default function GameSession() {
                   <Badge variant="outline" className="text-xs">
                     <Star className="w-3 h-3 mr-1" />
                     {splashMovie.vote_average.toFixed(1)}
+                  </Badge>
+                )}
+                {splashMovie?.rt_score && (
+                  <Badge variant="outline" className="text-xs">
+                    🍅 {splashMovie.rt_score}%
                   </Badge>
                 )}
                 {splashMovie?.mpaa_rating && (
