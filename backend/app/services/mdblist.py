@@ -40,6 +40,10 @@ async def fetch_rt_scores(
     if not movies_to_fetch:
         return
 
+    # Cap per-request fetches to avoid hammering the API on large actors
+    MAX_PER_REQUEST = 20
+    movies_to_fetch = list(movies_to_fetch)[:MAX_PER_REQUEST]
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         for movie in movies_to_fetch:
             try:
@@ -47,11 +51,19 @@ async def fetch_rt_scores(
                     MDBLIST_API_URL,
                     params={"apikey": api_key, "tm": movie.tmdb_id},
                 )
-                if resp.status_code != 200:
+                if resp.status_code == 429:
+                    logger.warning("MDBList API rate limited (429) — stopping batch")
+                    break  # stop entire batch; don't mark these movies so they retry later
+                if resp.status_code not in (200, 404):
                     logger.warning(
                         "MDBList API returned %d for tmdb_id=%d",
                         resp.status_code, movie.tmdb_id,
                     )
+                    continue
+                if resp.status_code == 404:
+                    # Movie not in MDBList — store sentinel so we don't retry
+                    movie.rt_score = 0
+                    movie.rt_audience_score = 0
                     continue
 
                 data = resp.json()
