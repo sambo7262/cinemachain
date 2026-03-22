@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to discuss/plan
-stopped_at: Completed 05-bug-fixes-02-PLAN.md
-last_updated: "2026-03-22T04:00:05.453Z"
+status: executing
+stopped_at: Completed 05-bug-fixes-03-PLAN.md
+last_updated: "2026-03-22T04:03:58.834Z"
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 107
-  completed_plans: 104
+  completed_plans: 105
 ---
 
 # STATE.md — CinemaChain
@@ -25,7 +25,7 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 5 — Bug Fixes
-- **Plan:** 05-02 complete (05-03 next)
+- **Plan:** 05-03 complete (05-04 next)
 - **Status:** In Progress
 
 ## Progress
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-22:** 05-03: request_movie auto-resolves single shared actor between prev/selected movie; returns disambiguation_required with candidates for multiple; skip_actor=True field bypasses auto-resolve loop
 - **2026-03-22:** 05-02: pick_actor gains Request+BackgroundTasks; _prefetch_actor_credits_background enqueued after db.commit() for ENH-1 latency improvement
 - **2026-03-22:** 05-02: _resolve_actor_tmdb_id returns tuple[int|None, str|None] — canonical TMDB name stored in CSV steps_data (BUG-4)
 - **2026-03-22:** 05-02: BUG-3 eligibility query correct as written — scope invariant comments added; NAS DB diagnostic documented for manual execution
@@ -300,6 +301,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-22T04:00:05.443Z
-Stopped at: Completed 05-bug-fixes-02-PLAN.md
+Last session: 2026-03-22T04:03:58.828Z
+Stopped at: Completed 05-bug-fixes-03-PLAN.md
 Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.
