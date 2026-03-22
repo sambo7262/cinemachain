@@ -264,11 +264,11 @@ Plans:
   7. RT ratings research findings presented to user for decision
   8. Session cards show watched count, total runtime, and started date
   9. Now Playing tile shows MPAA rating, runtime, and TMDB rating
-**Plans:** 8 plans
+**Plans:** 1/8 plans executed
 
 Plans:
 - [ ] 06-00-PLAN.md — Wave 0 test stubs (Nyquist compliance: backend + frontend test scaffolds)
-- [ ] 06-01-PLAN.md — Backend settings infrastructure (AppSettings model, Alembic migration, settings router, Fernet encryption, .env migration)
+- [x] 06-01-PLAN.md — Backend settings infrastructure (AppSettings model, Alembic migration, settings router, Fernet encryption, .env migration)
 - [ ] 06-02-PLAN.md — Backend game endpoints (overview field, skip_radarr, PATCH session name, CSV actor name fix)
 - [ ] 06-03-PLAN.md — Frontend quick wins (session card stats, Now Playing stats, chain history search, TMDB links)
 - [ ] 06-04-PLAN.md — Movie Selection Splash Dialog (replaces window.confirm)
@@ -301,7 +301,7 @@ Plans:
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
 | 5. Bug Fixes | 7/7 | Complete   | 2026-03-22 |
-| 6. New Features | 0/7 | Planning complete | — |
+| 6. New Features | 1/8 | In Progress|  |
 | 7. Production Deployment | 0/? | Not started | — |
 
 ---
