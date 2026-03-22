@@ -1,17 +1,16 @@
-# compose.yaml
-# Compose v2 — no top-level `version:` key (obsolete; causes warning in DSM Container Manager)
+# compose.yaml — CinemaChain
 #
-# SYNOLOGY CONSTRAINTS ADDRESSED:
-#   - PUID/PGID set on backend (DSM ACLs != Unix perms)
-#   - PostgreSQL host port 5433 (not 5432 — reserved on Synology DSM)
-#   - mem_limit on every container (prevent OOM kills on shared NAS RAM)
-#   - restart: unless-stopped (not always — avoids infinite restart loops masking real errors)
-#   - healthcheck-gated depends_on for PostgreSQL — pg_isready with start_period: 30s
-#   - All volumes use host bind-mounts to /volume1/docker/appdata/cinemachain/
-#     (visible in DSM File Station; survive Docker package reinstalls)
-#   - Tailscale NOT included — system-wide Tailscale on NAS handles remote access
-#     Access remotely via Tailscale IP + local ports (8111 backend, 3111 frontend)
-#   - All services on synobridge network — same internal network as Plex, Radarr, Sonarr
+# USAGE:
+#   1. Copy .env.example to .env and fill in your values
+#   2. docker compose up -d
+#
+# NOTES:
+#   - PUID/PGID set on backend for correct file ownership on Linux hosts
+#   - PostgreSQL host port 5433 (avoids conflict with host-level Postgres on 5432)
+#   - PostgreSQL bound to 127.0.0.1 only (not exposed to network)
+#   - mem_limit on every container to prevent OOM on resource-constrained hosts
+#   - restart: unless-stopped — avoids infinite restart loops masking real errors
+#   - Volumes default to ./data/ — override with DATA_DIR in .env for NAS or custom paths
 
 services:
   backend:
@@ -20,7 +19,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     networks:
-      - synobridge
+      - cinemachain-net
     ports:
       - "8111:8000"
     environment:
@@ -28,15 +27,17 @@ services:
       - PGID=${PGID}
       - DATABASE_URL=postgresql+asyncpg://cinema:${DB_PASSWORD}@postgres:5432/cinemachain
       - TMDB_API_KEY=${TMDB_API_KEY}
-      - PLEX_TOKEN=${PLEX_TOKEN}
-      - PLEX_URL=${PLEX_URL}
       - RADARR_URL=${RADARR_URL}
       - RADARR_API_KEY=${RADARR_API_KEY}
-      - SONARR_URL=${SONARR_URL}
-      - SONARR_API_KEY=${SONARR_API_KEY}
+      - RADARR_QUALITY_PROFILE=${RADARR_QUALITY_PROFILE:-HD+}
+      - TMDB_CACHE_TIME=${TMDB_CACHE_TIME:-03:00}
+      - TMDB_CACHE_TOP_N=${TMDB_CACHE_TOP_N:-5000}
+      - TMDB_CACHE_TOP_ACTORS=${TMDB_CACHE_TOP_ACTORS:-1500}
+      - TMDB_CACHE_RUN_ON_STARTUP=${TMDB_CACHE_RUN_ON_STARTUP:-false}
+      - SETTINGS_ENCRYPTION_KEY=${SETTINGS_ENCRYPTION_KEY:-}
     volumes:
-      - /volume1/docker/appdata/cinemachain/backend:/app/data
-      - /volume1/docker/appdata/cinemachain/static:/app/static
+      - ${DATA_DIR:-./data}/backend:/app/data
+      - ${DATA_DIR:-./data}/static:/app/static
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,7 +50,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     networks:
-      - synobridge
+      - cinemachain-net
     ports:
       - "127.0.0.1:5433:5432"
     environment:
@@ -58,7 +59,7 @@ services:
       - POSTGRES_DB=cinemachain
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - /volume1/docker/appdata/cinemachain/postgres:/var/lib/postgresql/data
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cinema -d cinemachain"]
       interval: 10s
@@ -72,12 +73,12 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     networks:
-      - synobridge
+      - cinemachain-net
     ports:
       - "3111:80"
     depends_on:
       - backend
 
 networks:
-  synobridge:
-    external: true
+  cinemachain-net:
+    driver: bridge
