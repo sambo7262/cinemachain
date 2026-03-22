@@ -241,7 +241,7 @@ Plans:
   3. Eligible actors shown are only from the current (last watched) movie's cast
   4. CSV import stores canonical TMDB actor names; round-trip export/re-import produces no duplicate rows
   5. Actor selection triggers background filmography pre-fetch, reducing Eligible Movies load time
-**Plans:** 4/5 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md — Wave 0: test stubs for BUG-1, BUG-3, BUG-4, ENH-1 (append to test_game.py)
@@ -283,7 +283,7 @@ Plans:
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
-| 5. Bug Fixes | 4/5 | In Progress|  |
+| 5. Bug Fixes | 7/7 | Complete   | 2026-03-22 |
 | 6. New Features | 0/? | Not started | — |
 | 7. Production Deployment | 0/? | Not started | — |
 
