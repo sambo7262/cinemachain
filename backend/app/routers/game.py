@@ -618,13 +618,17 @@ async def _resolve_movie_tmdb_id(
     return (confidence, best["id"], suggestions)
 
 
-async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> int | None:
-    """Search TMDB for a person by name; return first result (ranked by popularity)."""
+async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> tuple[int | None, str | None]:
+    """Search TMDB for a person by name; return (tmdb_id, canonical_name) tuple.
+
+    canonical_name is the TMDB-verified spelling — use this in stored steps (not the raw CSV input).
+    Returns (None, None) if no results.
+    """
     r = await tmdb._client.get("/search/person", params={"query": name})
     results = r.json().get("results", [])
     if not results:
-        return None
-    return results[0]["id"]
+        return None, None
+    return results[0]["id"], results[0].get("name")
 
 
 # ---------------------------------------------------------------------------
@@ -688,13 +692,13 @@ async def import_csv_session(
             })
             step_order += 1
             if row.actorName:
-                actor_id = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+                actor_id, canonical_name = await _resolve_actor_tmdb_id(row.actorName, tmdb)
                 steps_data.append({
                     "step_order": step_order,
                     "movie_tmdb_id": movie_id,
                     "movie_title": row.movieName,
                     "actor_tmdb_id": actor_id,
-                    "actor_name": row.actorName,
+                    "actor_name": canonical_name or row.actorName,
                 })
                 step_order += 1
         else:
