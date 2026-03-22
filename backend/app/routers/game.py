@@ -801,6 +801,15 @@ async def import_csv_session(
             actor_tmdb_id=step_data["actor_tmdb_id"],
             actor_name=step_data["actor_name"],
         )
+        # Item 1: If actor_tmdb_id is set but actor_name is missing, resolve name from TMDB.
+        # Handles cases where a raw TMDB ID was entered as an actor override and name was NULL.
+        if step.actor_tmdb_id and not step.actor_name:
+            try:
+                person_data = await tmdb.fetch_person(step.actor_tmdb_id)
+                if person_data:
+                    step.actor_name = person_data.get("name")
+            except Exception:
+                pass  # Non-critical — name stays None; chain history degrades gracefully
         db.add(step)
 
     await db.commit()
