@@ -9,12 +9,14 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.db import engine
+from app.db import engine, AsyncSessionLocal
 from app.routers import health
 from app.routers import movies as movies_router
 from app.routers import actors as actors_router
 from app.routers import debug as debug_router
 from app.routers import game as game_router
+from app.routers.settings import router as settings_router
+from app.services import settings_service
 from app.services.cache import nightly_cache_job
 from app.services.tmdb import TMDBClient
 from app.services.radarr import RadarrClient
@@ -30,6 +32,13 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.execute(text("SELECT 1"))
     logger.info("Database connection verified")
+
+    # 1b. Migrate .env settings to DB on first startup (no-op if already populated)
+    async with AsyncSessionLocal() as db:
+        migrated = await settings_service.migrate_env_to_db(db)
+        if migrated:
+            logger.info("Migrated .env settings to database")
+        await db.commit()
 
     # 2. Initialize TMDB client (shared across all requests via app.state)
     tmdb_client = TMDBClient(api_key=settings.tmdb_api_key)
@@ -89,3 +98,4 @@ app.include_router(movies_router.router)
 app.include_router(actors_router.router)
 app.include_router(debug_router.router)
 app.include_router(game_router.router)
+app.include_router(settings_router, prefix="/api")

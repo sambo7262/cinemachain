@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     tmdb_cache_top_n: int = 5000
     tmdb_cache_time: str = "03:00"
     tmdb_cache_run_on_startup: bool = False
+    settings_encryption_key: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
