@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride } from "@/lib/api"
+import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride, type CsvActorError } from "@/lib/api"
 import { MovieCard } from "@/components/MovieCard"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -188,8 +188,9 @@ export default function GameLobby() {
     })
   }
 
+  const actorErrors: CsvActorError[] = validationResult?.actor_errors ?? []
   const allOverridesResolved = validationResult
-    ? validationResult.unresolved.every(u => overrides.some(o => o.row === u.row))
+    ? validationResult.unresolved.every(u => overrides.some(o => o.row === u.row)) && actorErrors.length === 0
     : false
 
   // Archive mutation
@@ -464,6 +465,24 @@ export default function GameLobby() {
                             )
                           })}
                         </div>
+                        {actorErrors.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-sm text-red-400">
+                              {actorErrors.length} row{actorErrors.length !== 1 ? "s" : ""} have actor name issues that couldn't be resolved. Edit your CSV file and re-import to fix these:
+                            </p>
+                            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                              {actorErrors.map((e) => (
+                                <div key={e.row} className="rounded bg-muted px-3 py-2 text-xs">
+                                  <span className="text-muted-foreground">Row {e.row + 1}: </span>
+                                  <span className="text-foreground font-medium">{e.csv_movie_title}</span>
+                                  <span className="text-muted-foreground"> — actor </span>
+                                  <span className="text-red-400 font-medium">"{e.csv_actor_name}"</span>
+                                  <span className="text-muted-foreground"> not found on TMDB</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <Button
                           className="w-full"
                           disabled={importMutation.isPending || !allOverridesResolved || !isNameValid}

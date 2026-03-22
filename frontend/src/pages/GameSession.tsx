@@ -856,13 +856,13 @@ export default function GameSession() {
                                 Year{sortIndicator("year")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("runtime")}
                               >
                                 Runtime{sortIndicator("runtime")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden xl:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("mpaa")}
                               >
                                 Rated{sortIndicator("mpaa")}
@@ -908,10 +908,10 @@ export default function GameSession() {
                                 <td className="px-4 py-2 text-right text-muted-foreground hidden sm:table-cell">
                                   {movie.year ?? "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden xl:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
                                   {movie.runtime != null ? `${movie.runtime}m` : "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden xl:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
                                   {movie.mpaa_rating ?? "—"}
                                 </td>
                               </tr>

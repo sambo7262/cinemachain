@@ -92,10 +92,18 @@ export interface CsvUnresolvedRow {
   suggestions: CsvSuggestion[]
 }
 
+export interface CsvActorError {
+  row: number
+  csv_movie_title: string
+  csv_actor_name: string
+  reason: string
+}
+
 export interface CsvValidationResponse {
   status: "validation_required"
   resolved_count: number
   unresolved: CsvUnresolvedRow[]
+  actor_errors?: CsvActorError[]
 }
 
 export interface CsvOverride {
