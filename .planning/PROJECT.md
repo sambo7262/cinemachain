@@ -89,4 +89,4 @@ The Movie Game — a chain-based discovery engine that navigates cinema through 
 - Docker Compose deployment for Synology NAS
 
 ---
-*Last updated: 2026-03-14 after v1.0 milestone start*
+*Last updated: 2026-03-22 after Phase 06 complete — Settings/Onboarding, movie splash dialog, session management dropdown, chain history search, TMDB links, info density improvements*
