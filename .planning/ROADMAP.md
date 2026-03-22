@@ -196,7 +196,7 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md — Security hardening, dead code removal, compose genericization
-- [ ] 07-02-PLAN.md — Security audit and comprehensive README
+- [x] 07-02-PLAN.md — Security audit and comprehensive README
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
@@ -307,7 +307,7 @@ Plans:
 **Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 07-01-PLAN.md — Security hardening, dead code removal, compose genericization
+- [x] 07-01-PLAN.md — Security hardening, dead code removal, compose genericization
 - [ ] 07-02-PLAN.md — Security audit and comprehensive README
 
 ---
