@@ -75,16 +75,17 @@ Source: derived from existing codebase patterns (px-4, py-3, gap-2, gap-4) in `G
 | Role | Size | Weight | Line Height | Tailwind Class |
 |------|------|--------|-------------|----------------|
 | Body | 14px | 400 regular | 1.5 | `text-sm` |
-| Label | 12px | 500 medium | 1.4 | `text-xs font-medium` |
+| Label | 12px | 400 regular | 1.4 | `text-xs` |
 | Subheading | 16px | 600 semibold | 1.4 | `text-base font-semibold` |
-| Heading | 20px | 700 bold | 1.2 | `text-xl font-bold` or `text-xl font-semibold` |
+| Heading | 20px | 600 semibold | 1.2 | `text-xl font-semibold` |
 
 Notes:
+- Exactly 2 font weights in use: 400 regular and 600 semibold. No 500 medium or 700 bold for new Phase 6 additions.
 - Page-level title (`CinemaChain` on home page) uses `text-3xl font-bold tracking-tight` — retain as-is, not a new addition
 - All new copy in Phase 6 uses body (14px/400) or subheading (16px/600) as the default
 - Movie splash overview text uses body (14px/400) at 1.5 line-height — no truncation (D-05)
-- Settings field labels use label (12px/500)
-- Do NOT introduce font sizes outside this set in Phase 6
+- Settings field labels use label (12px/400) — the smaller size alone provides sufficient visual distinction from body
+- Do NOT introduce font sizes or weights outside this set in Phase 6
 
 Source: `GameLobby.tsx` lines 216, 236, 241; `GameSession.tsx` lines 405–409, 509
 
@@ -103,7 +104,7 @@ The project uses shadcn zinc dark mode CSS variables. All values reference CSS c
 | Destructive | `hsl(var(--destructive))` | ~hsl(0, 62.8%, 30.6%) dark red | "Archive Session" confirm button only |
 
 Accent (`--primary`) reserved for:
-1. Primary action buttons (`Button` default variant) — e.g. "Save Settings", "Confirm" in movie splash
+1. Primary action buttons (`Button` default variant) — e.g. "Save Settings", "Add to Session" in movie splash
 2. Active/selected state indicators (selected movie or actor highlight)
 3. `ring` focus outline on focused inputs
 
@@ -131,7 +132,6 @@ Source: `frontend/src/index.css` CSS variable definitions, sampled component usa
 | Primary CTA — Confirm movie selection | "Add to Session" |
 | Primary CTA — Archive | "Archive Session" |
 | Primary CTA — Save session name | "Save Name" |
-| Cancel (all dialogs) | "Cancel" |
 
 ### Item 2 — Movie Selection Splash
 
@@ -141,7 +141,7 @@ Source: `frontend/src/index.css` CSS variable definitions, sampled component usa
 | Radarr checkbox label | "Request download via Radarr" |
 | Radarr checkbox description | "Adds this movie to your Radarr download queue." |
 | Confirm CTA | "Add to Session" |
-| Cancel CTA | "Cancel" |
+| Dismiss CTA | "Keep Browsing" |
 | TMDB link label (aria) | "View {Movie Title} on TMDB (opens in new tab)" |
 
 ### Item 3 — Session Settings Menu
@@ -153,9 +153,11 @@ Source: `frontend/src/index.css` CSS variable definitions, sampled component usa
 | Archive confirm dialog title | "Archive this session?" |
 | Archive confirm dialog body | "This session will be moved to the archive and no longer appear on the home page. You can still view it in archived sessions." |
 | Archive confirm CTA | "Archive Session" |
+| Archive dismiss CTA | "Keep Session" |
 | Edit name modal title | "Edit Session Name" |
 | Edit name input placeholder | "Enter a session name" |
 | Edit name save CTA | "Save Name" |
+| Edit name dismiss CTA | "Discard Changes" |
 
 ### Item 4 — Chain History Search
 
@@ -224,7 +226,7 @@ Layout within `DialogContent`:
 - Left column (fixed `w-32`): TMDB poster image, `object-fit: cover`, rounded-md corners
 - Right column (flex-1): Title (subheading 16px/600), TMDB rating + MPAA rating + runtime as Badge row, full overview text (body 14px/400, no truncation), TMDB external link icon
 - Below columns (full width): Radarr Checkbox + label
-- `DialogFooter`: "Cancel" (outline variant) + "Add to Session" (default variant, primary)
+- `DialogFooter`: "Keep Browsing" (outline variant) + "Add to Session" (default variant, primary)
 
 Dialog width: `max-w-2xl` — wider than default to accommodate poster + overview text.
 
@@ -232,7 +234,7 @@ Dialog width: `max-w-2xl` — wider than default to accommodate poster + overvie
 
 Layout within `DialogContent`:
 - Single `Input` field pre-populated with current session name
-- `DialogFooter`: "Cancel" (outline variant) + "Save Name" (default variant)
+- `DialogFooter`: "Discard Changes" (outline variant) + "Save Name" (default variant)
 
 Validation: show `text-red-500 text-xs` below input if field is empty on submit.
 
@@ -254,7 +256,7 @@ Wrap in `<a href="..." target="_blank" rel="noopener noreferrer">`.
 
 Layout: full-page route at `/settings`, accessible via NavBar link with `Settings` icon.
 Structure:
-- Page heading "Settings" (heading 20px/700)
+- Page heading "Settings" (heading 20px/600)
 - Grouped field sections using `Card` + `CardHeader` + `CardContent`
 - Section groups: TMDB (required), Radarr, Sonarr, Plex, Sync Schedule
 - Each section uses `CardHeader` with section name as `CardTitle` (subheading 16px/600)
