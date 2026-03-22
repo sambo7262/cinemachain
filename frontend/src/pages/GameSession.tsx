@@ -844,13 +844,13 @@ export default function GameSession() {
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("rating")}
                               >
                                 Rating{sortIndicator("rating")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("year")}
                               >
                                 Year{sortIndicator("year")}
@@ -902,10 +902,10 @@ export default function GameSession() {
                                 <td className="px-4 py-2 text-muted-foreground italic hidden sm:table-cell">
                                   {movie.via_actor_name ?? (selectedActor?.name ?? "—")}
                                 </td>
-                                <td className="px-4 py-2 text-right text-amber-400 hidden lg:table-cell">
+                                <td className="px-4 py-2 text-right text-amber-400 hidden sm:table-cell">
                                   {movie.vote_average != null ? `★ ${movie.vote_average.toFixed(1)}` : "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground hidden sm:table-cell">
                                   {movie.year ?? "—"}
                                 </td>
                                 <td className="px-4 py-2 text-right text-muted-foreground hidden xl:table-cell">
