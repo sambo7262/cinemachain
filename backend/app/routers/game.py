@@ -109,6 +109,7 @@ class PickActorRequest(BaseModel):
 class RequestMovieRequest(BaseModel):
     movie_tmdb_id: int
     movie_title: str | None = None
+    skip_actor: bool = False  # BUG-1: set True by frontend Skip button to bypass disambiguation loop
 
 
 class EligibleMovieResponse(BaseModel):
@@ -1654,8 +1655,77 @@ async def request_movie(
                 detail="Movie is already watched in this session; select an unwatched movie",
             )
 
+    # BUG-1: Auto-resolve connecting actor when no explicit pick was made.
+    # Check if the most recent step is a movie step (no actor yet) and this is NOT the first pick.
+    # skip_actor=True means the user dismissed the disambiguation dialog — bypass entirely.
+    last_step = max(session.steps, key=lambda s: s.step_order, default=None)
+    previous_movie_tmdb_id = session.current_movie_tmdb_id  # movie being transitioned FROM
+    already_picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
+
+    need_actor_auto_resolve = (
+        last_step is not None and                        # not the first pick
+        last_step.actor_tmdb_id is None and             # last step is a movie step (no actor picked)
+        body.movie_tmdb_id != previous_movie_tmdb_id   # actually advancing to a new movie
+        and not body.skip_actor                         # BUG-1: skip if user dismissed dialog
+    )
+
+    shared_actors: list = []  # defined here to avoid NameError in next_order calculation
+    if need_actor_auto_resolve:
+        # Find actors appearing in BOTH the previous movie AND the selected movie
+        shared_stmt = (
+            select(Actor, Credit)
+            .join(Credit, Credit.actor_id == Actor.id)
+            .join(Movie, Movie.id == Credit.movie_id)
+            .where(Movie.tmdb_id == body.movie_tmdb_id)
+            .where(Actor.tmdb_id.in_(
+                select(Actor.tmdb_id)
+                .join(Credit, Credit.actor_id == Actor.id)
+                .join(Movie, Movie.id == Credit.movie_id)
+                .where(Movie.tmdb_id == previous_movie_tmdb_id)
+                .where(Actor.tmdb_id.not_in(already_picked_ids) if already_picked_ids else True)
+            ))
+        )
+        shared_rows = await db.execute(shared_stmt)
+        shared_actors = [(actor, credit) for actor, credit in shared_rows.all()]
+
+        if len(shared_actors) > 1:
+            # Multiple connecting actors — require user to disambiguate.
+            # Do NOT create any steps. Return disambiguation response immediately.
+            # Frontend will show a dialog and re-submit after user picks.
+            return {
+                "status": "disambiguation_required",
+                "candidates": [
+                    {"tmdb_id": actor.tmdb_id, "name": actor.name}
+                    for actor, _ in shared_actors
+                ],
+                "session": _build_session_response(
+                    session,
+                    await _enrich_steps_watched_at(session.steps, db),
+                    current_movie_title=_resolve_current_movie_title(session),
+                ),
+            }
+        elif len(shared_actors) == 1:
+            # Exactly one connecting actor — auto-create the actor step.
+            auto_actor, _ = shared_actors[0]
+            actor_step_order = max((s.step_order for s in session.steps), default=-1) + 1
+            auto_actor_step = GameSessionStep(
+                session_id=session.id,
+                step_order=actor_step_order,
+                movie_tmdb_id=previous_movie_tmdb_id,  # actor was selected FROM this movie
+                movie_title=last_step.movie_title,      # title of the previous movie
+                actor_tmdb_id=auto_actor.tmdb_id,
+                actor_name=auto_actor.name,
+            )
+            db.add(auto_actor_step)
+            # Note: do NOT commit yet — movie step will be added next and committed together
+        # If 0 shared actors: fall through to existing movie step creation (no actor step)
+
     # Add step for the chosen movie
-    next_order = max((s.step_order for s in session.steps), default=-1) + 1
+    # Recalculate next_order — may have increased if auto_actor_step was added above
+    # (in-session steps list not yet updated, so use explicit calculation)
+    existing_max = max((s.step_order for s in session.steps), default=-1)
+    auto_step_added = need_actor_auto_resolve and len(shared_actors) == 1
+    next_order = existing_max + (2 if auto_step_added else 1)
     new_step = GameSessionStep(
         session_id=session.id,
         step_order=next_order,
