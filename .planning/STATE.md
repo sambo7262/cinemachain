@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-bug-fixes-04-PLAN.md
-last_updated: "2026-03-22T04:08:16.556Z"
+stopped_at: Completed 05-bug-fixes-05-PLAN.md
+last_updated: "2026-03-21T00:00:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 9
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 5 — Bug Fixes
-- **Plan:** 05-04 complete (05-05 next)
-- **Status:** In Progress
+- **Plan:** 05-05 complete (all Phase 5 plans done)
+- **Status:** Gap closure needed (BUG-2 MovieCard, CSV display)
 
 ## Progress
 
-`[██████████] 99%` — 106 of 107 plans complete
+`[██████████] 100%` — 107 of 107 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-21:** 05-05: NAS verification — BUG-1, BUG-3, ENH-1, BUG-4 data PASS; BUG-2 MovieCard portrait/landscape layout still broken (partial fix); CSV import display rendering broken (new issue); both deferred to gap closure
 - **2026-03-21:** 05-04: handleMovieConfirm returns early on disambiguation_required — session updated via queryClient but view does not advance until user resolves dialog; requestMovie body extended with skip_actor?: boolean (additive), return type extended with candidates array
 - **2026-03-22:** 05-03: request_movie auto-resolves single shared actor between prev/selected movie; returns disambiguation_required with candidates for multiple; skip_actor=True field bypasses auto-resolve loop
 - **2026-03-22:** 05-02: pick_actor gains Request+BackgroundTasks; _prefetch_actor_credits_background enqueued after db.commit() for ENH-1 latency improvement

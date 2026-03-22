@@ -18,7 +18,7 @@
 - [~] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (BUG-01 FIXED, BUG-02 FIXED, BUG-03 gap closure plan 04.1-03 created)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [x] **Phase 4.3: Bug Fixes & UX Refinements** — All 7 items verified PASS on NAS (completed 2026-03-18)
-- [ ] **Phase 5: Bug Fixes** — Targeted bug fixes before feature work (scope TBD via discuss-phase)
+- [~] **Phase 5: Bug Fixes** — BUG-1, BUG-3, ENH-1, BUG-4 verified PASS on NAS; BUG-2 MovieCard and CSV import display deferred to gap closure (completed 2026-03-21)
 - [ ] **Phase 6: New Features** — New feature additions (scope TBD via discuss-phase)
 - [ ] **Phase 7: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
@@ -244,11 +244,11 @@ Plans:
 **Plans:** 4/5 plans executed
 
 Plans:
-- [ ] 05-01-PLAN.md — Wave 0: test stubs for BUG-1, BUG-3, BUG-4, ENH-1 (append to test_game.py)
-- [ ] 05-02-PLAN.md — Wave 1: Backend — BUG-3 eligibility verification, BUG-4 CSV canonical name fix, ENH-1 actor pre-cache
-- [ ] 05-03-PLAN.md — Wave 2: Backend — BUG-1 request_movie auto-actor resolution + disambiguation response
-- [ ] 05-04-PLAN.md — Wave 3: Frontend — BUG-1 disambiguation dialog, BUG-2 mobile layout (MovieCard + GameLobby)
-- [ ] 05-05-PLAN.md — Wave 4: Docker rebuild + NAS deploy + human verify all 5 items
+- [x] 05-01-PLAN.md — Wave 0: test stubs for BUG-1, BUG-3, BUG-4, ENH-1 (append to test_game.py)
+- [x] 05-02-PLAN.md — Wave 1: Backend — BUG-3 eligibility verification, BUG-4 CSV canonical name fix, ENH-1 actor pre-cache
+- [x] 05-03-PLAN.md — Wave 2: Backend — BUG-1 request_movie auto-actor resolution + disambiguation response
+- [x] 05-04-PLAN.md — Wave 3: Frontend — BUG-1 disambiguation dialog, BUG-2 mobile layout (MovieCard + GameLobby)
+- [x] 05-05-PLAN.md — Wave 4: Docker rebuild + NAS deploy + human verify (3 full PASS, BUG-2 partial, CSV display new issue — gaps deferred)
 
 ### Phase 6: New Features
 **Goal:** TBD — scope to be defined via /gsd:discuss-phase 6
