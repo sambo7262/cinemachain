@@ -2,7 +2,7 @@
 phase: 5
 slug: bug-fixes
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-21
 ---
@@ -38,11 +38,11 @@ created: 2026-03-21
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| BUG-1 | 01 | 1 | BUG-1 | integration | `cd backend && python -m pytest tests/test_game_chain_actor.py -x -q` | ❌ W0 | ⬜ pending |
+| BUG-1 | 01 | 1 | BUG-1 | integration | `cd backend && python -m pytest tests/test_game.py -x -q -k "test_bug1"` | ❌ W0 | ⬜ pending |
 | BUG-2 | 01 | 1 | BUG-2 | manual | visual inspection on mobile viewport | N/A | ⬜ pending |
-| BUG-3 | 01 | 1 | BUG-3 | integration | `cd backend && python -m pytest tests/test_eligibility.py -x -q` | ❌ W0 | ⬜ pending |
-| BUG-4 | 01 | 1 | BUG-4 | integration | `cd backend && python -m pytest tests/test_csv_import.py -x -q` | ❌ W0 | ⬜ pending |
-| ENH-1 | 01 | 1 | ENH-1 | integration | `cd backend && python -m pytest tests/test_actor_precache.py -x -q` | ❌ W0 | ⬜ pending |
+| BUG-3 | 01 | 1 | BUG-3 | integration | `cd backend && python -m pytest tests/test_game.py -x -q -k "test_bug3"` | ❌ W0 | ⬜ pending |
+| BUG-4 | 01 | 1 | BUG-4 | integration | `cd backend && python -m pytest tests/test_game.py -x -q -k "test_bug4"` | ❌ W0 | ⬜ pending |
+| ENH-1 | 01 | 1 | ENH-1 | integration | `cd backend && python -m pytest tests/test_game.py -x -q -k "test_enh1"` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,10 +50,14 @@ created: 2026-03-21
 
 ## Wave 0 Requirements
 
-- [ ] `backend/tests/test_game_chain_actor.py` — stubs for BUG-1 chain actor recording
-- [ ] `backend/tests/test_eligibility.py` — stubs for BUG-3 eligibility query correctness
-- [ ] `backend/tests/test_csv_import.py` — stubs for BUG-4 CSV round-trip validation
-- [ ] `backend/tests/test_actor_precache.py` — stubs for ENH-1 background prefetch trigger
+All stubs are appended to the existing test file — no new separate test files are created.
+
+- [ ] `backend/tests/test_game.py` — append stubs for BUG-1 chain actor recording (`test_bug1_auto_actor_single`, `test_bug1_disambiguation_multiple`)
+- [ ] `backend/tests/test_game.py` — append stub for BUG-3 eligibility query correctness (`test_bug3_eligibility_scoped_to_current_movie`)
+- [ ] `backend/tests/test_game.py` — append stubs for BUG-4 CSV round-trip validation (`test_bug4_csv_actor_name_canonical`, `test_bug4_csv_roundtrip`)
+- [ ] `backend/tests/test_game.py` — append stub for ENH-1 background prefetch trigger (`test_enh1_actor_precache_triggered`)
+
+Wave 0 is complete when `python -m pytest tests/test_game.py --collect-only` exits 0 and lists all six new test names.
 
 ---
 
@@ -68,11 +72,11 @@ created: 2026-03-21
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (all stubs go to test_game.py)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
