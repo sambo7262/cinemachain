@@ -1025,3 +1025,143 @@ async def test_eligible_movies_search_param(client):
     assert len(items) == 1, f"Expected 1 search result, got {len(items)}: {items}"
     assert items[0]["title"] == "Romantic Comedy Dreams"
     assert data.get("has_more") is False, "Search results must not paginate (has_more must be False)"
+
+
+# ---------------------------------------------------------------------------
+# BUG-1: Auto-actor selection / disambiguation (Phase 5 Wave 0 stubs)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bug1_auto_actor_single(client):
+    """BUG-1: When exactly one eligible actor connects previous movie to selected movie,
+    request-movie must auto-create the actor step (no disambiguation required).
+
+    STUB — will be RED until Wave 1 implements auto-actor logic in request_movie.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit, WatchEvent
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        movie_a = Movie(tmdb_id=91001, title="Movie A BUG1 Single")
+        movie_b = Movie(tmdb_id=91002, title="Movie B BUG1 Single")
+        actor_solo = Actor(tmdb_id=91001, name="Actor Solo BUG1")
+        db.add_all([movie_a, movie_b, actor_solo])
+        await db.flush()
+
+        credit_a = Credit(movie_id=movie_a.id, actor_id=actor_solo.id, character="Role A")
+        credit_b = Credit(movie_id=movie_b.id, actor_id=actor_solo.id, character="Role B")
+        db.add_all([credit_a, credit_b])
+
+        session = GameSession(
+            name="BUG1 Single Auto Session",
+            status="active",
+            current_movie_tmdb_id=91001,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step0 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=91001,
+            actor_tmdb_id=None,
+            movie_title="Movie A BUG1 Single",
+            step_order=0,
+        )
+        db.add(step0)
+
+        we = WatchEvent(tmdb_id=91001, source="manual")
+        db.add(we)
+        await db.commit()
+        sid = session.id
+
+    resp = await client.post(
+        f"/game/sessions/{sid}/request-movie",
+        json={"movie_tmdb_id": 91002, "movie_title": "Movie B BUG1 Single"},
+    )
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["status"] != "disambiguation_required", (
+        "Expected auto-resolution when only one actor connects the movies; "
+        f"got status={data['status']!r}"
+    )
+    steps = data["session"]["steps"]
+    actor_step_ids = [s["actor_tmdb_id"] for s in steps if s.get("actor_tmdb_id") is not None]
+    assert 91001 in actor_step_ids, (
+        f"Expected actor_tmdb_id=91001 auto-inserted in steps; got actor_tmdb_ids={actor_step_ids}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bug1_disambiguation_multiple(client):
+    """BUG-1: When multiple eligible actors connect previous movie to selected movie,
+    request-movie must return status='disambiguation_required' with a candidates list.
+
+    STUB — will be RED until Wave 1 adds disambiguation logic to request_movie.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit, WatchEvent
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        movie_a = Movie(tmdb_id=92001, title="Movie A BUG1 Multi")
+        movie_b = Movie(tmdb_id=92002, title="Movie B BUG1 Multi")
+        actor_x = Actor(tmdb_id=92001, name="Actor X BUG1")
+        actor_y = Actor(tmdb_id=92002, name="Actor Y BUG1")
+        db.add_all([movie_a, movie_b, actor_x, actor_y])
+        await db.flush()
+
+        credit_ax = Credit(movie_id=movie_a.id, actor_id=actor_x.id, character="X in A")
+        credit_bx = Credit(movie_id=movie_b.id, actor_id=actor_x.id, character="X in B")
+        credit_ay = Credit(movie_id=movie_a.id, actor_id=actor_y.id, character="Y in A")
+        credit_by = Credit(movie_id=movie_b.id, actor_id=actor_y.id, character="Y in B")
+        db.add_all([credit_ax, credit_bx, credit_ay, credit_by])
+
+        session = GameSession(
+            name="BUG1 Multi Disambiguation Session",
+            status="active",
+            current_movie_tmdb_id=92001,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step0 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=92001,
+            actor_tmdb_id=None,
+            movie_title="Movie A BUG1 Multi",
+            step_order=0,
+        )
+        db.add(step0)
+
+        we = WatchEvent(tmdb_id=92001, source="manual")
+        db.add(we)
+        await db.commit()
+        sid = session.id
+
+    resp = await client.post(
+        f"/game/sessions/{sid}/request-movie",
+        json={"movie_tmdb_id": 92002, "movie_title": "Movie B BUG1 Multi"},
+    )
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["status"] == "disambiguation_required", (
+        f"Expected status='disambiguation_required' when multiple actors connect movies; "
+        f"got status={data['status']!r}"
+    )
+    candidates = data.get("candidates", [])
+    assert len(candidates) >= 2, (
+        f"Expected at least 2 candidates in disambiguation response; got {len(candidates)}: {candidates}"
+    )
