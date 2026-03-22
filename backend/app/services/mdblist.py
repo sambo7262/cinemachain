@@ -41,8 +41,8 @@ async def fetch_rt_scores(
     if not movies_to_fetch:
         return
 
-    # Cap per-request fetches to avoid hammering the API on large actors
-    MAX_PER_REQUEST = 20
+    # Cap per-request fetches — generous limit for paid tier (10k/day)
+    MAX_PER_REQUEST = 100
     movies_to_fetch = list(movies_to_fetch)[:MAX_PER_REQUEST]
 
     async with httpx.AsyncClient(timeout=10.0) as client:

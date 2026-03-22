@@ -116,7 +116,7 @@ async def _backfill_mpaa_pass(tmdb: TMDBClient, limit: int = 2000) -> None:
     logger.info("_backfill_mpaa_pass: %d ratings found", fetched)
 
 
-async def _backfill_rt_scores_pass(limit: int = 500) -> None:
+async def _backfill_rt_scores_pass(limit: int = 3000) -> None:
     """Fetch RT scores for movies with NULL or sentinel (0) rt_score."""
     async with _bg_session_factory() as db:
         await backfill_rt_scores(db, limit=limit)
