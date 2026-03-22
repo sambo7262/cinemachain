@@ -683,6 +683,7 @@ async def import_csv_session(
     steps_data = []
     step_order = 0
     unresolved: list[dict] = []
+    actor_errors: list[dict] = []
     resolved_count = 0
 
     # Each CSV row has movie_name + actor_name on the same row.
@@ -711,14 +712,23 @@ async def import_csv_session(
             step_order += 1
             if row.actorName:
                 actor_id, canonical_name = await _resolve_actor_tmdb_id(row.actorName, tmdb)
-                steps_data.append({
-                    "step_order": step_order,
-                    "movie_tmdb_id": movie_id,
-                    "movie_title": row.movieName,
-                    "actor_tmdb_id": actor_id,
-                    "actor_name": canonical_name or row.actorName,
-                })
-                step_order += 1
+                if actor_id is None:
+                    actor_errors.append({
+                        "row": i,
+                        "csv_movie_title": row.movieName,
+                        "csv_actor_name": row.actorName,
+                        "reason": "actor_not_found",
+                    })
+                    # Do NOT append actor step — skip it; movie step already added above
+                else:
+                    steps_data.append({
+                        "step_order": step_order,
+                        "movie_tmdb_id": movie_id,
+                        "movie_title": row.movieName,
+                        "actor_tmdb_id": actor_id,
+                        "actor_name": canonical_name,
+                    })
+                    step_order += 1
         else:
             # Low confidence or zero results — flag for user review
             unresolved.append({
@@ -728,13 +738,14 @@ async def import_csv_session(
             })
 
     # If any rows need review, return validation_required (do NOT create session)
-    if unresolved:
+    if unresolved or actor_errors:
         return JSONResponse(
             status_code=200,
             content={
                 "status": "validation_required",
                 "resolved_count": resolved_count,
                 "unresolved": unresolved,
+                "actor_errors": actor_errors,
             },
         )
 
