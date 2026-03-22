@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-new-features-05-PLAN.md
-last_updated: "2026-03-22T14:40:31.418Z"
+stopped_at: Completed 06-new-features-07-PLAN.md
+last_updated: "2026-03-22T14:45:30.920Z"
 progress:
   total_phases: 12
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 117
-  completed_plans: 116
+  completed_plans: 117
 ---
 
 # STATE.md — CinemaChain
@@ -24,12 +24,12 @@ progress:
 
 ## Current Position
 
-Phase: 06 (new-features) — EXECUTING
-Plan: 8 of 8
+Phase: 06 (new-features) — COMPLETE
+Plan: 8 of 8 (all plans complete)
 
 ## Progress
 
-`[██████████] 97%` — 113 of 117 plans complete
+`[██████████] 100%` — 117 of 117 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -50,6 +50,7 @@ Plan: 8 of 8
 
 ## Recent Decisions
 
+- **2026-03-22:** 06-07: RT ratings (Item 7) — MDBList API selected; accepts TMDB ID natively, returns Tomatometer + Audience Score, 1000 req/day free with DB caching; implementation deferred to post-Phase-6 backlog
 - **2026-03-22:** 06-02: overview stored in _ensure_movie_details_in_db and _backfill_movie_posters_background so populated via all TMDB fetch paths; skip_radarr=True bypasses Radarr and returns "skipped" status; PATCH /sessions/{id}/name validates and checks uniqueness excluding self; CSV actor name resolved via fetch_person when actor_tmdb_id set and actor_name missing
 - **2026-03-22:** 05-06: Eligible Movies table Rating/Year columns moved from hidden lg:table-cell to hidden sm:table-cell — visible at 640px (landscape phone) not 1024px; BUG-2 gap addressed at table layer
 - **2026-03-21:** 05-05: NAS verification — BUG-1, BUG-3, ENH-1, BUG-4 data PASS; BUG-2 MovieCard portrait/landscape layout still broken (partial fix); CSV import display rendering broken (new issue); both deferred to gap closure
@@ -304,6 +305,6 @@ Plan: 8 of 8
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:40:31.411Z
-Stopped at: Completed 06-new-features-05-PLAN.md
+Last session: 2026-03-22T14:45:30.911Z
+Stopped at: Completed 06-new-features-07-PLAN.md
 Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.

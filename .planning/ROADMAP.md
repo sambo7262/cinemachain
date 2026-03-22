@@ -19,7 +19,7 @@
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [x] **Phase 4.3: Bug Fixes & UX Refinements** — All 7 items verified PASS on NAS (completed 2026-03-18)
 - [~] **Phase 5: Bug Fixes** — BUG-1, BUG-3, ENH-1, BUG-4 verified PASS on NAS; BUG-2 MovieCard and CSV import display deferred to gap closure (completed 2026-03-21)
-- [ ] **Phase 6: New Features** — TMDB actor name fix, movie selection splash, session menu consolidation, chain history search, TMDB external links, in-app settings page, RT research, session card stats, Now Playing tile stats
+- [x] **Phase 6: New Features** — TMDB actor name fix, movie selection splash, session menu consolidation, chain history search, TMDB external links, in-app settings page, RT research, session card stats, Now Playing tile stats (completed 2026-03-22)
 - [ ] **Phase 7: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
@@ -264,7 +264,7 @@ Plans:
   7. RT ratings research findings presented to user for decision
   8. Session cards show watched count, total runtime, and started date
   9. Now Playing tile shows MPAA rating, runtime, and TMDB rating
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 - [x] 06-00-PLAN.md — Wave 0 test stubs (Nyquist compliance: backend + frontend test scaffolds)
@@ -274,7 +274,7 @@ Plans:
 - [x] 06-04-PLAN.md — Movie Selection Splash Dialog (replaces window.confirm)
 - [x] 06-05-PLAN.md — Session Settings Menu consolidation (archive confirm + edit name modal)
 - [x] 06-06-PLAN.md — Settings page + OnboardingScreen + NavBar link + App.tsx gate
-- [ ] 06-07-PLAN.md — RT research decision + visual verification checkpoint
+- [x] 06-07-PLAN.md — RT research decision + visual verification checkpoint
 ### Phase 7: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
 **Depends on:** Phase 6
@@ -301,7 +301,7 @@ Plans:
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
 | 5. Bug Fixes | 7/7 | Complete   | 2026-03-22 |
-| 6. New Features | 7/8 | In Progress|  |
+| 6. New Features | 8/8 | Complete   | 2026-03-22 |
 | 7. Production Deployment | 0/? | Not started | — |
 
 ---
