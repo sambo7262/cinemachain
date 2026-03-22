@@ -1165,3 +1165,317 @@ async def test_bug1_disambiguation_multiple(client):
     assert len(candidates) >= 2, (
         f"Expected at least 2 candidates in disambiguation response; got {len(candidates)}: {candidates}"
     )
+
+
+# ---------------------------------------------------------------------------
+# BUG-3: Eligible actors scoped to current movie (Phase 5 Wave 0 stub)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bug3_eligibility_scoped_to_current_movie(client):
+    """BUG-3: eligible-actors must return ONLY actors from the current (last watched) movie.
+    Actors from previous chain movies must NOT appear in the eligible list.
+
+    STUB — will be RED until Wave 1 fixes the eligible-actors query to scope by current movie.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit, WatchEvent
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        movie_a = Movie(tmdb_id=93001, title="Movie A BUG3")
+        movie_b = Movie(tmdb_id=93002, title="Movie B BUG3")
+        actor_in_a = Actor(tmdb_id=93001, name="Actor In A Only BUG3")
+        actor_in_b = Actor(tmdb_id=93002, name="Actor In B Only BUG3")
+        db.add_all([movie_a, movie_b, actor_in_a, actor_in_b])
+        await db.flush()
+
+        credit_a = Credit(movie_id=movie_a.id, actor_id=actor_in_a.id, character="Role in A")
+        credit_b = Credit(movie_id=movie_b.id, actor_id=actor_in_b.id, character="Role in B")
+        db.add_all([credit_a, credit_b])
+
+        session = GameSession(
+            name="BUG3 Eligibility Scope Session",
+            status="active",
+            current_movie_tmdb_id=93002,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step0 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=93001,
+            actor_tmdb_id=None,
+            movie_title="Movie A BUG3",
+            step_order=0,
+        )
+        step1 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=93001,
+            actor_tmdb_id=93001,
+            movie_title="Movie A BUG3",
+            step_order=1,
+        )
+        step2 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=93002,
+            actor_tmdb_id=None,
+            movie_title="Movie B BUG3",
+            step_order=2,
+        )
+        db.add_all([step0, step1, step2])
+
+        we = WatchEvent(tmdb_id=93002, source="manual")
+        db.add(we)
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/eligible-actors")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    actors = resp.json()
+
+    returned_ids = [a["tmdb_id"] for a in actors]
+    assert 93001 not in returned_ids, (
+        "Actor from previous chain movie (93001) must NOT appear in eligible-actors for current movie (93002); "
+        f"got tmdb_ids={returned_ids}"
+    )
+    assert 93002 in returned_ids, (
+        f"Actor from current movie (93002) must appear in eligible-actors; got tmdb_ids={returned_ids}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# BUG-4: CSV actor name canonical + roundtrip (Phase 5 Wave 0 stubs)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bug4_csv_actor_name_canonical(client):
+    """BUG-4: After CSV import, actor steps must store the canonical TMDB name,
+    not the raw CSV string, when they differ.
+
+    STUB — will be RED until Wave 1 fixes import_csv_session to use the resolved name.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from unittest.mock import patch, AsyncMock
+    from app.models import GameSession, Movie
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        movie = Movie(tmdb_id=27205, title="Inception", poster_path="/inception.jpg")
+        db.add(movie)
+        await db.commit()
+
+    async def mock_resolve_actor(name: str, tmdb):
+        return (99001, "Canonical Name From TMDB")
+
+    async def mock_resolve_movie(title: str, tmdb):
+        return ("high", 27205, [])
+
+    with patch("app.routers.game._resolve_actor_tmdb_id", side_effect=mock_resolve_actor), \
+         patch("app.routers.game._resolve_movie_tmdb_id", side_effect=mock_resolve_movie):
+        resp = await client.post(
+            "/game/sessions/import-csv",
+            json={
+                "rows": [{"movieName": "Inception", "actorName": "csv raw name", "order": 0}],
+                "name": "BUG4 CSV Canonical Test",
+                "overrides": [],
+            },
+        )
+
+    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+    steps = resp.json().get("steps", [])
+    actor_steps = [s for s in steps if s.get("actor_tmdb_id") == 99001]
+    assert len(actor_steps) >= 1, (
+        f"Expected an actor step with actor_tmdb_id=99001; got steps={steps}"
+    )
+    actor_name_stored = actor_steps[0].get("actor_name")
+    assert actor_name_stored == "Canonical Name From TMDB", (
+        f"Expected canonical TMDB name 'Canonical Name From TMDB' stored in actor step; "
+        f"got actor_name={actor_name_stored!r} (raw CSV name must not be stored)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bug4_csv_roundtrip(client):
+    """BUG-4: export then re-import a session produces correct steps with no duplicates
+    and no blank actor names for steps with actor_tmdb_id set.
+
+    STUB — will be RED until Wave 1 fixes actor_name storage in CSV import.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    import csv
+    import io
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+    from unittest.mock import patch
+
+    async with AsyncSession(engine) as db:
+        movie = Movie(tmdb_id=94001, title="Roundtrip Movie BUG4", poster_path="/rt.jpg")
+        actor = Actor(tmdb_id=94001, name="Roundtrip Actor BUG4")
+        db.add_all([movie, actor])
+        await db.flush()
+
+        credit = Credit(movie_id=movie.id, actor_id=actor.id, character="Lead")
+        db.add(credit)
+
+        session = GameSession(
+            name="BUG4 Roundtrip Session",
+            status="active",
+            current_movie_tmdb_id=94001,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step0 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=94001,
+            actor_tmdb_id=None,
+            movie_title="Roundtrip Movie BUG4",
+            step_order=0,
+        )
+        step1 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=94001,
+            actor_tmdb_id=94001,
+            actor_name="Roundtrip Actor BUG4",
+            movie_title="Roundtrip Movie BUG4",
+            step_order=1,
+        )
+        db.add_all([step0, step1])
+        await db.commit()
+        sid = session.id
+
+    # Export session to CSV
+    export_resp = await client.get(f"/game/sessions/{sid}/export-csv")
+    assert export_resp.status_code == 200, f"Export failed: {export_resp.status_code}: {export_resp.text}"
+
+    csv_text = export_resp.text
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) > 0, "Exported CSV must have at least one row"
+
+    # Re-import via mock resolvers to avoid TMDB calls
+    async def mock_resolve_movie(title: str, tmdb):
+        return ("high", 94001, [])
+
+    async def mock_resolve_actor(name: str, tmdb):
+        return (94001, "Roundtrip Actor BUG4")
+
+    import_rows = [
+        {"movieName": r.get("movie_name", ""), "actorName": r.get("actor_name", ""), "order": i}
+        for i, r in enumerate(rows)
+        if r.get("movie_name")
+    ]
+
+    with patch("app.routers.game._resolve_actor_tmdb_id", side_effect=mock_resolve_actor), \
+         patch("app.routers.game._resolve_movie_tmdb_id", side_effect=mock_resolve_movie):
+        import_resp = await client.post(
+            "/game/sessions/import-csv",
+            json={
+                "rows": import_rows,
+                "name": "BUG4 Roundtrip Reimport",
+                "overrides": [],
+            },
+        )
+
+    assert import_resp.status_code == 201, f"Re-import failed: {import_resp.status_code}: {import_resp.text}"
+    reimport_steps = import_resp.json().get("steps", [])
+
+    # No duplicate movie entries
+    movie_steps = [s for s in reimport_steps if s.get("actor_tmdb_id") is None]
+    movie_ids_seen = [s["movie_tmdb_id"] for s in movie_steps]
+    assert len(movie_ids_seen) == len(set(movie_ids_seen)), (
+        f"Duplicate movie steps found after re-import: {movie_ids_seen}"
+    )
+
+    # No blank actor_name for steps with actor_tmdb_id set
+    blank_actor_steps = [
+        s for s in reimport_steps
+        if s.get("actor_tmdb_id") is not None and not s.get("actor_name")
+    ]
+    assert len(blank_actor_steps) == 0, (
+        f"Blank actor_name found in actor steps after re-import: {blank_actor_steps}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# ENH-1: Actor pre-cache triggered on pick-actor (Phase 5 Wave 0 stub)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_enh1_actor_precache_triggered(client):
+    """ENH-1: Calling pick-actor must trigger a background pre-fetch of the selected
+    actor's filmography credits (_prefetch_actor_credits_background).
+
+    STUB — will be RED until Wave 1 adds the background task call to pick_actor.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from unittest.mock import patch, AsyncMock, MagicMock
+    from app.models import GameSession, GameSessionStep, Movie, Actor, Credit, WatchEvent
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db import engine
+
+    async with AsyncSession(engine) as db:
+        movie = Movie(tmdb_id=95001, title="ENH1 Precache Movie")
+        actor = Actor(tmdb_id=95001, name="ENH1 Precache Actor")
+        db.add_all([movie, actor])
+        await db.flush()
+
+        credit = Credit(movie_id=movie.id, actor_id=actor.id, character="Lead")
+        db.add(credit)
+
+        session = GameSession(
+            name="ENH1 Precache Session",
+            status="active",
+            current_movie_tmdb_id=95001,
+            current_movie_watched=True,
+        )
+        db.add(session)
+        await db.flush()
+
+        step0 = GameSessionStep(
+            session_id=session.id,
+            movie_tmdb_id=95001,
+            actor_tmdb_id=None,
+            movie_title="ENH1 Precache Movie",
+            step_order=0,
+        )
+        we = WatchEvent(tmdb_id=95001, source="manual")
+        db.add_all([step0, we])
+        await db.commit()
+        sid = session.id
+
+    with patch("app.routers.game._prefetch_actor_credits_background") as mock_prefetch:
+        resp = await client.post(
+            f"/game/sessions/{sid}/pick-actor",
+            json={"actor_tmdb_id": 95001, "actor_name": "ENH1 Precache Actor"},
+        )
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+        assert mock_prefetch.called or any(
+            call_args[0][0] == mock_prefetch or mock_prefetch in str(call_args)
+            for call_args in mock_prefetch.call_args_list
+        ) or mock_prefetch.call_count > 0, (
+            "Expected _prefetch_actor_credits_background to be called as a background task after pick-actor; "
+            "it was not called — ENH-1 not yet implemented"
+        )
