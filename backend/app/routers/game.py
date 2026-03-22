@@ -243,8 +243,11 @@ async def _fetch_mpaa_rating(
             sa.update(Movie).where(Movie.tmdb_id == tmdb_id).values(mpaa_rating=cert)
         )
         await db.commit()
+        logger.debug("MPAA tmdb_id=%d: cert=%r", tmdb_id, cert)
         return cert
     except Exception:
+        logger.exception("Failed to fetch MPAA rating for tmdb_id=%d", tmdb_id)
+        # Don't store sentinel — leave as None so it retries next load
         return ""
 
 

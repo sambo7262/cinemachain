@@ -72,10 +72,18 @@ async def fetch_rt_scores(
                 tomatometer = None
                 audience = None
                 for r in ratings:
-                    if r.get("source") == "tomatoes":
+                    src = r.get("source", "")
+                    if src in ("tomatoes", "tomatometr"):
                         tomatometer = r.get("value")
-                    elif r.get("source") == "tomatoesaudience":
+                    elif src in ("tomatoesaudience", "tomatoesau"):
                         audience = r.get("value")
+
+                if tomatometer is None and ratings:
+                    sources = [r.get("source") for r in ratings]
+                    logger.debug(
+                        "MDBList tmdb_id=%d: no RT score found. Available sources: %s",
+                        movie.tmdb_id, sources,
+                    )
 
                 # Store scores. rt_score = 0 means "fetched, no RT data available"
                 # (distinguishes from None which means "never fetched").
