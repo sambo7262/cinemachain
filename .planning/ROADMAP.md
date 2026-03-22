@@ -232,12 +232,23 @@ Plans:
 ---
 
 ### Phase 5: Bug Fixes
-**Goal:** TBD — scope to be defined via /gsd:discuss-phase 5
+**Goal:** All five confirmed bugs and one approved enhancement are resolved: chain actor auto-recording, mobile portrait layout, eligibility query scoping, CSV actor name normalization, and actor selection pre-cache.
 **Depends on:** Phase 4
-**Requirements:** TBD
+**Requirements:** BUG-1, BUG-2, BUG-3, BUG-4, ENH-1
 **Success Criteria** (what must be TRUE):
-  - TBD
-**Plans:** TBD
+  1. Selecting a movie without a prior actor pick auto-records the connecting actor (or shows disambiguation dialog if multiple actors connect)
+  2. MovieCard displays all required fields (title, via actor, TMDB rating, runtime, MPAA) in portrait mode at 320px width
+  3. Eligible actors shown are only from the current (last watched) movie's cast
+  4. CSV import stores canonical TMDB actor names; round-trip export/re-import produces no duplicate rows
+  5. Actor selection triggers background filmography pre-fetch, reducing Eligible Movies load time
+**Plans:** 5 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Wave 0: test stubs for BUG-1, BUG-3, BUG-4, ENH-1 (append to test_game.py)
+- [ ] 05-02-PLAN.md — Wave 1: Backend — BUG-3 eligibility verification, BUG-4 CSV canonical name fix, ENH-1 actor pre-cache
+- [ ] 05-03-PLAN.md — Wave 2: Backend — BUG-1 request_movie auto-actor resolution + disambiguation response
+- [ ] 05-04-PLAN.md — Wave 3: Frontend — BUG-1 disambiguation dialog, BUG-2 mobile layout (MovieCard + GameLobby)
+- [ ] 05-05-PLAN.md — Wave 4: Docker rebuild + NAS deploy + human verify all 5 items
 
 ### Phase 6: New Features
 **Goal:** TBD — scope to be defined via /gsd:discuss-phase 6
@@ -272,7 +283,7 @@ Plans:
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
-| 5. Bug Fixes | 0/? | Not started | — |
+| 5. Bug Fixes | 0/5 | Not started | — |
 | 6. New Features | 0/? | Not started | — |
 | 7. Production Deployment | 0/? | Not started | — |
 
