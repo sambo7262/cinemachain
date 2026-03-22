@@ -21,6 +21,7 @@ const emptyForm: SettingsDTO = {
   plex_url: "",
   tmdb_cache_time: "",
   tmdb_cache_top_n: "",
+  mdblist_api_key: "",
 }
 
 function nullToEmpty(settings: SettingsDTO): SettingsDTO {
@@ -230,6 +231,25 @@ export function Settings() {
               onChange={handleChange("plex_url")}
             />
             <p className="text-xs text-muted-foreground">Plex server URL (e.g., http://localhost:32400)</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* MDBList */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">MDBList</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="mdblist-api-key" className="text-xs">MDBList API Key</label>
+            <Input
+              id="mdblist-api-key"
+              type="password"
+              value={formData.mdblist_api_key ?? ""}
+              onChange={handleChange("mdblist_api_key")}
+            />
+            <p className="text-xs text-muted-foreground">Optional. Enables Rotten Tomatoes scores on movies. Get your key at mdblist.com.</p>
           </div>
         </CardContent>
       </Card>
