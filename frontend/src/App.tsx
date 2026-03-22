@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import GameLobby from "./pages/GameLobby"
 import GameSession from "./pages/GameSession"
@@ -11,6 +11,7 @@ import { OnboardingScreen } from "./components/OnboardingScreen"
 import { api } from "@/lib/api"
 
 export default function App() {
+  const location = useLocation()
   const { data: settingsStatus, isLoading: settingsLoading } = useQuery({
     queryKey: ["settingsStatus"],
     queryFn: api.getSettingsStatus,
@@ -26,8 +27,8 @@ export default function App() {
     )
   }
 
-  // Block app if TMDB not configured
-  if (settingsStatus && !settingsStatus.tmdb_configured) {
+  // Block app if TMDB not configured (but always allow /settings through)
+  if (settingsStatus && !settingsStatus.tmdb_configured && location.pathname !== "/settings") {
     return <OnboardingScreen />
   }
 
