@@ -29,7 +29,7 @@ Plan: 5 of 8
 
 ## Progress
 
-`[██████████] 99%` — 108 of 109 plans complete
+`[██████████] 97%` — 113 of 117 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -50,6 +50,7 @@ Plan: 5 of 8
 
 ## Recent Decisions
 
+- **2026-03-22:** 06-02: overview stored in _ensure_movie_details_in_db and _backfill_movie_posters_background so populated via all TMDB fetch paths; skip_radarr=True bypasses Radarr and returns "skipped" status; PATCH /sessions/{id}/name validates and checks uniqueness excluding self; CSV actor name resolved via fetch_person when actor_tmdb_id set and actor_name missing
 - **2026-03-22:** 05-06: Eligible Movies table Rating/Year columns moved from hidden lg:table-cell to hidden sm:table-cell — visible at 640px (landscape phone) not 1024px; BUG-2 gap addressed at table layer
 - **2026-03-21:** 05-05: NAS verification — BUG-1, BUG-3, ENH-1, BUG-4 data PASS; BUG-2 MovieCard portrait/landscape layout still broken (partial fix); CSV import display rendering broken (new issue); both deferred to gap closure
 - **2026-03-21:** 05-04: handleMovieConfirm returns early on disambiguation_required — session updated via queryClient but view does not advance until user resolves dialog; requestMovie body extended with skip_actor?: boolean (additive), return type extended with candidates array
