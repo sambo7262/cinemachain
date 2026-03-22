@@ -117,6 +117,11 @@ class RequestMovieRequest(BaseModel):
     movie_tmdb_id: int
     movie_title: str | None = None
     skip_actor: bool = False  # BUG-1: set True by frontend Skip button to bypass disambiguation loop
+    skip_radarr: bool = False  # When True, skip Radarr add call and set radarr_status="skipped"
+
+
+class RenameSessionRequest(BaseModel):
+    name: str
 
 
 class EligibleMovieResponse(BaseModel):
@@ -129,6 +134,7 @@ class EligibleMovieResponse(BaseModel):
     runtime: int | None = None
     vote_count: int | None = None
     mpaa_rating: str | None = None
+    overview: str | None = None
     via_actor_name: str | None = None
     watched: bool = False
     selectable: bool = True
@@ -506,10 +512,12 @@ async def _ensure_movie_details_in_db(
             data = await tmdb.fetch_movie(tmdb_id)
             genres_json = json.dumps([g["name"] for g in data.get("genres", [])])
             runtime_val = data.get("runtime")
+            overview_val = data.get("overview")
             await db.execute(
                 sa.update(Movie).where(Movie.tmdb_id == tmdb_id).values(
                     genres=genres_json,
                     runtime=runtime_val,
+                    overview=overview_val,
                 )
             )
             await db.commit()
@@ -576,6 +584,7 @@ async def _backfill_movie_posters_background(
                     poster_path=data.get("poster_path"),
                     vote_average=data.get("vote_average"),
                     vote_count=data.get("vote_count"),
+                    overview=data.get("overview"),
                     genres=None,
                 ).on_conflict_do_update(
                     index_elements=["tmdb_id"],
@@ -585,6 +594,7 @@ async def _backfill_movie_posters_background(
                         "poster_path": data.get("poster_path"),
                         "vote_average": data.get("vote_average"),
                         "vote_count": data.get("vote_count"),
+                        "overview": data.get("overview"),
                     },
                 )
                 await db.execute(stmt)
@@ -1126,6 +1136,64 @@ async def archive_session(session_id: int, db: AsyncSession = Depends(get_db)):
     return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
 
 
+@router.patch("/sessions/{session_id}/name", response_model=GameSessionResponse)
+async def rename_session(
+    session_id: int,
+    body: RenameSessionRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Rename a session. Returns 400 for invalid name, 404 if not found, 409 if name taken."""
+    # Validate name
+    name = body.name.strip() if body.name else ""
+    if not name:
+        raise HTTPException(status_code=400, detail="Session name cannot be empty")
+    if len(name) > 100:
+        raise HTTPException(status_code=400, detail="Session name must be 100 characters or fewer")
+
+    # Check uniqueness among active sessions (excluding self)
+    existing = await db.execute(
+        select(GameSession).where(
+            GameSession.name == name,
+            GameSession.id != session_id,
+            GameSession.status.not_in(["archived", "ended"]),
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="A session with that name already exists")
+
+    # Load session
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session_id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.name = name
+    await db.commit()
+    await db.refresh(session)
+
+    # Re-fetch with steps
+    result = await db.execute(
+        select(GameSession)
+        .where(GameSession.id == session.id)
+        .options(selectinload(GameSession.steps))
+    )
+    session = result.scalar_one()
+    wa_map = await _enrich_steps_watched_at(session.steps, db)
+    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    runtime_map = await _enrich_steps_runtime(session.steps, db)
+    return _build_session_response(
+        session, wa_map,
+        current_movie_title=_resolve_current_movie_title(session),
+        poster_map=poster_map,
+        profile_map=profile_map,
+        runtime_map=runtime_map,
+    )
+
+
 @router.post("/sessions/{session_id}/mark-current-watched", response_model=GameSessionResponse)
 async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_db)):
     """Mark the session's current movie as watched (manual fallback for non-Plex-Pass setups).
@@ -1430,6 +1498,7 @@ async def get_eligible_movies(
                     "vote_average": movie.vote_average,
                     "vote_count": movie.vote_count,
                     "mpaa_rating": movie.mpaa_rating,
+                    "overview": movie.overview,
                     "genres": movie.genres,
                     "runtime": movie.runtime,
                     "watched": movie.tmdb_id in watched_ids,
@@ -1471,6 +1540,7 @@ async def get_eligible_movies(
                         "vote_average": movie.vote_average,
                         "vote_count": movie.vote_count,
                         "mpaa_rating": movie.mpaa_rating,
+                        "overview": movie.overview,
                         "genres": movie.genres,
                         "runtime": movie.runtime,
                         "watched": movie.tmdb_id in watched_ids,
@@ -1782,11 +1852,15 @@ async def request_movie(
 
     # Trigger Radarr — outer guard mirrors create_session; session is already committed
     # so a Radarr failure must never surface as a 500.
+    # skip_radarr=True allows frontend to bypass Radarr (e.g., movie already owned).
     radarr: RadarrClient = request.app.state.radarr_client
-    try:
-        radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
-    except Exception:
-        radarr_result = {"status": "error"}
+    if not body.skip_radarr:
+        try:
+            radarr_result = await _request_radarr(body.movie_tmdb_id, radarr)
+        except Exception:
+            radarr_result = {"status": "error"}
+    else:
+        radarr_result = {"status": "skipped"}
 
     wa_map = await _enrich_steps_watched_at(session.steps, db)
     return {
