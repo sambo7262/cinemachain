@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         nightly_cache_job,
         trigger=CronTrigger(hour=cache_hour, minute=cache_minute, timezone="UTC"),
-        kwargs={"tmdb": tmdb_client, "top_n": settings.tmdb_cache_top_n},
+        kwargs={"tmdb": tmdb_client, "top_n": settings.tmdb_cache_top_n, "top_actors": settings.tmdb_cache_top_actors},
         id="nightly_tmdb_cache",
         replace_existing=True,
         misfire_grace_time=3600,
@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
     # 5. Optional startup cache run (set TMDB_CACHE_RUN_ON_STARTUP=true to trigger immediately)
     if settings.tmdb_cache_run_on_startup:
         logger.info("TMDB_CACHE_RUN_ON_STARTUP=true — triggering cache job now")
-        asyncio.create_task(nightly_cache_job(tmdb=tmdb_client, top_n=settings.tmdb_cache_top_n))
+        asyncio.create_task(nightly_cache_job(tmdb=tmdb_client, top_n=settings.tmdb_cache_top_n, top_actors=settings.tmdb_cache_top_actors))
 
     # 6. Static files — ensure /static/posters/ exists and mount it
     os.makedirs("static/posters", exist_ok=True)

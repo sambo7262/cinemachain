@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import os
 
 from sqlalchemy import select
@@ -123,7 +124,7 @@ async def _backfill_rt_scores_pass(limit: int = 3000) -> None:
         await db.commit()
 
 
-async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000) -> None:
+async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000, top_actors: int = 1500) -> None:
     """Fetch top-N movies by vote count and ensure all are fully cached in the DB.
 
     Incremental: skips movies where fetched_at IS NOT NULL AND genres IS NOT NULL.
@@ -177,10 +178,11 @@ async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000) -> None:
 
     logger.info("nightly_cache_job: movie enrichment complete")
 
-    # --- Actor pre-fetch pass: top 1500 popular actors ---
-    logger.info("nightly_cache_job: fetching top actors for pre-population")
+    # --- Actor pre-fetch pass: configurable top popular actors ---
+    logger.info("nightly_cache_job: fetching top %d actors for pre-population", top_actors)
     actor_ids: list[int] = []
-    for actor_page in range(1, 76):  # 75 pages × 20 = 1500 actors
+    actor_pages = math.ceil(top_actors / 20)
+    for actor_page in range(1, actor_pages + 1):
         try:
             r = await tmdb._client.get("/person/popular", params={"page": actor_page})
             r.raise_for_status()

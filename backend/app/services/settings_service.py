@@ -21,12 +21,9 @@ _ENV_KEYS_TO_MIGRATE = (
     "radarr_url",
     "radarr_api_key",
     "radarr_quality_profile",
-    "sonarr_url",
-    "sonarr_api_key",
-    "plex_token",
-    "plex_url",
     "tmdb_cache_time",
     "tmdb_cache_top_n",
+    "tmdb_cache_top_actors",
 )
 
 

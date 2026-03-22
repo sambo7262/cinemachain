@@ -16,12 +16,9 @@ class SettingsResponse(BaseModel):
     radarr_url: str | None = None
     radarr_api_key: str | None = None
     radarr_quality_profile: str | None = None
-    sonarr_url: str | None = None
-    sonarr_api_key: str | None = None
-    plex_token: str | None = None
-    plex_url: str | None = None
     tmdb_cache_time: str | None = None
     tmdb_cache_top_n: str | None = None
+    tmdb_cache_top_actors: str | None = None
     mdblist_api_key: str | None = None
 
 
@@ -31,12 +28,9 @@ class SettingsUpdateRequest(BaseModel):
     radarr_url: str | None = None
     radarr_api_key: str | None = None
     radarr_quality_profile: str | None = None
-    sonarr_url: str | None = None
-    sonarr_api_key: str | None = None
-    plex_token: str | None = None
-    plex_url: str | None = None
     tmdb_cache_time: str | None = None
     tmdb_cache_top_n: str | None = None
+    tmdb_cache_top_actors: str | None = None
     mdblist_api_key: str | None = None
 
 
