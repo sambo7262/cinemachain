@@ -192,7 +192,11 @@ Plans:
 **Goal:** Pre-production bug smash resolving three known issues before deployment: CSV chain movie eligibility, CSV comma-in-title parsing, and suggested movies algorithm on long chains.
 **Depends on:** Phase 4
 **Requirements:** (none mapped — pre-production hardening)
-**Plans:** 3/3 plans complete
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Security hardening, dead code removal, compose genericization
+- [ ] 07-02-PLAN.md — Security audit and comprehensive README
 
 Plans:
 - [ ] 04.1-01-PLAN.md — Wave 1: BUG-01 + BUG-03 regression tests, BUG-03 backend fix (early-return removal), BUG-02 frontend RFC 4180 CSV parser
@@ -300,7 +304,11 @@ Plans:
   1. All secrets (API keys, DB password, Plex token) are loaded exclusively from a .env file; .env.example documents every variable with description and no real values
   2. Docker Compose yaml is clean, annotated, and deployable by a user following a README setup guide
   3. A security review confirms no credentials in images, no open ports beyond what's required, and no hardcoded values in source
-**Plans:** 3/3 plans complete
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Security hardening, dead code removal, compose genericization
+- [ ] 07-02-PLAN.md — Security audit and comprehensive README
 
 ---
 
