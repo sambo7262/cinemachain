@@ -275,6 +275,23 @@ Plans:
 - [x] 06-05-PLAN.md — Session Settings Menu consolidation (archive confirm + edit name modal)
 - [x] 06-06-PLAN.md — Settings page + OnboardingScreen + NavBar link + App.tsx gate
 - [x] 06-07-PLAN.md — RT research decision + visual verification checkpoint
+### Phase 6.1: Bug Fixes & MDBList RT Integration (INSERTED)
+**Goal:** Fix three post-Phase-6 bugs (settings page navigation broken, home page session card stats showing zeros, session card stats not matching stored session data) and implement MDBList RT scores (API key in settings, RT score column in eligible movies table, RT score in Now Playing stats, RT score in movie splash dialog).
+**Depends on:** Phase 6
+**Requirements:** none
+**Success Criteria** (what must be TRUE):
+  1. Clicking the settings icon navigates to /settings
+  2. Home page session cards show correct watched count, total runtime, and started date (not zeros)
+  3. MDBList API key field exists in Settings page and is saved/loaded via the settings API
+  4. Eligible movies table has an RT score column populated from MDBList (when API key configured)
+  5. Now Playing tile shows RT Tomatometer score alongside existing MPAA/runtime/TMDB stats
+  6. Movie splash dialog shows RT Tomatometer score in the badge row
+
+Plans:
+- [ ] 06.1-01-PLAN.md — Bug fixes (settings nav, home page stats zeros)
+- [ ] 06.1-02-PLAN.md — MDBList backend (API key in settings, rt_score on Movie model, fetch + cache)
+- [ ] 06.1-03-PLAN.md — MDBList frontend (RT score in table, Now Playing, splash)
+
 ### Phase 7: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
 **Depends on:** Phase 6
