@@ -1479,3 +1479,51 @@ async def test_enh1_actor_precache_triggered(client):
             "Expected _prefetch_actor_credits_background to be called as a background task after pick-actor; "
             "it was not called — ENH-1 not yet implemented"
         )
+
+
+# ---------------------------------------------------------------------------
+# BUG-4 gap closure: actor name lookup failures must produce structured errors
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_csv_actor_validation_errors(client):
+    """Gap closure: actor name lookup failures must return structured errors, not silent null import.
+
+    When _resolve_actor_tmdb_id returns (None, None), the row must appear in actor_errors
+    and no actor step with actor_tmdb_id=None must be written to the DB.
+    """
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+
+    from unittest.mock import patch
+
+    async def mock_resolve_actor_fail(name: str, tmdb):
+        return (None, None)  # simulate TMDB name mismatch
+
+    async def mock_resolve_movie_ok(title: str, tmdb):
+        return ("high", 27205, [])  # Inception tmdb_id
+
+    with (
+        patch("app.routers.game._resolve_actor_tmdb_id", side_effect=mock_resolve_actor_fail),
+        patch("app.routers.game._resolve_movie_tmdb_id", side_effect=mock_resolve_movie_ok),
+    ):
+        resp = await client.post(
+            "/game/sessions/import-csv",
+            json={
+                "rows": [{"movieName": "Inception", "actorName": "Nestor Carbonell", "order": 0}],
+                "name": "CSV Actor Validation Test",
+                "overrides": [],
+            },
+        )
+
+    assert resp.status_code == 200, f"Expected 200 partial/validation, got {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert "actor_errors" in body, f"Response must contain actor_errors key; got: {body}"
+    assert len(body["actor_errors"]) == 1, f"Expected 1 actor error; got {body['actor_errors']}"
+    err = body["actor_errors"][0]
+    assert err["row"] == 0
+    assert err["csv_actor_name"] == "Nestor Carbonell"
+    assert err["csv_movie_title"] == "Inception"
+    assert "reason" in err
