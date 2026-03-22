@@ -290,7 +290,7 @@ Plans:
 Plans:
 - [x] 06.1-01-PLAN.md — Bug fixes (settings nav, home page stats zeros)
 - [x] 06.1-02-PLAN.md — MDBList backend (API key in settings, rt_score on Movie model, fetch + cache)
-- [ ] 06.1-03-PLAN.md — MDBList frontend (RT score in table, Now Playing, splash)
+- [x] 06.1-03-PLAN.md — MDBList frontend (RT score in table, Now Playing, splash)
 
 ### Phase 7: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
@@ -300,7 +300,7 @@ Plans:
   1. All secrets (API keys, DB password, Plex token) are loaded exclusively from a .env file; .env.example documents every variable with description and no real values
   2. Docker Compose yaml is clean, annotated, and deployable by a user following a README setup guide
   3. A security review confirms no credentials in images, no open ports beyond what's required, and no hardcoded values in source
-**Plans:** TBD
+**Plans:** 3/3 plans complete
 
 ---
 
