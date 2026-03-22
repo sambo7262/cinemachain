@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to discuss/plan
-stopped_at: Completed 05-bug-fixes-01-PLAN.md
-last_updated: "2026-03-22T03:54:54.143Z"
+stopped_at: Completed 05-bug-fixes-02-PLAN.md
+last_updated: "2026-03-22T04:00:05.453Z"
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 107
-  completed_plans: 103
+  completed_plans: 104
 ---
 
 # STATE.md — CinemaChain
@@ -24,13 +24,13 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 5 — Bug Fixes (scope TBD)
-- **Plan:** — (no plans yet)
-- **Status:** Ready to discuss/plan
+- **Phase:** Phase 5 — Bug Fixes
+- **Plan:** 05-02 complete (05-03 next)
+- **Status:** In Progress
 
 ## Progress
 
-`[██████████] 99%` — 99 of 99 plans complete
+`[██████████] 97%` — 104 of 107 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,9 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-22:** 05-02: pick_actor gains Request+BackgroundTasks; _prefetch_actor_credits_background enqueued after db.commit() for ENH-1 latency improvement
+- **2026-03-22:** 05-02: _resolve_actor_tmdb_id returns tuple[int|None, str|None] — canonical TMDB name stored in CSV steps_data (BUG-4)
+- **2026-03-22:** 05-02: BUG-3 eligibility query correct as written — scope invariant comments added; NAS DB diagnostic documented for manual execution
 - **2026-03-18:** 04.3-08: Phase 4.3 gap closure NAS verification PASS — UX-A rating sort (highest-rated first, nulls always last) and BUG-A poster wall (blurred poster images visible on session pages) both confirmed on live NAS; additional fixes in same build: poster blur 6px/60% overlay, solid bg-card on content areas, empty container removed from CSV sessions, CSV poster backfill background task
 - **2026-03-18:** 04.3-07: Removed vote_count.isnot(None) from poster-wall supplement query; added nullslast() ordering so fresh-NAS movie stubs with vote_count=NULL appear as fallback ordered after cached popular movies
 - **2026-03-18:** 04.3-06: Two-pass null-stable sort replaces buggy tuple comparator in get_eligible_movies — null items always land last regardless of sort direction for all five sort columns (rating, runtime, genre, year, mpaa); the (is_none_bool, value) tuple pattern failed under reverse=True because True > False flipped the null position
@@ -297,6 +300,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-22T03:54:54.136Z
-Stopped at: Completed 05-bug-fixes-01-PLAN.md
+Last session: 2026-03-22T04:00:05.443Z
+Stopped at: Completed 05-bug-fixes-02-PLAN.md
 Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.
