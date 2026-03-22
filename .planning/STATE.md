@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-bug-fixes-03-PLAN.md
-last_updated: "2026-03-22T04:03:58.834Z"
+stopped_at: Completed 05-bug-fixes-04-PLAN.md
+last_updated: "2026-03-22T04:08:16.556Z"
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 107
-  completed_plans: 105
+  completed_plans: 106
 ---
 
 # STATE.md — CinemaChain
@@ -25,12 +25,12 @@ progress:
 ## Current Position
 
 - **Phase:** Phase 5 — Bug Fixes
-- **Plan:** 05-03 complete (05-04 next)
+- **Plan:** 05-04 complete (05-05 next)
 - **Status:** In Progress
 
 ## Progress
 
-`[██████████] 97%` — 104 of 107 plans complete
+`[██████████] 99%` — 106 of 107 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -51,6 +51,7 @@ progress:
 
 ## Recent Decisions
 
+- **2026-03-21:** 05-04: handleMovieConfirm returns early on disambiguation_required — session updated via queryClient but view does not advance until user resolves dialog; requestMovie body extended with skip_actor?: boolean (additive), return type extended with candidates array
 - **2026-03-22:** 05-03: request_movie auto-resolves single shared actor between prev/selected movie; returns disambiguation_required with candidates for multiple; skip_actor=True field bypasses auto-resolve loop
 - **2026-03-22:** 05-02: pick_actor gains Request+BackgroundTasks; _prefetch_actor_credits_background enqueued after db.commit() for ENH-1 latency improvement
 - **2026-03-22:** 05-02: _resolve_actor_tmdb_id returns tuple[int|None, str|None] — canonical TMDB name stored in CSV steps_data (BUG-4)
@@ -301,6 +302,6 @@ progress:
 
 ## Session Continuity
 
-Last session: 2026-03-22T04:03:58.828Z
-Stopped at: Completed 05-bug-fixes-03-PLAN.md
+Last session: 2026-03-22T04:08:16.550Z
+Stopped at: Completed 05-bug-fixes-04-PLAN.md
 Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.
