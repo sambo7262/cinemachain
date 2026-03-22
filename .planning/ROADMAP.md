@@ -264,7 +264,7 @@ Plans:
   7. RT ratings research findings presented to user for decision
   8. Session cards show watched count, total runtime, and started date
   9. Now Playing tile shows MPAA rating, runtime, and TMDB rating
-**Plans:** 4/8 plans executed
+**Plans:** 5/8 plans executed
 
 Plans:
 - [x] 06-00-PLAN.md — Wave 0 test stubs (Nyquist compliance: backend + frontend test scaffolds)
@@ -273,7 +273,7 @@ Plans:
 - [x] 06-03-PLAN.md — Frontend quick wins (session card stats, Now Playing stats, chain history search, TMDB links)
 - [ ] 06-04-PLAN.md — Movie Selection Splash Dialog (replaces window.confirm)
 - [ ] 06-05-PLAN.md — Session Settings Menu consolidation (archive confirm + edit name modal)
-- [ ] 06-06-PLAN.md — Settings page + OnboardingScreen + NavBar link + App.tsx gate
+- [x] 06-06-PLAN.md — Settings page + OnboardingScreen + NavBar link + App.tsx gate
 - [ ] 06-07-PLAN.md — RT research decision + visual verification checkpoint
 ### Phase 7: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
@@ -301,7 +301,7 @@ Plans:
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
 | 5. Bug Fixes | 7/7 | Complete   | 2026-03-22 |
-| 6. New Features | 4/8 | In Progress|  |
+| 6. New Features | 5/8 | In Progress|  |
 | 7. Production Deployment | 0/? | Not started | — |
 
 ---
