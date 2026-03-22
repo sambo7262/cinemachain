@@ -76,7 +76,7 @@ The Movie Game — a chain-based discovery engine that navigates cinema through 
 | PostgreSQL over SQLite | Synology has headroom; Postgres handles filtering/sorting better at scale | — Pending |
 | Plex webhook + manual fallback | Webhook automates game loop; manual mark covers edge cases | — Pending |
 | Radarr for movies, Sonarr for TV | Standard arr-stack split; already running both | — Pending |
-| RT ratings source | No public API — scraping vs third-party aggregator TBD | — Pending |
+| RT ratings source | No public API — scraping vs third-party aggregator TBD | MDBList API (Phase 06.1) |
 
 ## Current Milestone: v1.0 CinemaChain
 
@@ -89,4 +89,4 @@ The Movie Game — a chain-based discovery engine that navigates cinema through 
 - Docker Compose deployment for Synology NAS
 
 ---
-*Last updated: 2026-03-22 after Phase 06 complete — Settings/Onboarding, movie splash dialog, session management dropdown, chain history search, TMDB links, info density improvements*
+*Last updated: 2026-03-22 after Phase 06.1 complete — Bug fixes (settings nav, session stat zeros), MDBList RT score integration (backend service, migration, settings API, frontend display in table/tile/splash)*
