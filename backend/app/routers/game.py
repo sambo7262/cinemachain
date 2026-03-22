@@ -948,7 +948,8 @@ async def list_sessions(
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
-        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s)))
+        runtime_map = await _enrich_steps_runtime(s.steps, db)
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), runtime_map=runtime_map))
     return out
 
 
@@ -964,7 +965,8 @@ async def list_archived_sessions(db: AsyncSession = Depends(get_db)):
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
-        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s)))
+        runtime_map = await _enrich_steps_runtime(s.steps, db)
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), runtime_map=runtime_map))
     return out
 
 
