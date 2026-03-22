@@ -13,7 +13,6 @@ from app.db import engine, AsyncSessionLocal
 from app.routers import health
 from app.routers import movies as movies_router
 from app.routers import actors as actors_router
-from app.routers import debug as debug_router
 from app.routers import game as game_router
 from app.routers.settings import router as settings_router
 from app.services import settings_service
@@ -96,6 +95,5 @@ app = FastAPI(title="CinemaChain", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(movies_router.router)
 app.include_router(actors_router.router)
-app.include_router(debug_router.router)
 app.include_router(game_router.router)
 app.include_router(settings_router)
