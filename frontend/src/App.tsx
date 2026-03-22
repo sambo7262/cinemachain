@@ -16,9 +16,14 @@ export default function App() {
     queryFn: api.getSettingsStatus,
   })
 
-  // Show nothing during initial settings check (avoids onboarding flash)
+  // Show NavBar during initial settings check so the settings link is always clickable
   if (settingsLoading) {
-    return null
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <NavBar />
+        <div className="flex-1" />
+      </div>
+    )
   }
 
   // Block app if TMDB not configured
