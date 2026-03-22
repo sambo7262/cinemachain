@@ -484,7 +484,7 @@ export default function GameLobby() {
                                         className="text-xs rounded border border-border bg-background px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-primary"
                                         onChange={(evt) => {
                                           const val = parseInt(evt.target.value, 10)
-                                          if (!isNaN(val) && val > 0) handleActorOverridePick(e.row, val, `TMDB #${val}`)
+                                          if (!isNaN(val) && val > 0) handleActorOverridePick(e.row, val, "")
                                         }}
                                       />
                                     </div>
