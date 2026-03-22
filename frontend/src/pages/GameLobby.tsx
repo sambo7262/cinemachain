@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride, type CsvActorError } from "@/lib/api"
+import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride, type CsvActorError, type CsvActorOverride } from "@/lib/api"
 import { MovieCard } from "@/components/MovieCard"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -132,6 +132,7 @@ export default function GameLobby() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [validationResult, setValidationResult] = useState<CsvValidationResponse | null>(null)
   const [overrides, setOverrides] = useState<CsvOverride[]>([])
+  const [actorOverrides, setActorOverrides] = useState<CsvActorOverride[]>([])
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +167,7 @@ export default function GameLobby() {
 
   // Import CSV mutation
   const importMutation = useMutation({
-    mutationFn: () => api.importCsv(csvRows, sessionName.trim() || "Imported Chain", overrides),
+    mutationFn: () => api.importCsv(csvRows, sessionName.trim() || "Imported Chain", overrides, actorOverrides),
     onSuccess: (result) => {
       if ("status" in result && result.status === "validation_required") {
         setValidationResult(result as CsvValidationResponse)
@@ -189,8 +190,12 @@ export default function GameLobby() {
   }
 
   const actorErrors: CsvActorError[] = validationResult?.actor_errors ?? []
+  const handleActorOverridePick = (row: number, actor_tmdb_id: number, actor_name: string) => {
+    setActorOverrides(prev => [...prev.filter(o => o.row !== row), { row, actor_tmdb_id, actor_name }])
+  }
   const allOverridesResolved = validationResult
-    ? validationResult.unresolved.every(u => overrides.some(o => o.row === u.row)) && actorErrors.length === 0
+    ? validationResult.unresolved.every(u => overrides.some(o => o.row === u.row)) &&
+      actorErrors.every(e => actorOverrides.some(o => o.row === e.row))
     : false
 
   // Archive mutation
@@ -467,19 +472,51 @@ export default function GameLobby() {
                         </div>
                         {actorErrors.length > 0 && (
                           <div className="flex flex-col gap-2">
-                            <p className="text-sm text-red-400">
-                              {actorErrors.length} row{actorErrors.length !== 1 ? "s" : ""} have actor name issues that couldn't be resolved. Edit your CSV file and re-import to fix these:
+                            <p className="text-sm text-amber-400">
+                              {actorErrors.length} actor name{actorErrors.length !== 1 ? "s" : ""} couldn't be matched — select the correct actor for each:
                             </p>
-                            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                              {actorErrors.map((e) => (
-                                <div key={e.row} className="rounded bg-muted px-3 py-2 text-xs">
-                                  <span className="text-muted-foreground">Row {e.row + 1}: </span>
-                                  <span className="text-foreground font-medium">{e.csv_movie_title}</span>
-                                  <span className="text-muted-foreground"> — actor </span>
-                                  <span className="text-red-400 font-medium">"{e.csv_actor_name}"</span>
-                                  <span className="text-muted-foreground"> not found on TMDB</span>
-                                </div>
-                              ))}
+                            <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                              {actorErrors.map((e) => {
+                                const picked = actorOverrides.find(o => o.row === e.row)
+                                return (
+                                  <div key={e.row} className="flex flex-col gap-1 rounded bg-muted px-3 py-2">
+                                    <span className="text-xs text-muted-foreground">Row {e.row + 1}: <span className="text-foreground font-medium">{e.csv_movie_title}</span> — actor <span className="text-amber-400">"{e.csv_actor_name}"</span></span>
+                                    {e.suggestions.length === 0 ? (
+                                      <span className="text-xs text-red-400">No TMDB results found — edit your CSV and re-import.</span>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {e.suggestions.map(s => (
+                                          <button
+                                            key={s.tmdb_id}
+                                            onClick={() => handleActorOverridePick(e.row, s.tmdb_id, s.name)}
+                                            className={cn(
+                                              "text-xs rounded px-2 py-1 border transition-colors",
+                                              picked?.actor_tmdb_id === s.tmdb_id
+                                                ? "bg-primary text-primary-foreground border-primary"
+                                                : "bg-background border-border hover:border-primary/50"
+                                            )}
+                                          >
+                                            {s.name}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <label className="text-xs text-muted-foreground whitespace-nowrap">Or enter TMDB person ID:</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="e.g. 1892"
+                                        className="text-xs rounded border border-border bg-background px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-primary"
+                                        onChange={(evt) => {
+                                          const val = parseInt(evt.target.value, 10)
+                                          if (!isNaN(val) && val > 0) handleActorOverridePick(e.row, val, `TMDB #${val}`)
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                         )}

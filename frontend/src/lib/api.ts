@@ -92,11 +92,23 @@ export interface CsvUnresolvedRow {
   suggestions: CsvSuggestion[]
 }
 
+export interface CsvActorSuggestion {
+  tmdb_id: number
+  name: string
+}
+
 export interface CsvActorError {
   row: number
   csv_movie_title: string
   csv_actor_name: string
   reason: string
+  suggestions: CsvActorSuggestion[]
+}
+
+export interface CsvActorOverride {
+  row: number
+  actor_tmdb_id: number
+  actor_name: string
 }
 
 export interface CsvValidationResponse {
@@ -172,10 +184,11 @@ export const api = {
     rows: Array<{ movieName: string; actorName: string; order: number }>,
     name: string,
     overrides?: CsvOverride[],
+    actorOverrides?: CsvActorOverride[],
   ) =>
     apiFetch<GameSessionDTO | CsvValidationResponse>("/game/sessions/import-csv", {
       method: "POST",
-      body: JSON.stringify({ rows, name, overrides: overrides ?? [] }),
+      body: JSON.stringify({ rows, name, overrides: overrides ?? [], actor_overrides: actorOverrides ?? [] }),
     }),
 
   searchMovies: (q: string) =>

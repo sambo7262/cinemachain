@@ -836,33 +836,33 @@ export default function GameSession() {
                           : "No eligible movies found for this session."}
                       </p>
                     ) : filteredMovies.length > 0 ? (
-                      <div className="rounded-md border border-border overflow-hidden">
-                        <table className="w-full text-sm">
+                      <div className="rounded-md border border-border overflow-x-auto">
+                        <table className="min-w-max w-full text-sm">
                           <thead className="bg-muted/50">
                             <tr>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground w-14"></th>
                               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
-                              <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Via</th>
+                              <th className="text-left px-4 py-2 font-medium text-muted-foreground">Via</th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("rating")}
                               >
                                 Rating{sortIndicator("rating")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("year")}
                               >
                                 Year{sortIndicator("year")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("runtime")}
                               >
                                 Runtime{sortIndicator("runtime")}
                               </th>
                               <th
-                                className="text-right px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                                className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
                                 onClick={() => handleSortClick("mpaa")}
                               >
                                 Rated{sortIndicator("mpaa")}
@@ -899,19 +899,19 @@ export default function GameSession() {
                                     <span className="ml-2 text-xs text-green-400 border border-green-400 rounded px-1">Watched</span>
                                   )}
                                 </td>
-                                <td className="px-4 py-2 text-muted-foreground italic hidden sm:table-cell">
+                                <td className="px-4 py-2 text-muted-foreground italic">
                                   {movie.via_actor_name ?? (selectedActor?.name ?? "—")}
                                 </td>
-                                <td className="px-4 py-2 text-right text-amber-400 hidden sm:table-cell">
+                                <td className="px-4 py-2 text-right text-amber-400">
                                   {movie.vote_average != null ? `★ ${movie.vote_average.toFixed(1)}` : "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden sm:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground">
                                   {movie.year ?? "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground">
                                   {movie.runtime != null ? `${movie.runtime}m` : "—"}
                                 </td>
-                                <td className="px-4 py-2 text-right text-muted-foreground hidden lg:table-cell">
+                                <td className="px-4 py-2 text-right text-muted-foreground">
                                   {movie.mpaa_rating ?? "—"}
                                 </td>
                               </tr>

@@ -95,10 +95,17 @@ class CsvOverride(BaseModel):
     tmdb_id: int
 
 
+class CsvActorOverride(BaseModel):
+    row: int
+    actor_tmdb_id: int
+    actor_name: str
+
+
 class ImportCSVRequest(BaseModel):
     rows: list[CSVRow]
-    name: str = "Imported Chain"           # NEW — optional with default
+    name: str = "Imported Chain"
     overrides: list[CsvOverride] = []
+    actor_overrides: list[CsvActorOverride] = []
 
 
 class PickActorRequest(BaseModel):
@@ -636,17 +643,20 @@ async def _resolve_movie_tmdb_id(
     return (confidence, best["id"], suggestions)
 
 
-async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> tuple[int | None, str | None]:
-    """Search TMDB for a person by name; return (tmdb_id, canonical_name) tuple.
+async def _resolve_actor_tmdb_id(name: str, tmdb: TMDBClient) -> tuple[int | None, str | None, list[dict]]:
+    """Search TMDB for a person by name; return (tmdb_id, canonical_name, suggestions) tuple.
 
     canonical_name is the TMDB-verified spelling — use this in stored steps (not the raw CSV input).
-    Returns (None, None) if no results.
+    suggestions is a list of top-3 {tmdb_id, name} dicts for disambiguation.
+    Returns (None, None, []) if no results.
     """
     r = await tmdb._client.get("/search/person", params={"query": name})
     results = r.json().get("results", [])
     if not results:
-        return None, None
-    return results[0]["id"], results[0].get("name")
+        return None, None, []
+    top3 = results[:3]
+    suggestions = [{"tmdb_id": p["id"], "name": p.get("name", "")} for p in top3]
+    return results[0]["id"], results[0].get("name"), suggestions
 
 
 # ---------------------------------------------------------------------------
@@ -677,8 +687,9 @@ async def import_csv_session(
 
     tmdb: TMDBClient = request.app.state.tmdb_client
 
-    # Build override lookup: row index -> confirmed tmdb_id
+    # Build override lookups
     override_map: dict[int, int] = {o.row: o.tmdb_id for o in body.overrides}
+    actor_override_map: dict[int, CsvActorOverride] = {o.row: o for o in body.actor_overrides}
 
     steps_data = []
     step_order = 0
@@ -711,13 +722,18 @@ async def import_csv_session(
             })
             step_order += 1
             if row.actorName:
-                actor_id, canonical_name = await _resolve_actor_tmdb_id(row.actorName, tmdb)
+                if i in actor_override_map:
+                    ao = actor_override_map[i]
+                    actor_id, canonical_name = ao.actor_tmdb_id, ao.actor_name
+                else:
+                    actor_id, canonical_name, actor_suggestions = await _resolve_actor_tmdb_id(row.actorName, tmdb)
                 if actor_id is None:
                     actor_errors.append({
                         "row": i,
                         "csv_movie_title": row.movieName,
                         "csv_actor_name": row.actorName,
                         "reason": "actor_not_found",
+                        "suggestions": actor_suggestions,
                     })
                     # Do NOT append actor step — skip it; movie step already added above
                 else:
