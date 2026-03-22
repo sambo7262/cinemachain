@@ -130,6 +130,25 @@ export interface PosterWallItem {
   poster_local_path: string | null
 }
 
+export interface SettingsDTO {
+  tmdb_api_key: string | null
+  tmdb_base_url: string | null
+  radarr_url: string | null
+  radarr_api_key: string | null
+  radarr_quality_profile: string | null
+  sonarr_url: string | null
+  sonarr_api_key: string | null
+  plex_token: string | null
+  plex_url: string | null
+  tmdb_cache_time: string | null
+  tmdb_cache_top_n: string | null
+}
+
+export interface SettingsStatusDTO {
+  tmdb_configured: boolean
+  migrated_from_env: boolean
+}
+
 // --- Game session API ---
 
 export const api = {
@@ -163,8 +182,14 @@ export const api = {
   pickActor: (sessionId: number, body: { actor_tmdb_id: number; actor_name: string }) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/pick-actor`, { method: "POST", body: JSON.stringify(body) }),
 
-  requestMovie: (sessionId: number, body: { movie_tmdb_id: number; movie_title: string; skip_actor?: boolean }) =>
+  requestMovie: (sessionId: number, body: { movie_tmdb_id: number; movie_title: string; skip_actor?: boolean; skip_radarr?: boolean }) =>
     apiFetch<{ status: string; candidates?: Array<{tmdb_id: number; name: string}>; session: GameSessionDTO }>(`/game/sessions/${sessionId}/request-movie`, { method: "POST", body: JSON.stringify(body) }),
+
+  renameSession: (sessionId: number, name: string) =>
+    apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/name`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }),
 
   pauseSession: (sessionId: number) =>
     apiFetch<GameSessionDTO>(`/game/sessions/${sessionId}/pause`, { method: "POST" }),
@@ -215,6 +240,16 @@ export const api = {
 
   getPosterWall: (): Promise<PosterWallItem[]> =>
     apiFetch<PosterWallItem[]>("/movies/poster-wall"),
+
+  getSettings: () => apiFetch<SettingsDTO>("/settings"),
+
+  saveSettings: (settings: Partial<SettingsDTO>) =>
+    apiFetch<SettingsDTO>("/settings", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
+
+  getSettingsStatus: () => apiFetch<SettingsStatusDTO>("/settings/status"),
 
   exportCsv: (sessionId: number, sessionName: string) => {
     fetch(`${BASE}/game/sessions/${sessionId}/export-csv`)
