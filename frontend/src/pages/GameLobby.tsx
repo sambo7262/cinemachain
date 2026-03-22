@@ -78,23 +78,6 @@ function currentMovieForSession(session: GameSessionDTO): string {
   return step?.movie_title ?? session.steps[0]?.movie_title ?? "(untitled)"
 }
 
-function formatSessionAge(createdAt: string): string {
-  if (!createdAt) return "—"
-  try {
-    const diffMs = Date.now() - new Date(createdAt).getTime()
-    const diffMinutes = Math.floor(diffMs / 60000)
-    if (diffMinutes < 60) return `${diffMinutes}m ago`
-    const diffHours = Math.floor(diffMinutes / 60)
-    const remainingMinutes = diffMinutes % 60
-    if (diffHours < 24) {
-      return remainingMinutes === 0 ? `${diffHours}h ago` : `${diffHours}h ${remainingMinutes}m ago`
-    }
-    const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
-  } catch {
-    return "—"
-  }
-}
 
 export default function GameLobby() {
   const navigate = useNavigate()
