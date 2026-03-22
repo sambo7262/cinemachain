@@ -52,6 +52,12 @@ export default function GameSession() {
   const { showRadarr } = useNotification()
   const [deleteStepOpen, setDeleteStepOpen] = useState(false)
 
+  // Archive + rename state
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
+  const [editNameOpen, setEditNameOpen] = useState(false)
+  const [editNameValue, setEditNameValue] = useState("")
+  const [editNameError, setEditNameError] = useState("")
+
   // Random pick state
   const [randomPickOpen, setRandomPickOpen] = useState(false)
   const [randomPickMovie, setRandomPickMovie] = useState<EligibleMovieDTO | null>(null)
@@ -367,6 +373,28 @@ export default function GameSession() {
     },
   })
 
+  // Archive session mutation
+  const archiveMutation = useMutation({
+    mutationFn: () => api.archiveSession(sid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
+      navigate("/")
+    },
+  })
+
+  // Rename session mutation
+  const renameMutation = useMutation({
+    mutationFn: (name: string) => api.renameSession(sid, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", sid] })
+      queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
+      setEditNameOpen(false)
+    },
+    onError: () => {
+      setEditNameError("A session with that name already exists")
+    },
+  })
+
   // Continue the chain after watched confirmation.
   // CRITICAL: must call continueChain (not resumeSession) — continueChain preserves
   // current_movie_watched=True so eligible tabs remain unlocked.
@@ -456,6 +484,19 @@ export default function GameSession() {
                 onClick={() => setDeleteStepOpen(true)}
               >
                 Delete Last Step
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setEditNameValue(session?.name ?? "")
+                setEditNameOpen(true)
+              }}>
+                Edit Session Name
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setArchiveConfirmOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                Archive Session
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1204,6 +1245,80 @@ export default function GameSession() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive this session?</DialogTitle>
+            <DialogDescription>
+              This session will be moved to the archive and no longer appear on the home page. You can still view it in archived sessions.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveConfirmOpen(false)}>
+              Keep Session
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                archiveMutation.mutate()
+                setArchiveConfirmOpen(false)
+              }}
+              disabled={archiveMutation.isPending}
+            >
+              Archive Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Session Name Dialog */}
+      <Dialog open={editNameOpen} onOpenChange={(open) => {
+        setEditNameOpen(open)
+        if (!open) { setEditNameError("") }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Session Name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              placeholder="Enter a session name"
+              value={editNameValue}
+              onChange={(e) => {
+                setEditNameValue(e.target.value)
+                setEditNameError("")
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && editNameValue.trim()) {
+                  renameMutation.mutate(editNameValue.trim())
+                }
+              }}
+            />
+            {editNameError && (
+              <p className="text-red-500 text-xs">{editNameError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditNameOpen(false)}>
+              Discard Changes
+            </Button>
+            <Button
+              onClick={() => {
+                if (!editNameValue.trim()) {
+                  setEditNameError("This field is required.")
+                  return
+                }
+                renameMutation.mutate(editNameValue.trim())
+              }}
+              disabled={renameMutation.isPending}
+            >
+              Save Name
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       </div>{/* end content wrapper */}
     </div>
   )
