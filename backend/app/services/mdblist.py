@@ -1,9 +1,10 @@
 """MDBList API client for fetching Rotten Tomatoes scores."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Movie
@@ -96,3 +97,74 @@ async def fetch_rt_scores(
                 )
                 # Don't set rt_score — will retry next time
                 continue
+
+
+async def _fetch_and_store_rt(movie: Movie, client: httpx.AsyncClient, api_key: str) -> bool:
+    """Fetch RT scores for a single movie. Returns False if rate-limited (caller should stop)."""
+    try:
+        resp = await client.get(MDBLIST_API_URL, params={"apikey": api_key, "tm": movie.tmdb_id})
+        if resp.status_code == 429:
+            logger.warning("MDBList rate limited (429) — stopping nightly backfill")
+            return False
+        if resp.status_code == 404:
+            movie.rt_score = 0
+            movie.rt_audience_score = 0
+            return True
+        if resp.status_code != 200:
+            logger.warning("MDBList returned %d for tmdb_id=%d", resp.status_code, movie.tmdb_id)
+            return True
+
+        data = resp.json()
+        ratings = data.get("ratings", [])
+        tomatometer = None
+        audience = None
+        for r in ratings:
+            src = r.get("source", "")
+            if src in ("tomatoes", "tomatometr"):
+                tomatometer = r.get("value")
+            elif src in ("tomatoesaudience", "tomatoesau"):
+                audience = r.get("value")
+
+        if tomatometer is None and ratings:
+            logger.debug("MDBList tmdb_id=%d: no RT score. Sources: %s", movie.tmdb_id, [r.get("source") for r in ratings])
+
+        movie.rt_score = tomatometer if tomatometer is not None else 0
+        movie.rt_audience_score = audience if audience is not None else 0
+        return True
+    except Exception:
+        logger.exception("Failed to fetch MDBList scores for tmdb_id=%d", movie.tmdb_id)
+        return True  # don't stop the batch on network errors
+
+
+async def backfill_rt_scores(db: AsyncSession, limit: int = 500) -> None:
+    """Nightly pass: fetch RT scores for movies with NULL or sentinel (0) rt_score.
+
+    Unlike fetch_rt_scores (on-demand), this also retries the 0-sentinel so that
+    movies which returned no RT data on a previous attempt get a second chance.
+    Stops immediately on 429 to preserve daily quota.
+    """
+    api_key = await settings_service.get_setting(db, "mdblist_api_key")
+    if not api_key:
+        return
+
+    result = await db.execute(
+        select(Movie).where(
+            or_(Movie.rt_score.is_(None), Movie.rt_score == 0)
+        ).limit(limit)
+    )
+    movies = result.scalars().all()
+    if not movies:
+        logger.info("backfill_rt_scores: nothing to fetch")
+        return
+
+    logger.info("backfill_rt_scores: fetching RT scores for %d movies", len(movies))
+    fetched = 0
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for movie in movies:
+            ok = await _fetch_and_store_rt(movie, client, api_key)
+            if not ok:
+                break
+            fetched += 1
+            await asyncio.sleep(0.1)  # ~10 req/s — well within MDBList free tier
+
+    logger.info("backfill_rt_scores: %d/%d processed", fetched, len(movies))

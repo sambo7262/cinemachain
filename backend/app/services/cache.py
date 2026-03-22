@@ -7,9 +7,12 @@ import os
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 
+from sqlalchemy import or_
+
 from app.db import _bg_session_factory
 from app.models import Movie
-from app.routers.game import _ensure_actor_credits_in_db, _ensure_movie_cast_in_db, _ensure_movie_details_in_db
+from app.routers.game import _ensure_actor_credits_in_db, _ensure_movie_cast_in_db, _ensure_movie_details_in_db, _fetch_mpaa_rating
+from app.services.mdblist import backfill_rt_scores
 from app.services.tmdb import TMDBClient
 
 logger = logging.getLogger(__name__)
@@ -87,6 +90,37 @@ async def _download_posters_pass(tmdb: TMDBClient) -> None:
         await asyncio.sleep(0.05)
 
     logger.info("_download_posters_pass: downloaded %d posters", downloaded)
+
+
+async def _backfill_mpaa_pass(tmdb: TMDBClient, limit: int = 2000) -> None:
+    """Fetch MPAA ratings for movies with NULL or empty mpaa_rating.
+
+    Retries empty-string sentinel so previously-failed lookups get another chance.
+    """
+    async with _bg_session_factory() as db:
+        result = await db.execute(
+            select(Movie.tmdb_id).where(
+                or_(Movie.mpaa_rating.is_(None), Movie.mpaa_rating == "")
+            ).limit(limit)
+        )
+        tmdb_ids = [row[0] for row in result.all()]
+
+    logger.info("_backfill_mpaa_pass: %d movies need MPAA rating", len(tmdb_ids))
+    fetched = 0
+    for tmdb_id in tmdb_ids:
+        async with _bg_session_factory() as db:
+            cert = await _fetch_mpaa_rating(tmdb_id, tmdb, db)
+            if cert:
+                fetched += 1
+        await asyncio.sleep(0.05)
+    logger.info("_backfill_mpaa_pass: %d ratings found", fetched)
+
+
+async def _backfill_rt_scores_pass(limit: int = 500) -> None:
+    """Fetch RT scores for movies with NULL or sentinel (0) rt_score."""
+    async with _bg_session_factory() as db:
+        await backfill_rt_scores(db, limit=limit)
+        await db.commit()
 
 
 async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000) -> None:
@@ -181,4 +215,11 @@ async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000) -> None:
     # --- Poster download pass ---
     logger.info("nightly_cache_job: starting poster download pass")
     await _download_posters_pass(tmdb)
+
+    # --- MPAA backfill pass ---
+    await _backfill_mpaa_pass(tmdb)
+
+    # --- RT score backfill pass ---
+    await _backfill_rt_scores_pass()
+
     logger.info("nightly_cache_job: complete")
