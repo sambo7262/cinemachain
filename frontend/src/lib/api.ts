@@ -71,6 +71,7 @@ export interface EligibleMovieDTO {
   via_actor_name: string | null
   vote_count: number | null
   mpaa_rating: string | null
+  overview: string | null  // NEW — TMDB plot summary
 }
 
 export interface MovieSearchResultDTO {

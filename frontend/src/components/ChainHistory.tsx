@@ -1,7 +1,11 @@
-import React from "react"
+import React, { useState } from "react"
+import { Search, ExternalLink } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import type { GameSessionStepDTO } from "@/lib/api"
 
 export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
+  const [searchQuery, setSearchQuery] = useState("")
+
   if (steps.length === 0) return null
 
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order)
@@ -10,9 +14,28 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
   // The immediately following step (step_order + 1) holds the actor pick for that movie.
   const movieSteps = sorted.filter((s) => s.actor_tmdb_id === null)
 
+  const filteredSteps = movieSteps.filter((step) => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    const actorStep = sorted.find((s) => s.step_order === step.step_order + 1 && s.actor_tmdb_id !== null)
+    return (
+      (step.movie_title ?? "").toLowerCase().includes(q) ||
+      (actorStep?.actor_name ?? "").toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div className="rounded-md border border-border overflow-hidden">
-      <table className="w-full text-sm">
+      <div className="relative mb-0 px-3 pt-3">
+        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search movies and actors..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+      <table className="w-full text-sm mt-2">
         <thead className="bg-muted/50">
           <tr>
             <th className="text-left px-3 py-2 text-muted-foreground w-8 font-medium">#</th>
@@ -22,7 +45,7 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {movieSteps.map((step, i) => {
+          {filteredSteps.map((step, i) => {
             // Actor for this movie lives in the very next step by step_order
             const actorStep = sorted.find((s) => s.step_order === step.step_order + 1 && s.actor_tmdb_id !== null)
             return (
@@ -47,7 +70,19 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
                     )}
                   </td>
                   <td className="px-3 py-2 font-medium">
-                    {step.movie_title ?? "(untitled)"}
+                    <span className="inline-flex items-center gap-1">
+                      {step.movie_title ?? "(untitled)"}
+                      <a
+                        href={`https://www.themoviedb.org/movie/${step.movie_tmdb_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="View on TMDB"
+                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-right text-muted-foreground text-xs hidden sm:table-cell">
                     {step.watched_at
@@ -74,7 +109,21 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
                       )}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground italic" colSpan={2}>
-                      {actorStep.actor_name}
+                      <span className="inline-flex items-center gap-1">
+                        {actorStep.actor_name}
+                        {actorStep.actor_tmdb_id && (
+                          <a
+                            href={`https://www.themoviedb.org/person/${actorStep.actor_tmdb_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="View on TMDB"
+                            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </span>
                     </td>
                   </tr>
                 )}
@@ -83,6 +132,11 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
           })}
         </tbody>
       </table>
+      {filteredSteps.length === 0 && searchQuery && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No chain steps match "{searchQuery}".
+        </p>
+      )}
     </div>
   )
 }

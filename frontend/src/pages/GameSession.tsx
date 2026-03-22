@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { X, Clock, MoreHorizontal, Shuffle, Star } from "lucide-react"
+import { X, Clock, MoreHorizontal, Shuffle, Star, ExternalLink } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -914,7 +914,19 @@ export default function GameSession() {
                                   )}
                                 </td>
                                 <td className="px-4 py-2">
-                                  <span className="font-medium">{movie.title}</span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="font-medium">{movie.title}</span>
+                                    <a
+                                      href={`https://www.themoviedb.org/movie/${movie.tmdb_id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      aria-label="View on TMDB"
+                                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </span>
                                   {movie.watched && (
                                     <span className="ml-2 text-xs text-green-400 border border-green-400 rounded px-1">Watched</span>
                                   )}
