@@ -528,6 +528,23 @@ async def _prefetch_credits_background(
         pass
 
 
+async def _prefetch_actor_credits_background(
+    actor_tmdb_id: int,
+    tmdb: TMDBClient,
+) -> None:
+    """Background task: pre-populate Credit rows for a selected actor's full filmography.
+
+    Called when the user picks an actor so their eligible movies are ready before
+    the Eligible Movies tab renders. Mirrors _prefetch_credits_background pattern.
+    ENH-1: reduces perceived latency on actor selection.
+    """
+    try:
+        async with _bg_session_factory() as db:
+            await _ensure_actor_credits_in_db(actor_tmdb_id, tmdb, db)
+    except Exception:
+        pass
+
+
 async def _backfill_movie_posters_background(
     movie_tmdb_ids: list[int],
     tmdb: TMDBClient,
@@ -1540,6 +1557,8 @@ async def get_eligible_movies(
 async def pick_actor(
     session_id: int,
     body: PickActorRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Record an actor pick, adding a new GameSessionStep. Returns 409 if actor already picked."""
@@ -1577,6 +1596,11 @@ async def pick_actor(
     )
     db.add(new_step)
     await db.commit()
+
+    # ENH-1: pre-fetch actor's filmography in background so Eligible Movies tab
+    # loads faster after actor selection.
+    tmdb: TMDBClient = request.app.state.tmdb_client
+    background_tasks.add_task(_prefetch_actor_credits_background, body.actor_tmdb_id, tmdb)
 
     # Re-fetch with steps loaded
     result = await db.execute(
