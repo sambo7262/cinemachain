@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { X, Clock, MoreHorizontal, Shuffle, Star, ExternalLink } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -55,6 +56,11 @@ export default function GameSession() {
   const [randomPickOpen, setRandomPickOpen] = useState(false)
   const [randomPickMovie, setRandomPickMovie] = useState<EligibleMovieDTO | null>(null)
   const [randomPickError, setRandomPickError] = useState<string | null>(null)
+
+  // Movie selection splash dialog state
+  const [splashOpen, setSplashOpen] = useState(false)
+  const [splashMovie, setSplashMovie] = useState<EligibleMovieDTO | null>(null)
+  const [radarrChecked, setRadarrChecked] = useState(true)
 
   // BUG-1: Disambiguation dialog state
   const [disambigOpen, setDisambigOpen] = useState(false)
@@ -207,12 +213,18 @@ export default function GameSession() {
     setRandomPickOpen(true)
   }
 
-  // Movie selection: confirm -> pick-actor -> request-movie with error recovery
-  const handleMovieConfirm = async (movie: EligibleMovieDTO) => {
-    const confirmed = window.confirm(
-      `Select "${movie.title}" as your next movie?`
-    )
-    if (!confirmed) return
+  // Movie selection: open splash dialog (replaces window.confirm)
+  const handleMovieConfirm = (movie: EligibleMovieDTO) => {
+    setSplashMovie(movie)
+    setRadarrChecked(true)
+    setSplashOpen(true)
+  }
+
+  // Splash confirm: pick-actor -> request-movie with skip_radarr support
+  const handleSplashConfirm = async () => {
+    if (!splashMovie) return
+    setSplashOpen(false)
+    const movie = splashMovie
 
     setMovieRequestError(null)
     try {
@@ -225,6 +237,7 @@ export default function GameSession() {
       const requestResult = await api.requestMovie(sid, {
         movie_tmdb_id: movie.tmdb_id,
         movie_title: movie.title,
+        skip_radarr: !radarrChecked,
       })
       if (requestResult?.status === "disambiguation_required") {
         // Multiple actors connect this pick — show disambiguation dialog.
@@ -235,7 +248,9 @@ export default function GameSession() {
         queryClient.setQueryData(["session", sid], requestResult.session)
         return  // do not advance view or show Radarr notification yet
       }
-      if (requestResult?.status === "already_in_radarr") {
+      if (!radarrChecked) {
+        // Radarr skipped — no notification needed
+      } else if (requestResult?.status === "already_in_radarr") {
         showRadarr("Already in Radarr")
       } else if (requestResult?.status === "queued") {
         showRadarr("Movie Queued for Download")
@@ -979,6 +994,109 @@ export default function GameSession() {
         )}
       </div>
 
+      {/* Movie Selection Splash Dialog */}
+      <Dialog open={splashOpen} onOpenChange={setSplashOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">
+              {splashMovie?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-6">
+            {/* Left column — poster */}
+            <div className="shrink-0">
+              {splashMovie?.poster_path ? (
+                <img
+                  src={`https://image.tmdb.org/t/p/w185${splashMovie.poster_path}`}
+                  alt={splashMovie.title}
+                  className="w-32 rounded-md object-cover"
+                />
+              ) : (
+                <div className="w-32 h-48 rounded-md bg-secondary flex items-center justify-center text-muted-foreground text-xs">
+                  No poster
+                </div>
+              )}
+            </div>
+
+            {/* Right column — metadata */}
+            <div className="flex-1 space-y-3">
+              {/* Stats row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {splashMovie?.vote_average && (
+                  <Badge variant="outline" className="text-xs">
+                    <Star className="w-3 h-3 mr-1" />
+                    {splashMovie.vote_average.toFixed(1)}
+                  </Badge>
+                )}
+                {splashMovie?.mpaa_rating && (
+                  <Badge variant="outline" className="text-xs">
+                    {splashMovie.mpaa_rating}
+                  </Badge>
+                )}
+                {splashMovie?.runtime && (
+                  <Badge variant="outline" className="text-xs">
+                    {Math.floor(splashMovie.runtime / 60)}h {splashMovie.runtime % 60}m
+                  </Badge>
+                )}
+                {splashMovie?.year && (
+                  <Badge variant="outline" className="text-xs">
+                    {splashMovie.year}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Overview — full text, no truncation */}
+              {splashMovie?.overview && (
+                <p className="text-sm leading-relaxed">
+                  {splashMovie.overview}
+                </p>
+              )}
+
+              {/* TMDB link */}
+              {splashMovie?.tmdb_id && (
+                <a
+                  href={`https://www.themoviedb.org/movie/${splashMovie.tmdb_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`View ${splashMovie.title} on TMDB (opens in new tab)`}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View on TMDB
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Radarr checkbox */}
+          <div className="flex items-start gap-3 pt-2">
+            <Checkbox
+              id="radarr-checkbox"
+              checked={radarrChecked}
+              onCheckedChange={(checked) => setRadarrChecked(checked === true)}
+            />
+            <div>
+              <label htmlFor="radarr-checkbox" className="text-sm font-medium cursor-pointer">
+                Request download via Radarr
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Adds this movie to your Radarr download queue.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSplashOpen(false)}>
+              Keep Browsing
+            </Button>
+            <Button onClick={handleSplashConfirm}>
+              Add to Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Last Step Dialog */}
       <Dialog open={deleteStepOpen} onOpenChange={setDeleteStepOpen}>
         <DialogContent>
@@ -1075,15 +1193,10 @@ export default function GameSession() {
             </Button>
             <Button
               variant="default"
-              onClick={async () => {
+              onClick={() => {
                 if (!randomPickMovie) return
-                setRandomPickError(null)
-                try {
-                  await handleMovieConfirm(randomPickMovie)
-                  setRandomPickOpen(false)
-                } catch {
-                  setRandomPickError("Failed to request movie. Try again.")
-                }
+                setRandomPickOpen(false)
+                handleMovieConfirm(randomPickMovie)
               }}
             >
               Request This Movie
