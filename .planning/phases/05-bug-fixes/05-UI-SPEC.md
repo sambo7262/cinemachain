@@ -1,8 +1,8 @@
 ---
 phase: 5
 slug: bug-fixes
-status: draft
-shadcn_initialized: true
+status: approved
+reviewed_at: 2026-03-21shadcn_initialized: true
 preset: "style=default, baseColor=zinc, cssVariables=true"
 created: 2026-03-21
 ---
