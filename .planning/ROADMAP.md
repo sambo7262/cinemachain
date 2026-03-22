@@ -18,8 +18,9 @@
 - [~] **Phase 4.1: Bug Fixes & CSV Hardening** — Pre-production bug smash: CSV chain movie eligibility (movies already in chain appearing as selectable), CSV parsing with comma-in-title edge case (evaluate .xlsx support), suggested movies algorithm fix for long chains (BUG-01 FIXED, BUG-02 FIXED, BUG-03 gap closure plan 04.1-03 created)
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [x] **Phase 4.3: Bug Fixes & UX Refinements** — All 7 items verified PASS on NAS (completed 2026-03-18)
-- [ ] **Phase 5: Bug Fixes & Feature Additions** — Round of bug fixes and new features before production deployment (TBD)
-- [ ] **Phase 6: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
+- [ ] **Phase 5: Bug Fixes** — Targeted bug fixes before feature work (scope TBD via discuss-phase)
+- [ ] **Phase 6: New Features** — New feature additions (scope TBD via discuss-phase)
+- [ ] **Phase 7: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
 
@@ -230,7 +231,7 @@ Plans:
 
 ---
 
-### Phase 5: Bug Fixes & Feature Additions
+### Phase 5: Bug Fixes
 **Goal:** TBD — scope to be defined via /gsd:discuss-phase 5
 **Depends on:** Phase 4
 **Requirements:** TBD
@@ -238,9 +239,17 @@ Plans:
   - TBD
 **Plans:** TBD
 
-### Phase 6: Production Deployment
-**Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
+### Phase 6: New Features
+**Goal:** TBD — scope to be defined via /gsd:discuss-phase 6
 **Depends on:** Phase 5
+**Requirements:** TBD
+**Success Criteria** (what must be TRUE):
+  - TBD
+**Plans:** TBD
+
+### Phase 7: Production Deployment
+**Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
+**Depends on:** Phase 6
 **Requirements:** PROD-01, PROD-02, PROD-03
 **Success Criteria** (what must be TRUE):
   1. All secrets (API keys, DB password, Plex token) are loaded exclusively from a .env file; .env.example documents every variable with description and no real values
@@ -263,8 +272,9 @@ Plans:
 | 4.1. Bug Fixes & CSV Hardening | 3/3 | Complete   | 2026-03-18 |
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
-| 5. Bug Fixes & Feature Additions | 0/? | Not started | — |
-| 6. Production Deployment | 0/? | Not started | — |
+| 5. Bug Fixes | 0/? | Not started | — |
+| 6. New Features | 0/? | Not started | — |
+| 7. Production Deployment | 0/? | Not started | — |
 
 ---
 
@@ -311,9 +321,9 @@ Plans:
 | UX-09 | Phase 4 |
 | SESSION-01 | Phase 4 |
 | SESSION-02 | Phase 4 |
-| PROD-01 | Phase 6 |
-| PROD-02 | Phase 6 |
-| PROD-03 | Phase 6 |
+| PROD-01 | Phase 7 |
+| PROD-02 | Phase 7 |
+| PROD-03 | Phase 7 |
 
 **Total mapped:** 25/25 v1 + 8 Phase 03.1 UI requirements + 5 Phase 03.2 UX requirements + 8 Phase 4 requirements + 3 Phase 5 requirements
 

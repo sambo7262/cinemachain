@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 05 inserted (bug fixes + features); Production Deployment shifted to Phase 06
+stopped_at: Roadmap restructured — Phase 5 (Bug Fixes), Phase 6 (New Features), Phase 7 (Production Deployment)
 last_updated: "2026-03-18T22:33:26.209Z"
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 9
   total_plans: 102
   completed_plans: 102
@@ -24,8 +24,8 @@ progress:
 
 ## Current Position
 
-- **Phase:** Phase 5 — Bug Fixes & Feature Additions (new; Production Deployment moved to Phase 6)
-- **Plan:** — (no plans yet; scope to be defined)
+- **Phase:** Phase 5 — Bug Fixes (scope TBD)
+- **Plan:** — (no plans yet)
 - **Status:** Ready to discuss/plan
 
 ## Progress
