@@ -45,14 +45,14 @@ class SettingsStatusResponse(BaseModel):
     migrated_from_env: bool = False
 
 
-@router.get("/settings", response_model=SettingsResponse)
+@router.get("", response_model=SettingsResponse)
 async def get_settings(db: AsyncSession = Depends(get_db)) -> SettingsResponse:
     """Return all current settings (decrypted)."""
     data = await settings_service.get_all_settings(db)
     return SettingsResponse(**{k: data.get(k) for k in SettingsResponse.model_fields})
 
 
-@router.put("/settings", response_model=SettingsResponse)
+@router.put("", response_model=SettingsResponse)
 async def update_settings(
     body: SettingsUpdateRequest,
     db: AsyncSession = Depends(get_db),
@@ -64,7 +64,7 @@ async def update_settings(
     return SettingsResponse(**{k: data.get(k) for k in SettingsResponse.model_fields})
 
 
-@router.get("/settings/status", response_model=SettingsStatusResponse)
+@router.get("/status", response_model=SettingsStatusResponse)
 async def get_settings_status(db: AsyncSession = Depends(get_db)) -> SettingsStatusResponse:
     """Return configuration status flags."""
     configured = await settings_service.is_tmdb_configured(db)
