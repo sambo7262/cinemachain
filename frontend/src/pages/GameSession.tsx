@@ -39,7 +39,7 @@ export default function GameSession() {
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
-  const [sortCol, setSortCol] = useState<"rating" | "year" | "runtime" | "mpaa">("rating")
+  const [sortCol, setSortCol] = useState<"rating" | "year" | "runtime" | "mpaa" | "rt" | "rt">("rating")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const [accumulatedMovies, setAccumulatedMovies] = useState<EligibleMovieDTO[]>([])
   const firstNewResultRef = useRef<HTMLTableRowElement>(null)
@@ -115,7 +115,7 @@ export default function GameSession() {
   }, [searchQuery])
 
   // Sort click handler — toggle direction on same column, reset direction on new column
-  const handleSortClick = (col: "rating" | "year" | "runtime" | "mpaa") => {
+  const handleSortClick = (col: "rating" | "year" | "runtime" | "mpaa" | "rt") => {
     if (col === sortCol) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"))
     } else {
@@ -126,7 +126,7 @@ export default function GameSession() {
     setAccumulatedMovies([])
   }
 
-  const sortIndicator = (col: "rating" | "year" | "runtime" | "mpaa") =>
+  const sortIndicator = (col: "rating" | "year" | "runtime" | "mpaa" | "rt") =>
     sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : ""
 
   // Reset accumulated movies when actor, sort, filter, or search changes
@@ -948,7 +948,7 @@ export default function GameSession() {
                               </th>
                               <th
                                 className="text-right px-4 py-2 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
-                                onClick={() => handleSortClick("rt")}  // TODO: backend sort by rt_score
+                                onClick={() => handleSortClick("rt")}
                               >
                                 RT{sortIndicator("rt")}
                               </th>
