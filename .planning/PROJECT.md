@@ -2,91 +2,62 @@
 
 ## What This Is
 
-A Dockerized home media companion app running on Synology NAS, integrated with Plex, Radarr, and Sonarr. Given a movie or actor as input, it surfaces filmography data to guide the user's next media selection — through a structured actor-chain discovery game or direct search. Selections are queued automatically via Radarr/Sonarr.
+A Dockerized home media companion app running on Synology NAS, integrated with Radarr. Given a movie as the starting point, it surfaces filmography data to guide the user's next media selection through a structured actor-chain discovery game. Selections are queued automatically via Radarr.
 
 ## Core Value
 
 The Movie Game — a chain-based discovery engine that navigates cinema through shared actors, making "what to watch next" effortless and exploratory without ever repeating an actor.
 
-## Requirements
+## Current State — v1.0 Shipped (2026-03-22)
 
-### Validated
+**v1.0 is live on Synology NAS and publicly deployable via Docker Hub.**
 
-(None yet — ship to validate)
+### What's Working
+- **Movie Game** — full actor-chain loop: start movie → pick actor → pick next movie → repeat; Radarr queuing on each pick
+- **Multi-session support** — concurrent named sessions, archive/delete, session grid on home page
+- **CSV import/export** — import a pre-existing chain with fuzzy actor resolution and disambiguation UI
+- **Eligible Movies** — sortable (rating/runtime/year/MPAA), filterable (genre/MPAA/rating/vote-floor), searchable by title
+- **RT scores** — MDBList Tomatometer displayed in eligible movies table, Now Playing tile, and movie splash
+- **Settings page** — configure Radarr URL/key, TMDB key, MDBList key with encrypted DB storage and onboarding gate
+- **Nightly TMDB cache** — pre-warms top 5,000 movies + 1,500 actors; zero on-demand calls during gameplay
+- **Local poster caching** — nightly download of poster images; CDN fallback
+- **Chain history** — searchable table of all picks with actor/movie thumbnails and TMDB external links
+- **Public deployment** — generic `compose.yaml`, placeholder `.env.example`, 148-line README
 
-### Active
+### Known Tech Debt
+- `backend/app/routers/debug.py` exists as dead code (unreachable — not registered in main.py)
+- `backend/.env.example` has orphaned Plex/Sonarr/Tailscale placeholder fields
+- `postgres` service in compose.yaml lacks explicit `networks:` declaration (implicit, works correctly)
 
-**Data Layer**
-- [ ] TMDB API as primary filmography source (actors, movies, TV shows, ratings, roles)
-- [ ] IMDB as fallback data source for coverage gaps
-- [ ] PostgreSQL storing filmography data, watch history, and game session state
-- [ ] Plex API integration to sync watch history
-- [ ] Plex webhook listener for playback completion events (manual "mark watched" as fallback)
+## Next Milestone: v2.0
 
-**Movie Game Mode**
-- [ ] Session state: tracks which actors have been picked (no repeats per session)
-- [ ] Eligible Actors panel: cast of last-watched movie, excluding previously picked actors
-- [ ] Eligible Movies panel: unwatched filmography of the selected actor
-- [ ] Sort by genre, IMDB rating, and aggregated rating
-- [ ] Toggle: show all movies with watched badges vs hide already-watched
-- [ ] Only unwatched movies are selectable/requestable
-- [ ] Selection triggers Radarr (movies) or Sonarr (TV) request
+**Not yet planned.** Seed requirements from v1 scope exceptions:
 
-**Query Mode**
-- [ ] Search by actor name → full filmography
-- [ ] Search by movie/show title → that specific item
-- [ ] Search by genre/keyword → browse results
-- [ ] Sort by genre, rating, year
-- [ ] Toggle: show/hide watched
-- [ ] Selection triggers Radarr/Sonarr request
+| Requirement | Description |
+|-------------|-------------|
+| QUERY-01 | Search by actor name → full filmography |
+| QUERY-02 | Search by movie/TV title → that specific item |
+| QUERY-03 | Browse by genre/keyword |
+| QUERY-04 | Sort results by genre, rating, year |
+| QUERY-05 | Toggle show/hide watched items |
+| QUERY-06 | Movie request via Radarr |
+| QUERY-07 | TV show request via Sonarr |
+| DATA-05 | Optional Plex webhook re-integration |
 
-**Infrastructure**
-- [ ] Docker Compose: separate containers for backend, PostgreSQL, and frontend
-- [ ] .env support for all API keys and config (TMDB, Plex, Radarr, Sonarr)
-- [ ] Volumes for DB persistence
-- [ ] Accessible via Tailscale on home network
+Run `/gsd:new-milestone` to begin requirements gathering for v2.
 
-### Out of Scope
+## Stack
 
-- Plex library status in results — adds complexity without clear value for this use case
-- Multi-user / authentication — single-user household, not needed
-- Movie Game for TV shows — Movie Game is movies-only; TV shows available in Query mode only
-- Rotten Tomatoes official API — no public API exists; RT scores deferred to planning phase
+- **Backend:** FastAPI + SQLAlchemy (async) + PostgreSQL + Alembic
+- **Frontend:** React + TypeScript + Vite + Tailwind v3 + shadcn/ui
+- **Infrastructure:** Docker Compose + Nginx proxy + APScheduler
+- **External APIs:** TMDB, Radarr, MDBList
 
 ## Context
 
-- **Infrastructure:** Synology NAS running Docker; existing stack: Plex, Radarr, Sonarr, SabNZBD
-- **Network:** Ubiquiti LAN with Tailscale for remote access; app must be reachable via Tailscale IP
-- **Integration targets:** Plex API (watch history + webhooks), Radarr API (movie requests), Sonarr API (TV requests), TMDB API (filmography)
-- **Primary use case:** On-the-couch media selection — UI should be responsive and easy to navigate from a TV/tablet
-- **Rotten Tomatoes:** No public API; displaying RT scores requires scraping or a third-party aggregator — to be resolved during planning
-
-## Constraints
-
-- **Deployment:** Docker on Synology NAS — resource-constrained; avoid bloated runtimes
-- **Network:** Must be accessible via Tailscale hostname/IP; no public exposure required
-- **API limits:** TMDB free tier has rate limits — cache fetched data aggressively
-- **Stack compatibility:** Must integrate with existing Radarr/Sonarr/Plex without modifying them
-
-## Key Decisions
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| TMDB primary + IMDB fallback | TMDB has reliable free API; IMDB scraping fragile but fills gaps | — Pending |
-| PostgreSQL over SQLite | Synology has headroom; Postgres handles filtering/sorting better at scale | — Pending |
-| Plex webhook + manual fallback | Webhook automates game loop; manual mark covers edge cases | — Pending |
-| Radarr for movies, Sonarr for TV | Standard arr-stack split; already running both | — Pending |
-| RT ratings source | No public API — scraping vs third-party aggregator TBD | MDBList API (Phase 06.1) |
-
-## Current Milestone: v1.0 CinemaChain
-
-**Goal:** Build the full initial app — data layer, Movie Game mode, Query mode, and Docker infrastructure.
-
-**Target features:**
-- TMDB + PostgreSQL + Plex data layer with watch sync
-- Movie Game mode with actor-chain session state
-- Query mode with actor/title/genre search
-- Docker Compose deployment for Synology NAS
+- **Infrastructure:** Synology NAS running Docker; app on Tailscale LAN
+- **Integrations:** Radarr API (movie requests), TMDB API (filmography + metadata), MDBList API (RT scores)
+- **Primary use case:** On-the-couch media selection — UI designed for tablet/TV
 
 ---
-*Last updated: 2026-03-22 after Phase 06.1 complete — Bug fixes (settings nav, session stat zeros), MDBList RT score integration (backend service, migration, settings API, frontend display in table/tile/splash)*
+*Updated: 2026-03-22 — v1.0 archived*
