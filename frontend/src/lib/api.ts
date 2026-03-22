@@ -142,6 +142,7 @@ export interface SettingsDTO {
   plex_url: string | null
   tmdb_cache_time: string | null
   tmdb_cache_top_n: string | null
+  mdblist_api_key: string | null
 }
 
 export interface SettingsStatusDTO {

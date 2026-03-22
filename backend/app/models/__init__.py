@@ -27,6 +27,8 @@ class Movie(Base):
     mpaa_rating: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     overview: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     poster_local_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    rt_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    rt_audience_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     credits: Mapped[list[Credit]] = relationship(back_populates="movie", lazy="raise")

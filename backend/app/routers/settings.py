@@ -22,6 +22,7 @@ class SettingsResponse(BaseModel):
     plex_url: str | None = None
     tmdb_cache_time: str | None = None
     tmdb_cache_top_n: str | None = None
+    mdblist_api_key: str | None = None
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -36,6 +37,7 @@ class SettingsUpdateRequest(BaseModel):
     plex_url: str | None = None
     tmdb_cache_time: str | None = None
     tmdb_cache_top_n: str | None = None
+    mdblist_api_key: str | None = None
 
 
 class SettingsStatusResponse(BaseModel):
