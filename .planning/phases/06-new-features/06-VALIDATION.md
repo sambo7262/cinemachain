@@ -38,24 +38,21 @@ created: 2026-03-22
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 6-01-01 | 01 | 1 | Item 1 actor name | unit | `pytest tests/test_csv_import.py -x -q` | ❌ W0 | ⬜ pending |
-| 6-02-01 | 02 | 1 | Item 2 overview migration | unit | `pytest tests/test_movie_model.py -x -q` | ❌ W0 | ⬜ pending |
-| 6-03-01 | 03 | 1 | Item 3 session name PATCH | unit | `pytest tests/test_session_router.py -x -q` | ❌ W0 | ⬜ pending |
-| 6-04-01 | 04 | 2 | Item 6 settings model | unit | `pytest tests/test_settings.py -x -q` | ❌ W0 | ⬜ pending |
-| 6-05-01 | 05 | 2 | Item 6 settings router | unit | `pytest tests/test_settings_router.py -x -q` | ❌ W0 | ⬜ pending |
-| 6-06-01 | 06 | 3 | Frontend components | manual | Visual inspection | N/A | ⬜ pending |
+| 6-01-01 | 01 | 1 | Item 1 actor name | unit | `pytest tests/test_game.py::test_csv_actor_name_resolved -x -q` | :x: W0 | :white_large_square: pending |
+| 6-02-01 | 02 | 1 | Item 2 overview migration | unit | `pytest tests/test_game.py::test_eligible_movie_overview_field -x -q` | :x: W0 | :white_large_square: pending |
+| 6-03-01 | 03 | 1 | Item 3 session name PATCH | unit | `pytest tests/test_game.py::test_rename_session -x -q` | :x: W0 | :white_large_square: pending |
+| 6-04-01 | 04 | 2 | Item 6 settings model | unit | `pytest tests/test_settings.py::test_db_overrides_env -x -q` | :x: W0 | :white_large_square: pending |
+| 6-05-01 | 05 | 2 | Item 6 settings router | unit | `pytest tests/test_settings.py::test_db_overrides_env -x -q` | :x: W0 | :white_large_square: pending |
+| 6-06-01 | 06 | 3 | Frontend components | manual | Visual inspection | N/A | :white_large_square: pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: :white_large_square: pending · :white_check_mark: green · :x: red · :warning: flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `backend/tests/test_csv_import.py` — stubs for actor name resolution via TMDB in CSV path (Item 1)
-- [ ] `backend/tests/test_movie_model.py` — stubs for overview field migration (Item 2)
-- [ ] `backend/tests/test_session_router.py` — stubs for PATCH /sessions/{id}/name (Item 3)
-- [ ] `backend/tests/test_settings.py` — stubs for AppSettings model and Fernet encryption (Item 6)
-- [ ] `backend/tests/test_settings_router.py` — stubs for GET/PUT /settings endpoints (Item 6)
+- [ ] `backend/tests/test_game.py` — stubs for actor name resolution (Item 1), overview field (Item 2), skip_radarr (Item 2), rename session (Item 3)
+- [ ] `backend/tests/test_settings.py` — stubs for AppSettings DB override of .env (Item 6)
 
 ---
 
