@@ -25,6 +25,7 @@ class Movie(Base):
     runtime: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     vote_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     mpaa_rating: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    overview: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     poster_local_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -111,3 +112,13 @@ class GameSessionStep(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     session: Mapped[GameSession] = relationship(back_populates="steps", lazy="raise")
+
+
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    value: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
