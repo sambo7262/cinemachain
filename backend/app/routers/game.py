@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db import engine, get_db, _bg_session_factory
 from app.models import Actor, Credit, GameSession, GameSessionStep, Movie, WatchEvent
+from app.services.mdblist import fetch_rt_scores
 from app.services.radarr import RadarrClient
 from app.services.tmdb import TMDBClient
 
@@ -139,6 +140,7 @@ class EligibleMovieResponse(BaseModel):
     watched: bool = False
     selectable: bool = True
     movie_title: str
+    rt_score: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1515,6 +1517,7 @@ async def get_eligible_movies(
                     "watched": movie.tmdb_id in watched_ids,
                     "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                     "via_actor_name": actor.name,
+                    "rt_score": movie.rt_score if movie.rt_score and movie.rt_score > 0 else None,
                 }
     else:
         # Combined view: get eligible actors first, then their filmographies
@@ -1557,6 +1560,7 @@ async def get_eligible_movies(
                         "watched": movie.tmdb_id in watched_ids,
                         "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                         "via_actor_name": actor.name,
+                        "rt_score": movie.rt_score if movie.rt_score and movie.rt_score > 0 else None,
                     }
 
     # Actor-scoped path only: fetch genres+runtime stubs and MPAA ratings on demand.
@@ -1582,6 +1586,20 @@ async def get_eligible_movies(
             if m.get("mpaa_rating") is None:
                 cert = await _fetch_mpaa_rating(mid, _tmdb, db)
                 m["mpaa_rating"] = cert
+
+    # Fetch RT scores on-demand from MDBList (if API key configured)
+    if movies_map:
+        await fetch_rt_scores(list(movies_map.keys()), db)
+        await db.commit()
+        # Refresh rt_score values in movies_map from DB
+        rt_result = await db.execute(
+            select(Movie.tmdb_id, Movie.rt_score)
+            .where(Movie.tmdb_id.in_(list(movies_map.keys())))
+        )
+        for row in rt_result.all():
+            if row.tmdb_id in movies_map:
+                # Don't expose the 0 sentinel to frontend — convert to null
+                movies_map[row.tmdb_id]["rt_score"] = row.rt_score if row.rt_score and row.rt_score > 0 else None
 
     movies = list(movies_map.values())
 
