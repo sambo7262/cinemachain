@@ -240,7 +240,7 @@ export default function GameLobby() {
                           {session.watched_count} watched · {session.step_count ?? 0} steps · started {formatSessionAge(session.created_at ?? "")}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -269,7 +269,7 @@ export default function GameLobby() {
             )}
             <Button
               variant="outline"
-              className="self-start"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setSessionName("")
                 setCsvRows([])

@@ -63,8 +63,8 @@ export function MovieCard({
       ) : (
         <div className="w-16 h-24 rounded bg-muted flex-shrink-0" />
       )}
-      <CardContent className="p-0 flex flex-col gap-1">
-        <p className="text-lg font-semibold leading-tight">{title}</p>
+      <CardContent className="p-0 flex flex-col gap-1 min-w-0">
+        <p className="text-lg font-semibold leading-tight line-clamp-2">{title}</p>
         <p className="text-sm text-muted-foreground">
           {year ?? ""}
           {runtime ? ` · ${runtime}m` : ""}
