@@ -264,9 +264,10 @@ Plans:
   7. RT ratings research findings presented to user for decision
   8. Session cards show watched count, total runtime, and started date
   9. Now Playing tile shows MPAA rating, runtime, and TMDB rating
-**Plans:** 7 plans
+**Plans:** 8 plans
 
 Plans:
+- [ ] 06-00-PLAN.md — Wave 0 test stubs (Nyquist compliance: backend + frontend test scaffolds)
 - [ ] 06-01-PLAN.md — Backend settings infrastructure (AppSettings model, Alembic migration, settings router, Fernet encryption, .env migration)
 - [ ] 06-02-PLAN.md — Backend game endpoints (overview field, skip_radarr, PATCH session name, CSV actor name fix)
 - [ ] 06-03-PLAN.md — Frontend quick wins (session card stats, Now Playing stats, chain history search, TMDB links)
