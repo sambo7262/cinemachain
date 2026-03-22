@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { Film } from "lucide-react"
+import { Film, Settings as SettingsIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function NavBar() {
@@ -43,6 +43,13 @@ export function NavBar() {
             )}
           >
             Archived
+          </Link>
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SettingsIcon className="w-4 h-4" />
           </Link>
         </div>
       </div>
