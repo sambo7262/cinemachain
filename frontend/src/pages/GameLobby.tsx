@@ -61,6 +61,18 @@ function parseCSV(text: string): ParsedRow[] {
     .filter(r => r.movieName || r.actorName)
 }
 
+function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${h}h ${m}m total`
+}
+
+function formatDate(isoString: string | null): string {
+  if (!isoString) return "Unknown"
+  const d = new Date(isoString)
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+}
+
 function currentMovieForSession(session: GameSessionDTO): string {
   const step = session.steps.find(s => s.movie_tmdb_id === session.current_movie_tmdb_id)
   return step?.movie_title ?? session.steps[0]?.movie_title ?? "(untitled)"
@@ -198,15 +210,6 @@ export default function GameLobby() {
       actorErrors.every(e => actorOverrides.some(o => o.row === e.row))
     : false
 
-  // Archive mutation
-  const archiveMutation = useMutation({
-    mutationFn: (sessionId: number) => api.archiveSession(sessionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeSessions"] })
-      queryClient.invalidateQueries({ queryKey: ["archivedSessions"] })
-    },
-  })
-
   const isSequenceValid = !csvRows.some(r => !r.isValid)
 
   return (
@@ -243,22 +246,10 @@ export default function GameLobby() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {session.watched_count} watched · {session.step_count ?? 0} steps · started {formatSessionAge(session.created_at ?? "")}
+                          {session.watched_count} watched · {formatRuntime(session.watched_runtime_minutes)} · Started {formatDate(session.created_at)}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-red-100 text-red-800 border border-red-200 hover:bg-red-200"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            archiveMutation.mutate(session.id)
-                          }}
-                          disabled={archiveMutation.isPending}
-                        >
-                          Archive
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

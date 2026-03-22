@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { X, Clock, MoreHorizontal, Shuffle } from "lucide-react"
+import { X, Clock, MoreHorizontal, Shuffle, Star } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -523,6 +523,26 @@ export default function GameSession() {
                   <p className="text-lg font-bold text-foreground">
                     {currentStep?.movie_title ?? "(untitled)"}
                   </p>
+                  {(() => {
+                    const currentMovie = allEligibleMovies.find(m => m.tmdb_id === session?.current_movie_tmdb_id)
+                    if (!currentMovie) return null
+                    return (
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {currentMovie.mpaa_rating && (
+                          <Badge variant="outline" className="text-xs">{currentMovie.mpaa_rating}</Badge>
+                        )}
+                        {currentMovie.runtime && (
+                          <span>{Math.floor(currentMovie.runtime / 60)}h {currentMovie.runtime % 60}m</span>
+                        )}
+                        {currentMovie.vote_average && (
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="w-3 h-3" />
+                            {currentMovie.vote_average.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <p className="text-sm text-muted-foreground">
                     {isStartingMovie
                       ? "Watch this movie, then mark it as watched to start the chain."
