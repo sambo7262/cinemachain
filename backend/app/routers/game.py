@@ -1241,6 +1241,13 @@ async def get_eligible_actors(
     picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
     picked_set = set(picked_ids)
 
+    # ELIGIBILITY SCOPE INVARIANT (BUG-3 confirmed):
+    # Eligible actors = cast of current_movie_tmdb_id MINUS already-picked actors.
+    # Previous chain movies have NO bearing on eligibility.
+    # The .where(Movie.tmdb_id == session.current_movie_tmdb_id) below enforces this.
+    # Symptom reports of out-of-scope actors are data integrity issues (stale Credit rows),
+    # not query logic bugs. The queries are correct as written.
+
     # SQL join: Credit -> Actor + Movie, filter by current movie
     stmt = (
         select(Actor, Credit)
@@ -1384,6 +1391,7 @@ async def get_eligible_movies(
         # Combined view: get eligible actors first, then their filmographies
         picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
 
+        # BUG-3 scope check: actor_stmt already scoped to current_movie_tmdb_id — correct.
         actor_stmt = (
             select(Actor, Credit)
             .join(Credit, Credit.actor_id == Actor.id)
