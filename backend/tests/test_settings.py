@@ -47,3 +47,27 @@ def test_required_env_vars_documented():
     required_keys = ["DB_PASSWORD", "TMDB_API_KEY", "PLEX_TOKEN", "RADARR_API_KEY", "SONARR_API_KEY", "TS_AUTHKEY", "PUID", "PGID"]
     for key in required_keys:
         assert key in content, f"Missing required key in .env.example: {key}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 Wave 0 stubs — RED phase (fail until Plan 01 implements settings service)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_db_overrides_env(client):
+    """ITEM-6: DB-stored setting takes precedence over .env value after startup migration."""
+    # Stub: will fail until Plan 01 implements settings service + router
+    # GET /settings should return values (either from DB or migrated from .env)
+    resp = await client.get("/api/settings")
+    assert resp.status_code == 200, f"GET /settings returned {resp.status_code} — settings router may not exist"
+    data = resp.json()
+    assert "tmdb_api_key" in data, "Settings response missing tmdb_api_key field"
+
+    # PUT a new value
+    put_resp = await client.put("/api/settings", json={"tmdb_api_key": "new_test_key_override"})
+    assert put_resp.status_code == 200, f"PUT /settings returned {put_resp.status_code}"
+
+    # GET again — should reflect the DB-stored override
+    resp2 = await client.get("/api/settings")
+    assert resp2.status_code == 200
+    assert resp2.json()["tmdb_api_key"] == "new_test_key_override", "DB setting did not override .env value"

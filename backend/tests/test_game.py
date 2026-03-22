@@ -1527,3 +1527,83 @@ async def test_csv_actor_validation_errors(client):
     assert err["csv_actor_name"] == "Nestor Carbonell"
     assert err["csv_movie_title"] == "Inception"
     assert "reason" in err
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 Wave 0 stubs — RED phase (fail until Plans 01/02 execute)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_csv_actor_name_resolved(client):
+    """ITEM-1: CSV import resolves actor canonical name from TMDB when actor_tmdb_id is present but actor_name is NULL."""
+    # Setup: create a session via CSV import with a raw actor TMDB ID but no actor_name
+    # This tests that the import_csv_session endpoint calls tmdb.fetch_person to resolve the name
+    # Stub: will fail until Plan 02 Task 2 implements actor name resolution in CSV import path
+    resp = await client.post("/game/sessions/import-csv", content=b"...", headers={"content-type": "text/csv"})
+    # The exact CSV format should match existing import tests; this stub asserts the behavior exists
+    assert resp.status_code in (200, 201), f"CSV import endpoint returned {resp.status_code}"
+    data = resp.json()
+    # After import, steps with actor_tmdb_id should have actor_name populated
+    steps = data.get("steps", [])
+    for step in steps:
+        if step.get("actor_tmdb_id"):
+            assert step.get("actor_name") is not None, (
+                f"Step with actor_tmdb_id={step['actor_tmdb_id']} has no actor_name — TMDB name resolution missing"
+            )
+
+
+@pytest.mark.asyncio
+async def test_eligible_movie_overview_field(client):
+    """ITEM-2: EligibleMovieResponse includes overview field from Movie.overview."""
+    # Stub: will fail until Plan 01 adds overview to Movie model and Plan 02 includes it in response
+    # Need an active session to query eligible movies
+    resp = await client.get("/game/sessions/active")
+    if resp.status_code == 404:
+        pytest.skip("No active session for overview field test")
+    session = resp.json()
+    session_id = session["id"]
+    # Pick first eligible actor to get eligible movies
+    actors_resp = await client.get(f"/game/sessions/{session_id}/eligible-actors")
+    if actors_resp.status_code != 200 or not actors_resp.json():
+        pytest.skip("No eligible actors available")
+    actor_id = actors_resp.json()[0]["tmdb_id"]
+    movies_resp = await client.get(f"/game/sessions/{session_id}/eligible-movies?actor_tmdb_id={actor_id}")
+    assert movies_resp.status_code == 200
+    movies = movies_resp.json()
+    if movies:
+        assert "overview" in movies[0], "EligibleMovieResponse missing 'overview' field"
+
+
+@pytest.mark.asyncio
+async def test_request_movie_skip_radarr_field(client):
+    """ITEM-2: request_movie with skip_radarr=True skips the Radarr API call."""
+    # Stub: will fail until Plan 02 Task 1 adds skip_radarr to RequestMovieRequest
+    resp = await client.get("/game/sessions/active")
+    if resp.status_code == 404:
+        pytest.skip("No active session for skip_radarr test")
+    session = resp.json()
+    session_id = session["id"]
+    resp = await client.post(
+        f"/game/sessions/{session_id}/request-movie",
+        json={"movie_tmdb_id": 550, "movie_title": "Fight Club", "skip_radarr": True},
+    )
+    # Should not error on unrecognized field — skip_radarr must be accepted
+    assert resp.status_code != 422, "skip_radarr field not recognized by RequestMovieRequest schema"
+
+
+@pytest.mark.asyncio
+async def test_rename_session(client):
+    """ITEM-3: PATCH /sessions/{id}/name renames session with uniqueness check."""
+    # Stub: will fail until Plan 02 Task 1 adds the PATCH endpoint
+    # First create a session to rename
+    create_resp = await client.post("/game/sessions", json={"start_movie_tmdb_id": 550, "name": "Rename Test Session"})
+    if create_resp.status_code not in (200, 201):
+        pytest.skip("Cannot create session for rename test")
+    session_id = create_resp.json()["id"]
+    # Attempt rename
+    rename_resp = await client.patch(
+        f"/game/sessions/{session_id}/name",
+        json={"name": "Renamed Session"},
+    )
+    assert rename_resp.status_code == 200, f"PATCH rename returned {rename_resp.status_code} — endpoint may not exist"
+    assert rename_resp.json()["name"] == "Renamed Session"
