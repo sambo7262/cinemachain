@@ -289,7 +289,7 @@ Plans:
 
 Plans:
 - [x] 06.1-01-PLAN.md — Bug fixes (settings nav, home page stats zeros)
-- [ ] 06.1-02-PLAN.md — MDBList backend (API key in settings, rt_score on Movie model, fetch + cache)
+- [x] 06.1-02-PLAN.md — MDBList backend (API key in settings, rt_score on Movie model, fetch + cache)
 - [ ] 06.1-03-PLAN.md — MDBList frontend (RT score in table, Now Playing, splash)
 
 ### Phase 7: Production Deployment
