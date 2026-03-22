@@ -19,7 +19,7 @@
 - [x] **Phase 4.2: UI Polish & Local Poster Caching** — Poster-as-background on session views, random pick button, dead-end detection, session stats display, drifting column fix, and nightly local poster download with CDN fallback (completed 2026-03-18)
 - [x] **Phase 4.3: Bug Fixes & UX Refinements** — All 7 items verified PASS on NAS (completed 2026-03-18)
 - [~] **Phase 5: Bug Fixes** — BUG-1, BUG-3, ENH-1, BUG-4 verified PASS on NAS; BUG-2 MovieCard and CSV import display deferred to gap closure (completed 2026-03-21)
-- [ ] **Phase 6: New Features** — New feature additions (scope TBD via discuss-phase)
+- [ ] **Phase 6: New Features** — TMDB actor name fix, movie selection splash, session menu consolidation, chain history search, TMDB external links, in-app settings page, RT research, session card stats, Now Playing tile stats
 - [ ] **Phase 7: Production Deployment** — Security hardening, public Docker Compose yaml for local deployment by other users
 
 ---
@@ -251,13 +251,29 @@ Plans:
 - [x] 05-05-PLAN.md — Wave 4: Docker rebuild + NAS deploy + human verify (3 full PASS, BUG-2 partial, CSV display new issue — gaps deferred)
 
 ### Phase 6: New Features
-**Goal:** TBD — scope to be defined via /gsd:discuss-phase 6
+**Goal:** Add nine feature enhancements to CinemaChain: TMDB actor name resolution fix, movie selection splash window, session settings menu consolidation, chain history search, TMDB external links, in-app settings/config page with onboarding, Rotten Tomatoes research, home page session card stats, and Now Playing tile stats.
 **Depends on:** Phase 5
-**Requirements:** TBD
+**Requirements:** ITEM-1, ITEM-2, ITEM-3, ITEM-4, ITEM-5, ITEM-6, ITEM-7, ITEM-8, ITEM-9
 **Success Criteria** (what must be TRUE):
-  - TBD
-**Plans:** TBD
+  1. CSV-imported sessions display resolved actor names (not raw TMDB IDs)
+  2. Movie selection uses a rich splash dialog with poster, overview, ratings, and optional Radarr checkbox
+  3. Session dropdown menu contains Archive Session and Edit Session Name actions
+  4. Chain history table has a working search filter for movies and actors
+  5. Movies and actors have TMDB external link icons in eligible movies table and chain history
+  6. Settings page at /settings allows configuring all service credentials, with blocking onboarding when TMDB is absent
+  7. RT ratings research findings presented to user for decision
+  8. Session cards show watched count, total runtime, and started date
+  9. Now Playing tile shows MPAA rating, runtime, and TMDB rating
+**Plans:** 7 plans
 
+Plans:
+- [ ] 06-01-PLAN.md — Backend settings infrastructure (AppSettings model, Alembic migration, settings router, Fernet encryption, .env migration)
+- [ ] 06-02-PLAN.md — Backend game endpoints (overview field, skip_radarr, PATCH session name, CSV actor name fix)
+- [ ] 06-03-PLAN.md — Frontend quick wins (session card stats, Now Playing stats, chain history search, TMDB links)
+- [ ] 06-04-PLAN.md — Movie Selection Splash Dialog (replaces window.confirm)
+- [ ] 06-05-PLAN.md — Session Settings Menu consolidation (archive confirm + edit name modal)
+- [ ] 06-06-PLAN.md — Settings page + OnboardingScreen + NavBar link + App.tsx gate
+- [ ] 06-07-PLAN.md — RT research decision + visual verification checkpoint
 ### Phase 7: Production Deployment
 **Goal:** CinemaChain is deployable by any user with a Synology NAS and a Docker-capable environment, with secrets handled safely and no credentials baked into images or committed to source.
 **Depends on:** Phase 6
@@ -284,7 +300,7 @@ Plans:
 | 4.2. UI Polish & Local Poster Caching | 6/6 | Complete    | 2026-03-18 |
 | 4.3. Bug Fixes & UX Refinements | 7/8 | In Progress|  |
 | 5. Bug Fixes | 7/7 | Complete   | 2026-03-22 |
-| 6. New Features | 0/? | Not started | — |
+| 6. New Features | 0/7 | Planning complete | — |
 | 7. Production Deployment | 0/? | Not started | — |
 
 ---
