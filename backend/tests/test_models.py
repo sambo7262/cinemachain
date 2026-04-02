@@ -4,12 +4,16 @@ import pytest
 
 
 def test_all_four_tables_registered():
-    """All six models must register with Base.metadata."""
+    """All models must register with Base.metadata."""
     from app.models import Base, Movie, Actor, Credit, WatchEvent, GameSession, GameSessionStep
     tables = set(Base.metadata.tables.keys())
-    expected = {"movies", "actors", "credits", "watch_events", "game_sessions", "game_session_steps"}
+    expected = {
+        "movies", "actors", "credits", "watch_events",
+        "game_sessions", "game_session_steps",
+        "app_settings", "session_saves", "session_shortlist", "global_saves",
+    }
     assert tables == expected, (
-        f"Expected 6 tables, got: {tables}"
+        f"Expected tables {expected}, got: {tables}"
     )
 
 

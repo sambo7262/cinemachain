@@ -8,7 +8,7 @@ A Dockerized home media companion app running on Synology NAS, integrated with R
 
 The Movie Game — a chain-based discovery engine that navigates cinema through shared actors, making "what to watch next" effortless and exploratory without ever repeating an actor.
 
-## Current State — v1.0 Shipped (2026-03-22)
+## Current State — v2.0 in progress (Phase 20 complete — Now Playing polish & padding alignment)
 
 **v1.0 is live on Synology NAS and publicly deployable via Docker Hub.**
 
@@ -60,4 +60,4 @@ Run `/gsd:new-milestone` to begin requirements gathering for v2.
 - **Primary use case:** On-the-couch media selection — UI designed for tablet/TV
 
 ---
-*Updated: 2026-03-22 — v1.0 archived*
+*Updated: 2026-04-02 — Phase 20 complete: Now Playing metadata + ratings hub, PosterWall desktop fix, app-wide padding alignment*

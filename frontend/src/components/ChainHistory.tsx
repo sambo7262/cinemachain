@@ -1,10 +1,14 @@
 import React, { useState } from "react"
 import { Search, ExternalLink } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import type { GameSessionStepDTO } from "@/lib/api"
+
+const PAGE_SIZE = 20
 
 export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [page, setPage] = useState(1)
 
   if (steps.length === 0) return null
 
@@ -23,6 +27,14 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
       (actorStep?.actor_name ?? "").toLowerCase().includes(q)
     )
   })
+
+  // Reset to page 1 when search changes
+  React.useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredSteps.length / PAGE_SIZE))
+  const pagedSteps = filteredSteps.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="rounded-md border border-border overflow-hidden">
@@ -45,14 +57,15 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {filteredSteps.map((step, i) => {
+          {pagedSteps.map((step, i) => {
+            const stepNumber = (page - 1) * PAGE_SIZE + i + 1
             // Actor for this movie lives in the very next step by step_order
             const actorStep = sorted.find((s) => s.step_order === step.step_order + 1 && s.actor_tmdb_id !== null)
             return (
               <React.Fragment key={step.step_order}>
                 {/* Movie row */}
                 <tr>
-                  <td className="px-3 py-2 text-muted-foreground text-xs">{i + 1}</td>
+                  <td className="px-3 py-2 text-muted-foreground text-xs">{stepNumber}</td>
                   <td className="px-3 py-2">
                     {step.poster_path ? (
                       <img
@@ -73,10 +86,10 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
                     <span className="inline-flex items-center gap-1">
                       {step.movie_title ?? "(untitled)"}
                       <a
-                        href={`https://www.themoviedb.org/movie/${step.movie_tmdb_id}`}
+                        href={step.movie_imdb_id ? `https://www.imdb.com/title/${step.movie_imdb_id}` : `https://www.themoviedb.org/movie/${step.movie_tmdb_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label="View on TMDB"
+                        aria-label={step.movie_imdb_id ? "View on IMDB" : "View on TMDB"}
                         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -132,6 +145,29 @@ export function ChainHistory({ steps }: { steps: GameSessionStepDTO[] }) {
           })}
         </tbody>
       </table>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 py-3 border-t border-border">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page <= 1}
+          >
+            ← Prev
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages}
+          >
+            Next →
+          </Button>
+        </div>
+      )}
       {filteredSteps.length === 0 && searchQuery && (
         <p className="text-sm text-muted-foreground text-center py-4">
           No chain steps match "{searchQuery}".

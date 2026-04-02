@@ -58,10 +58,10 @@ export function MovieCard({
         <img
           src={poster}
           alt={title}
-          className="w-16 h-24 rounded object-cover flex-shrink-0"
+          className="w-16 h-24 sm:w-20 sm:h-[120px] rounded object-cover flex-shrink-0"
         />
       ) : (
-        <div className="w-16 h-24 rounded bg-muted flex-shrink-0" />
+        <div className="w-16 h-24 sm:w-20 sm:h-[120px] rounded bg-muted flex-shrink-0" />
       )}
       <CardContent className="p-0 flex flex-col gap-1 min-w-0">
         <p className="text-lg font-semibold leading-tight line-clamp-2">{title}</p>
@@ -80,11 +80,9 @@ export function MovieCard({
               {g}
             </Badge>
           ))}
-          {mpaa_rating && (
-            <Badge variant="outline" className="text-xs">
-              {mpaa_rating}
-            </Badge>
-          )}
+          <Badge variant="outline" className="text-xs">
+            {mpaa_rating || "NR"}
+          </Badge>
           {watched && (
             <Badge
               variant="outline"

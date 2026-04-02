@@ -35,6 +35,7 @@ services:
       - TMDB_CACHE_TOP_ACTORS=${TMDB_CACHE_TOP_ACTORS:-1500}
       - TMDB_CACHE_RUN_ON_STARTUP=${TMDB_CACHE_RUN_ON_STARTUP:-false}
       - SETTINGS_ENCRYPTION_KEY=${SETTINGS_ENCRYPTION_KEY:-}
+      - TZ=America/Los_Angeles
     volumes:
       - ${DATA_DIR:-./data}/backend:/app/data
       - ${DATA_DIR:-./data}/static:/app/static

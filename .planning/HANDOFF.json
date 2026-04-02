@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-31T05:28:13Z",
+  "phase": "08",
+  "phase_name": "bug-fixes",
+  "phase_dir": ".planning/phases/08-bug-fixes",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Phase 08 execution — all 4 plans", "status": "done", "commit": "fefb2a4"},
+    {"id": 2, "name": "Actor-movie credit validation on pick", "status": "done", "commit": "b005132"},
+    {"id": 3, "name": "GitHub Actions CI/CD for Docker", "status": "done", "commit": "b5a4269"},
+    {"id": 4, "name": "Fix missing utils.ts for CI build", "status": "done", "commit": "e4442ac"},
+    {"id": 5, "name": "Remove leftover accumulation refs (tsc -b)", "status": "done", "commit": "721a127"},
+    {"id": 6, "name": "Add missing logger to game.py", "status": "done", "commit": "c4ff550"},
+    {"id": 7, "name": "filmography_fetched flag + revert sticky columns", "status": "done", "commit": "6181f79"},
+    {"id": 8, "name": "Stable sort for eligible movies", "status": "done", "commit": "65b7fa4"},
+    {"id": 9, "name": "Per-movie exception handling in _backfill_mpaa_pass", "status": "done", "commit": "b5437d3"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [
+    {
+      "description": "Docker Hub CI secrets not yet confirmed set",
+      "type": "human_action",
+      "workaround": "Images can still be pushed manually via make rebuild"
+    },
+    {
+      "description": "The Others MPAA rating shows NR — will self-correct on next nightly run",
+      "type": "external",
+      "workaround": "Wait for nightly job or manually trigger cache refresh"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN to GitHub repo secrets",
+      "context": "Required for CI to push images to Docker Hub",
+      "blocking": false
+    },
+    {
+      "action": "Verify BUG-07 Trainspotting session self-heal on NAS",
+      "context": "Real root cause was stale credits data (actor not actually in movie). Fix shipped in b005132. Needs live test.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Add filmography_fetched boolean to Actor table (migration 0009)",
+      "rationale": "Short-circuit in _ensure_actor_credits_in_db fired on any credit row (even 1 from movie cast fetch), preventing Drew Barrymore-style actors from getting their filmography fetched",
+      "phase": "08"
+    },
+    {
+      "decision": "Sort low-rated bucket (vote_count < 500) by vote_average, not DB order",
+      "rationale": "DB query has no ORDER BY, so unrated bucket was non-deterministic causing apparent sort instability on page 1",
+      "phase": "08"
+    },
+    {
+      "decision": "Revert sticky table columns",
+      "rationale": "CSS sticky positioning not working correctly on mobile — user confirmed prior state was fine",
+      "phase": "08"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd:discuss-phase 9 for Navigation Redesign. Run /clear first.",
+  "context_notes": "Phase 08 complete. All bugs fixed. Multiple post-execution hotfixes applied this session. MPAA backfill was silently broken by missing logger — now fixed. Docker CI in place but needs secrets configured. Context exhausted at ~91%."
+}

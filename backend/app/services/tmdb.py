@@ -1,15 +1,27 @@
+from __future__ import annotations
+
 import asyncio
 
 import httpx
+
+# IMPORTANT -- TMDB Read Access Token required:
+# TMDBClient now uses Bearer token authentication (Authorization header).
+# The stored tmdb_api_key must be the "API Read Access Token" from your TMDB account
+# API settings page (the long JWT starting with eyJ...), NOT the v3 "API Key" (short hex).
+# After deploying this phase, update the TMDB API key field in CinemaChain Settings.
+# See: https://developer.themoviedb.org/docs/authentication-application
 
 
 class TMDBClient:
     BASE_URL = "https://api.themoviedb.org/3"
 
     def __init__(self, api_key: str) -> None:
+        # NOTE: api_key parameter now expects the TMDB "API Read Access Token" (v4 auth, long JWT),
+        # NOT the v3 "API Key" (short hex string). Users must update their stored value in Settings.
+        # See: https://developer.themoviedb.org/docs/authentication-application
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
-            params={"api_key": api_key},
+            headers={"Authorization": f"Bearer {api_key}"},
             timeout=httpx.Timeout(connect=60.0, read=90.0, write=30.0, pool=10.0),
         )
         self._sem = asyncio.Semaphore(10)
@@ -47,6 +59,40 @@ class TMDBClient:
             r = await self._client.get(f"/person/{person_id}")
             r.raise_for_status()
             return r.json()
+
+    async def search_person(self, name: str) -> dict | None:
+        """Search TMDB for a person by name. Returns the top result dict or None."""
+        async with self._sem:
+            r = await self._client.get("/search/person", params={"query": name})
+            r.raise_for_status()
+            results = r.json().get("results", [])
+            return results[0] if results else None
+
+    async def discover_movies(self, genre_id: int, page: int = 1) -> dict:
+        """Fetch TMDB Discover results for a genre. Returns raw response dict with 'results' key."""
+        async with self._sem:
+            r = await self._client.get(
+                "/discover/movie",
+                params={"sort_by": "popularity.desc", "with_genres": genre_id, "page": page},
+            )
+            r.raise_for_status()
+            return r.json()
+
+    async def fetch_recommendations(self, tmdb_id: int) -> dict:
+        """Fetch TMDB movie recommendations. Returns raw response with results[].
+
+        Each result has 'id' (TMDB movie ID). Page 1 returns ~20 results.
+        Pagination not needed — page 1 is sufficient for suggestion ranking.
+        """
+        async with self._sem:
+            r = await self._client.get(f"/movie/{tmdb_id}/recommendations")
+            r.raise_for_status()
+            return r.json()
+
+    async def test_connection(self) -> None:
+        """Test TMDB API key by hitting /authentication. Raises on failure."""
+        r = await self._client.get("/authentication")
+        r.raise_for_status()
 
     async def close(self) -> None:
         await self._client.aclose()

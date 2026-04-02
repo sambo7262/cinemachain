@@ -1,6 +1,6 @@
 # Phase 7: Production Deployment — Context
 
-**Gathered:** 2026-03-18
+**Gathered:** 2026-03-22 (updated; originally 2026-03-18)
 **Status:** Ready for planning
 
 <domain>
@@ -37,8 +37,12 @@ This phase does NOT add new features. It makes the existing app deployable, safe
 - These env vars are **stale** — remove them from:
   - `.env.example`
   - `compose.yaml` environment section
-  - Any remaining references in backend settings/config code
-- Audit backend settings.py / config files to confirm no orphaned references
+  - `backend/app/settings.py` — `plex_token`, `plex_url`, `sonarr_url`, `sonarr_api_key` are still **required** fields; app won't start without them even though nothing calls them
+- **Confirmed still present as of 2026-03-22:** all four fields in `backend/app/settings.py`, all four in `compose.yaml` environment section
+
+### MDBList API Key (Phase 6.1 addition)
+- **D-05:** MDBList API key is DB-stored via the in-app settings service (not an env var) — no `.env.example` entry needed
+- No action required in this phase — correctly handled at the application layer
 
 ### Secrets Cleanup
 - **CRITICAL:** `.env.example` currently has real credentials committed (TMDB API key, Plex token, Radarr/Sonarr API keys, real LAN IPs) — these must be replaced with placeholder values
@@ -55,6 +59,8 @@ All tunable parameters must be documented in `.env.example` with descriptions. I
 - **TMDB_CACHE_TOP_N** — number of top movies to pre-fetch in nightly run (default 5000)
 - **TMDB_CACHE_TOP_ACTORS** — number of popular actors to pre-warm (default 1500; from Phase 04-08, may be hardcoded — expose if so)
 - **TMDB_CACHE_RUN_ON_STARTUP** — whether to run DB refresh on app launch (true/false)
+- **SETTINGS_ENCRYPTION_KEY** — Fernet key for encrypting sensitive settings stored in DB (optional; leave empty to store unencrypted). Generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. **Added in Phase 6** — currently present in `backend/.env.example` but missing from root `.env.example`
+- **RADARR_QUALITY_PROFILE** — Radarr quality profile name to assign requests (default: `HD+`). Currently in `backend/app/settings.py` but missing from root `.env.example`
 - **DATA_DIR** — host path for all volume bind mounts (default: `./data`)
 - **PUID / PGID** — user IDs for file ownership (default: 1000/1000)
 - Each var needs a one-line comment describing what it does and where to get the value
@@ -126,8 +132,9 @@ All tunable parameters must be documented in `.env.example` with descriptions. I
 - `sambo7262/cinemachain-*` image naming — keep as-is
 
 ### Integration Points
-- `backend/app/` — audit settings/config files for any Plex/Sonarr references to remove
-- `.env.example` and `compose.yaml` must stay in sync — if a var is in one, it must be in both
+- `backend/app/settings.py` — `plex_token`, `plex_url`, `sonarr_url`, `sonarr_api_key` confirmed as required fields; must be removed (or made optional then removed) here first, then remove from `compose.yaml` and root `.env.example`
+- `backend/app/services/plex.py` + `backend/tests/test_plex_webhook.py` — Plex service file still exists; assess whether to keep (dead code) or delete
+- Root `.env.example` and `compose.yaml` must stay in sync — every env var passed in compose must be documented
 
 </code_context>
 
@@ -149,5 +156,5 @@ None — discussion stayed within phase scope.
 
 ---
 
-*Phase: 05-production-deployment*
-*Context gathered: 2026-03-18*
+*Phase: 07-production-deployment*
+*Context gathered: 2026-03-22*

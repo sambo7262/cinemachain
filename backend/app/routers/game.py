@@ -3,7 +3,10 @@ from __future__ import annotations
 import io
 import csv
 import json
+import logging
 import sqlalchemy as sa
+
+logger = logging.getLogger(__name__)
 from datetime import datetime as _datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -14,9 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import engine, get_db, _bg_session_factory
-from app.models import Actor, Credit, GameSession, GameSessionStep, Movie, WatchEvent
+from app.models import Actor, Credit, GameSession, GameSessionStep, GlobalSave, Movie, SessionSave, SessionShortlist, WatchEvent
 from app.services.mdblist import fetch_rt_scores
+from app.services import settings_service
+from app.services.suggestions import _update_session_suggestions, get_session_suggestions
 from app.services.radarr import RadarrClient
+from app.utils.masking import scrub_traceback
+from app.services.radarr_helper import _request_radarr
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -30,6 +37,7 @@ class StepResponse(BaseModel):
     step_order: int
     movie_tmdb_id: int
     movie_title: str | None
+    movie_imdb_id: str | None = None      # populated from Movie.imdb_id where available
     actor_tmdb_id: int | None
     actor_name: str | None
     watched_at: _datetime | None = None   # joined from WatchEvent at query time
@@ -37,6 +45,19 @@ class StepResponse(BaseModel):
     profile_path: str | None = None       # NEW — from Actor.profile_path
 
     model_config = {"from_attributes": True}
+
+
+
+class CurrentMovieDetail(BaseModel):
+    year: int | None = None
+    runtime: int | None = None
+    mpaa_rating: str | None = None
+    overview: str | None = None
+    vote_average: float | None = None
+    imdb_rating: float | None = None
+    rt_score: int | None = None
+    rt_audience_score: int | None = None
+    metacritic_score: int | None = None
 
 
 class GameSessionResponse(BaseModel):
@@ -53,8 +74,13 @@ class GameSessionResponse(BaseModel):
     step_count: int = 0          # count of steps where actor_tmdb_id IS NOT NULL (actor picks only)
     unique_actor_count: int = 0  # count of distinct actors used across all steps
     created_at: _datetime | None = None  # session creation timestamp
+    current_movie_detail: CurrentMovieDetail | None = None
 
     model_config = {"from_attributes": True}
+
+
+class SuggestionsResponse(BaseModel):
+    suggestion_tmdb_ids: list[int]
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +167,8 @@ class EligibleMovieResponse(BaseModel):
     selectable: bool = True
     movie_title: str
     rt_score: int | None = None
+    saved: bool = False
+    shortlisted: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -178,19 +206,22 @@ async def _enrich_steps_watched_at(
 
 async def _enrich_steps_thumbnails(
     steps: list[GameSessionStep], db: AsyncSession
-) -> tuple[dict[int, str | None], dict[int, str | None]]:
-    """Return (movie_tmdb_id->poster_path, actor_tmdb_id->profile_path) for chain history display."""
+) -> tuple[dict[int, str | None], dict[int, str | None], dict[int, str | None]]:
+    """Return (movie_tmdb_id->poster_path, actor_tmdb_id->profile_path, movie_tmdb_id->imdb_id) for chain history display."""
     movie_tmdb_ids = [s.movie_tmdb_id for s in steps]
     actor_tmdb_ids = [s.actor_tmdb_id for s in steps if s.actor_tmdb_id is not None]
 
     poster_map: dict[int, str | None] = {}
     profile_map: dict[int, str | None] = {}
+    imdb_map: dict[int, str | None] = {}
 
     if movie_tmdb_ids:
         m_rows = await db.execute(
-            select(Movie.tmdb_id, Movie.poster_path).where(Movie.tmdb_id.in_(movie_tmdb_ids))
+            select(Movie.tmdb_id, Movie.poster_path, Movie.imdb_id).where(Movie.tmdb_id.in_(movie_tmdb_ids))
         )
-        poster_map = {row.tmdb_id: row.poster_path for row in m_rows.all()}
+        for row in m_rows.all():
+            poster_map[row.tmdb_id] = row.poster_path
+            imdb_map[row.tmdb_id] = row.imdb_id
 
     if actor_tmdb_ids:
         a_rows = await db.execute(
@@ -198,7 +229,7 @@ async def _enrich_steps_thumbnails(
         )
         profile_map = {row.tmdb_id: row.profile_path for row in a_rows.all()}
 
-    return poster_map, profile_map
+    return poster_map, profile_map, imdb_map
 
 
 async def _enrich_steps_runtime(
@@ -245,8 +276,12 @@ async def _fetch_mpaa_rating(
         await db.commit()
         logger.debug("MPAA tmdb_id=%d: cert=%r", tmdb_id, cert)
         return cert
-    except Exception:
-        logger.exception("Failed to fetch MPAA rating for tmdb_id=%d", tmdb_id)
+    except Exception as exc:
+        safe_tb = scrub_traceback(exc)
+        logger.error(
+            "Failed to fetch MPAA rating for tmdb_id=%d\n%s",
+            tmdb_id, safe_tb,
+        )
         # Don't store sentinel — leave as None so it retries next load
         return ""
 
@@ -259,6 +294,8 @@ def _build_session_response(
     poster_map: dict[int, str | None] | None = None,
     profile_map: dict[int, str | None] | None = None,
     runtime_map: dict[int, int | None] | None = None,
+    imdb_map: dict[int, str | None] | None = None,
+    current_movie_detail: CurrentMovieDetail | None = None,
 ) -> GameSessionResponse:
     """Build GameSessionResponse with watched_at, thumbnail, and counter enrichment on each step."""
     steps = []
@@ -270,6 +307,7 @@ def _build_session_response(
             step_order=s.step_order,
             movie_tmdb_id=s.movie_tmdb_id,
             movie_title=s.movie_title,
+            movie_imdb_id=(imdb_map or {}).get(s.movie_tmdb_id),
             actor_tmdb_id=s.actor_tmdb_id,
             actor_name=s.actor_name,
             watched_at=wa,
@@ -299,6 +337,7 @@ def _build_session_response(
         step_count=step_count,
         unique_actor_count=unique_actor_count,
         created_at=session.created_at,
+        current_movie_detail=current_movie_detail,
     )
 
 
@@ -318,6 +357,26 @@ def _resolve_current_movie_title(session: GameSession) -> str | None:
     return None
 
 
+async def _resolve_current_movie_detail(session: GameSession, db: AsyncSession) -> CurrentMovieDetail | None:
+    """Query Movie table for current_movie_tmdb_id and return a CurrentMovieDetail or None."""
+    movie = (await db.execute(
+        select(Movie).where(Movie.tmdb_id == session.current_movie_tmdb_id)
+    )).scalar_one_or_none()
+    if not movie:
+        return None
+    return CurrentMovieDetail(
+        year=movie.year,
+        runtime=movie.runtime,
+        mpaa_rating=movie.mpaa_rating,
+        overview=movie.overview,
+        vote_average=movie.vote_average,
+        imdb_rating=movie.imdb_rating,
+        rt_score=movie.rt_score,
+        rt_audience_score=movie.rt_audience_score,
+        metacritic_score=movie.metacritic_score,
+    )
+
+
 async def _ensure_actor_credits_in_db(
     actor_tmdb_id: int,
     tmdb: TMDBClient,
@@ -329,18 +388,14 @@ async def _ensure_actor_credits_in_db(
     Uses on_conflict_do_nothing so repeated calls are safe (idempotent).
     Short-circuits if Credit rows already exist for this actor — avoids TMDB call.
     """
-    existing = await db.execute(
-        select(_func.count()).select_from(Credit)
-        .join(Actor, Actor.id == Credit.actor_id)
-        .where(Actor.tmdb_id == actor_tmdb_id)
-    )
-    if existing.scalar_one() > 0:
+    actor_row = await db.execute(select(Actor).where(Actor.tmdb_id == actor_tmdb_id))
+    existing_actor = actor_row.scalar_one_or_none()
+    if existing_actor is not None and existing_actor.filmography_fetched:
         # Also check for blank-title stubs — if any exist, fall through to backfill them
         blank = await db.execute(
             select(_func.count()).select_from(Movie)
             .join(Credit, Credit.movie_id == Movie.id)
-            .join(Actor, Actor.id == Credit.actor_id)
-            .where(Actor.tmdb_id == actor_tmdb_id, Movie.title == "")
+            .where(Credit.actor_id == existing_actor.id, Movie.title == "")
         )
         if blank.scalar_one() == 0:
             return
@@ -407,10 +462,13 @@ async def _ensure_actor_credits_in_db(
             credit_stmt = pg_insert(Credit).values(
                 movie_id=movie.id,
                 actor_id=actor.id,
-                character=credit_data.get("character"),
+                character=(credit_data.get("character") or "")[:255] or None,
                 order=None,
             ).on_conflict_do_nothing(index_elements=["movie_id", "actor_id"])
             await db.execute(credit_stmt)
+
+    # Mark filmography as fully fetched so the short-circuit fires on future calls.
+    actor.filmography_fetched = True
     await db.commit()
 
 
@@ -518,11 +576,13 @@ async def _ensure_movie_details_in_db(
             genres_json = json.dumps([g["name"] for g in data.get("genres", [])])
             runtime_val = data.get("runtime")
             overview_val = data.get("overview")
+            poster_val = data.get("poster_path")
             await db.execute(
                 sa.update(Movie).where(Movie.tmdb_id == tmdb_id).values(
                     genres=genres_json,
                     runtime=runtime_val,
                     overview=overview_val,
+                    poster_path=poster_val,
                 )
             )
             await db.commit()
@@ -860,7 +920,8 @@ async def import_csv_session(
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session), current_movie_detail=current_movie_detail)
 
 
 @router.post("/sessions", status_code=201, response_model=GameSessionResponse)
@@ -933,7 +994,8 @@ async def create_session(
     background_tasks.add_task(_prefetch_credits_background, body.start_movie_tmdb_id, tmdb)
 
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    response = _build_session_response(session, wa_map, radarr_status, current_movie_title=_resolve_current_movie_title(session))
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
+    response = _build_session_response(session, wa_map, radarr_status, current_movie_title=_resolve_current_movie_title(session), current_movie_detail=current_movie_detail)
     return response
 
 
@@ -953,8 +1015,9 @@ async def list_sessions(
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
+        poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(s.steps, db)
         runtime_map = await _enrich_steps_runtime(s.steps, db)
-        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), runtime_map=runtime_map))
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), poster_map=poster_map, profile_map=profile_map, imdb_map=imdb_map, runtime_map=runtime_map))
     return out
 
 
@@ -970,8 +1033,9 @@ async def list_archived_sessions(db: AsyncSession = Depends(get_db)):
     out = []
     for s in sessions:
         wa_map = await _enrich_steps_watched_at(s.steps, db)
+        poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(s.steps, db)
         runtime_map = await _enrich_steps_runtime(s.steps, db)
-        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), runtime_map=runtime_map))
+        out.append(_build_session_response(s, wa_map, current_movie_title=_resolve_current_movie_title(s), poster_map=poster_map, profile_map=profile_map, imdb_map=imdb_map, runtime_map=runtime_map))
     return out
 
 
@@ -982,12 +1046,12 @@ async def get_active_session(db: AsyncSession = Depends(get_db)):
     if session is None:
         return None
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(session.steps, db)
     runtime_map = await _enrich_steps_runtime(session.steps, db)
     return _build_session_response(
         session, wa_map,
         current_movie_title=_resolve_current_movie_title(session),
-        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map,
+        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map, imdb_map=imdb_map,
     )
 
 
@@ -1007,12 +1071,14 @@ async def get_session_by_id(session_id: int, db: AsyncSession = Depends(get_db))
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(session.steps, db)
     runtime_map = await _enrich_steps_runtime(session.steps, db)
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
     return _build_session_response(
         session, wa_map,
         current_movie_title=_resolve_current_movie_title(session),
-        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map,
+        poster_map=poster_map, profile_map=profile_map, runtime_map=runtime_map, imdb_map=imdb_map,
+        current_movie_detail=current_movie_detail,
     )
 
 
@@ -1029,7 +1095,6 @@ async def export_session_csv(session_id: int, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404, detail="Session not found")
 
     sorted_steps = sorted(session.steps, key=lambda s: s.step_order)
-    step_by_order = {s.step_order: s for s in sorted_steps}
     # Only movie-pick steps (actor_tmdb_id IS NULL) form the chain rows.
     # The actor that bridges to the next movie lives in the immediately following step.
     movie_steps = [s for s in sorted_steps if s.actor_tmdb_id is None]
@@ -1038,8 +1103,13 @@ async def export_session_csv(session_id: int, db: AsyncSession = Depends(get_db)
     writer = csv.writer(output)
     writer.writerow(["order", "movie_name", "actor_name"])
     for i, step in enumerate(movie_steps, start=1):
-        actor_step = step_by_order.get(step.step_order + 1)
-        actor_name = actor_step.actor_name if actor_step and actor_step.actor_tmdb_id else ""
+        # Find the next actor step after this movie step — step_order + 1 assumption is fragile
+        # when steps have been deleted (gaps in step_order). Forward-scan finds the right step.
+        actor_step = next(
+            (s for s in sorted_steps if s.step_order > step.step_order and s.actor_tmdb_id is not None),
+            None,
+        )
+        actor_name = actor_step.actor_name if actor_step else ""
         writer.writerow([i, step.movie_title or "", actor_name])
 
     output.seek(0)
@@ -1199,7 +1269,7 @@ async def rename_session(
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(session.steps, db)
     runtime_map = await _enrich_steps_runtime(session.steps, db)
     return _build_session_response(
         session, wa_map,
@@ -1207,11 +1277,12 @@ async def rename_session(
         poster_map=poster_map,
         profile_map=profile_map,
         runtime_map=runtime_map,
+        imdb_map=imdb_map,
     )
 
 
 @router.post("/sessions/{session_id}/mark-current-watched", response_model=GameSessionResponse)
-async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_db)):
+async def mark_current_watched(session_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """Mark the session's current movie as watched (manual fallback for non-Plex-Pass setups).
 
     Sets current_movie_watched=True, creates a WatchEvent for the current movie,
@@ -1247,6 +1318,8 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     session.status = "awaiting_continue"
     await db.commit()
 
+    background_tasks.add_task(_update_session_suggestions, session_id)
+
     # Re-fetch with steps
     result = await db.execute(
         select(GameSession)
@@ -1255,15 +1328,111 @@ async def mark_current_watched(session_id: int, db: AsyncSession = Depends(get_d
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    poster_map, profile_map = await _enrich_steps_thumbnails(session.steps, db)
+    poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(session.steps, db)
     runtime_map = await _enrich_steps_runtime(session.steps, db)
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
     return _build_session_response(
         session, wa_map,
         current_movie_title=_resolve_current_movie_title(session),
         poster_map=poster_map,
         profile_map=profile_map,
         runtime_map=runtime_map,
+        imdb_map=imdb_map,
+        current_movie_detail=current_movie_detail,
     )
+
+
+@router.get("/sessions/{session_id}/suggestions", response_model=SuggestionsResponse)
+async def get_session_suggestions_endpoint(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> SuggestionsResponse:
+    """Return TMDB-recommended movie IDs intersected with the current eligible pool.
+
+    Returns empty list if:
+    - tmdb_api_key is not configured
+    - tmdb_suggestions_seed_count is 0
+    - No watch events exist
+    - No TMDB suggestions intersect the eligible pool
+    """
+    # Guard: require tmdb_api_key
+    api_key = await settings_service.get_setting(db, "tmdb_api_key")
+    if not api_key:
+        return SuggestionsResponse(suggestion_tmdb_ids=[])
+
+    # Guard: respect seed count = 0 as "disabled"
+    n_str = await settings_service.get_setting(db, "tmdb_suggestions_seed_count")
+    n = int(n_str or "5")
+    if n == 0:
+        return SuggestionsResponse(suggestion_tmdb_ids=[])
+
+    # Validate session exists
+    result = await db.execute(select(GameSession).where(GameSession.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Get ranked suggestion IDs from service
+    tmdb = TMDBClient(api_key)
+    try:
+        ranked_ids = await get_session_suggestions(db, tmdb, n)
+    finally:
+        await tmdb.close()
+
+    if not ranked_ids:
+        return SuggestionsResponse(suggestion_tmdb_ids=[])
+
+    # Build eligible pool: query movies reachable from current step
+    # Step 1: get used actor tmdb_ids from session steps
+    steps_result = await db.execute(
+        select(GameSessionStep.actor_tmdb_id)
+        .where(GameSessionStep.session_id == session_id)
+        .where(GameSessionStep.actor_tmdb_id.isnot(None))
+    )
+    used_actor_tmdb_ids = {row[0] for row in steps_result.all()}
+
+    # Step 2: get chain of movie tmdb_ids already in the session
+    chain_result = await db.execute(
+        select(GameSessionStep.movie_tmdb_id)
+        .where(GameSessionStep.session_id == session_id)
+    )
+    chain_movie_tmdb_ids = {row[0] for row in chain_result.all()}
+    # Add current movie
+    if session.current_movie_tmdb_id:
+        chain_movie_tmdb_ids.add(session.current_movie_tmdb_id)
+
+    # Step 3: get actors from current movie, excluding used ones
+    current_movie_result = await db.execute(
+        select(Movie.id).where(Movie.tmdb_id == session.current_movie_tmdb_id)
+    )
+    current_movie_id = current_movie_result.scalar_one_or_none()
+    if not current_movie_id:
+        return SuggestionsResponse(suggestion_tmdb_ids=[])
+
+    eligible_actors_result = await db.execute(
+        select(Actor.tmdb_id)
+        .join(Credit, Credit.actor_id == Actor.id)
+        .where(Credit.movie_id == current_movie_id)
+        .where(Actor.tmdb_id.notin_(used_actor_tmdb_ids) if used_actor_tmdb_ids else sa.true())
+    )
+    eligible_actor_tmdb_ids = {row[0] for row in eligible_actors_result.all()}
+
+    if not eligible_actor_tmdb_ids:
+        return SuggestionsResponse(suggestion_tmdb_ids=[])
+
+    # Step 4: get all movies reachable via eligible actors
+    eligible_movies_result = await db.execute(
+        select(Movie.tmdb_id)
+        .join(Credit, Credit.movie_id == Movie.id)
+        .join(Actor, Actor.id == Credit.actor_id)
+        .where(Actor.tmdb_id.in_(eligible_actor_tmdb_ids))
+        .where(Movie.tmdb_id.notin_(chain_movie_tmdb_ids))
+    )
+    eligible_pool = {row[0] for row in eligible_movies_result.all()}
+
+    # Intersect: keep only suggestions that are in the eligible pool, preserving rank order
+    intersected = [tid for tid in ranked_ids if tid in eligible_pool]
+    return SuggestionsResponse(suggestion_tmdb_ids=intersected)
 
 
 @router.post("/sessions/{session_id}/continue-chain", response_model=GameSessionResponse)
@@ -1305,35 +1474,8 @@ async def continue_chain(session_id: int, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
-
-
-# ---------------------------------------------------------------------------
-# Radarr helper
-# ---------------------------------------------------------------------------
-
-async def _request_radarr(tmdb_id: int, radarr: RadarrClient) -> dict:
-    """Two-step Radarr add flow: check existence, then lookup + add.
-
-    Returns a status dict rather than raising — the session is already committed
-    by the time this is called, so a Radarr failure must not produce a 500.
-    """
-    try:
-        if await radarr.movie_exists(tmdb_id):
-            return {"status": "already_in_radarr"}
-        movie_payload = await radarr.lookup_movie(tmdb_id)
-        if not movie_payload:
-            return {"status": "not_found_in_radarr"}
-        movie_payload["monitored"] = True
-        movie_payload["addOptions"] = {"searchForMovie": True}
-        movie_payload["rootFolderPath"] = await radarr.get_root_folder()
-        movie_payload["qualityProfileId"] = await radarr.get_quality_profile_id()
-        await radarr.add_movie(movie_payload)
-        return {"status": "queued"}
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).warning("Radarr request failed for tmdb_id=%s: %s", tmdb_id, exc)
-        return {"status": "error"}
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session), current_movie_detail=current_movie_detail)
 
 
 # ---------------------------------------------------------------------------
@@ -1452,7 +1594,8 @@ async def get_eligible_movies(
     page: int = Query(default=1, ge=1),
     sort_dir: str | None = Query(default="desc"),
     search: str | None = Query(default=None),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=9999),
+    exclude_nr: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
 ):
     """Return eligible movies for the current game session.
@@ -1460,6 +1603,7 @@ async def get_eligible_movies(
     - actor_id: filter to a specific actor's filmography
     - sort: 'rating' (desc vote_average), 'runtime' (asc), 'genre' (asc)
     - all_movies: if False (default), only return unwatched movies
+    - exclude_nr: if True, exclude movies where mpaa_rating == "NR" (NULL MPAA passes through)
     """
     result = await db.execute(
         select(GameSession)
@@ -1521,6 +1665,12 @@ async def get_eligible_movies(
                     "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                     "via_actor_name": actor.name,
                     "rt_score": movie.rt_score if movie.rt_score and movie.rt_score > 0 else None,
+                    "rt_audience_score": movie.rt_audience_score if movie.rt_audience_score and movie.rt_audience_score > 0 else None,
+                    "imdb_id": movie.imdb_id if movie.imdb_id else None,
+                    "imdb_rating": movie.imdb_rating if movie.imdb_rating and movie.imdb_rating > 0 else None,
+                    "metacritic_score": movie.metacritic_score if movie.metacritic_score and movie.metacritic_score > 0 else None,
+                    "letterboxd_score": movie.letterboxd_score if movie.letterboxd_score and movie.letterboxd_score > 0 else None,
+                    "mdb_avg_score": movie.mdb_avg_score if movie.mdb_avg_score and movie.mdb_avg_score > 0 else None,
                 }
     else:
         # Combined view: get eligible actors first, then their filmographies
@@ -1538,6 +1688,42 @@ async def get_eligible_movies(
 
         eligible_actor_rows = await db.execute(actor_stmt)
         eligible_actor_tmdb_ids = [actor.tmdb_id for actor, _ in eligible_actor_rows.all()]
+
+        # Self-healing: if no eligible actors, check whether the current movie has credits at all.
+        # If the movie has zero credits (corrupted/stale DB state), trigger a cast re-fetch and retry.
+        if not eligible_actor_tmdb_ids and hasattr(request.app.state, "tmdb_client"):
+            credits_check = await db.execute(
+                select(Credit.id)
+                .join(Movie, Movie.id == Credit.movie_id)
+                .where(Movie.tmdb_id == session.current_movie_tmdb_id)
+                .limit(1)
+            )
+            has_credits = credits_check.first() is not None
+            if not has_credits:
+                logger.warning(
+                    "get_eligible_movies: session %d current_movie_tmdb_id=%d has no credits — triggering re-fetch",
+                    session_id, session.current_movie_tmdb_id,
+                )
+                _tmdb3 = request.app.state.tmdb_client
+                await _ensure_movie_cast_in_db(session.current_movie_tmdb_id, _tmdb3, db)
+                # Retry actor query after re-fetch
+                eligible_actor_rows2 = await db.execute(actor_stmt)
+                eligible_actor_tmdb_ids = [actor.tmdb_id for actor, _ in eligible_actor_rows2.all()]
+
+        # On-demand filmography fetch for combined view: ensure every eligible actor's
+        # credits are in the DB before querying their filmographies. Short-circuits via
+        # filmography_fetched — only makes TMDB calls on cold start; subsequent requests
+        # are instant. This is the same fetch the actor-specific path does per-actor.
+        if eligible_actor_tmdb_ids and hasattr(request.app.state, "tmdb_client"):
+            _tmdb_combined = request.app.state.tmdb_client
+            unfetched_result = await db.execute(
+                select(Actor).where(
+                    Actor.tmdb_id.in_(eligible_actor_tmdb_ids),
+                    Actor.filmography_fetched.isnot(True),
+                )
+            )
+            for unfetched_actor in unfetched_result.scalars().all():
+                await _ensure_actor_credits_in_db(unfetched_actor.tmdb_id, _tmdb_combined, db)
 
         if eligible_actor_tmdb_ids:
             film_stmt = (
@@ -1564,6 +1750,12 @@ async def get_eligible_movies(
                         "selectable": movie.tmdb_id not in watched_ids and movie.tmdb_id not in chain_movie_ids,
                         "via_actor_name": actor.name,
                         "rt_score": movie.rt_score if movie.rt_score and movie.rt_score > 0 else None,
+                        "rt_audience_score": movie.rt_audience_score if movie.rt_audience_score and movie.rt_audience_score > 0 else None,
+                        "imdb_id": movie.imdb_id if movie.imdb_id else None,
+                        "imdb_rating": movie.imdb_rating if movie.imdb_rating and movie.imdb_rating > 0 else None,
+                        "metacritic_score": movie.metacritic_score if movie.metacritic_score and movie.metacritic_score > 0 else None,
+                        "letterboxd_score": movie.letterboxd_score if movie.letterboxd_score and movie.letterboxd_score > 0 else None,
+                        "mdb_avg_score": movie.mdb_avg_score if movie.mdb_avg_score and movie.mdb_avg_score > 0 else None,
                     }
 
     # Actor-scoped path only: fetch genres+runtime stubs and MPAA ratings on demand.
@@ -1594,15 +1786,46 @@ async def get_eligible_movies(
     if movies_map:
         await fetch_rt_scores(list(movies_map.keys()), db)
         await db.commit()
-        # Refresh rt_score values in movies_map from DB
+        # Refresh all rating values in movies_map from DB
         rt_result = await db.execute(
-            select(Movie.tmdb_id, Movie.rt_score)
+            select(Movie.tmdb_id, Movie.rt_score, Movie.rt_audience_score,
+                   Movie.imdb_id, Movie.imdb_rating, Movie.metacritic_score,
+                   Movie.letterboxd_score, Movie.mdb_avg_score)
             .where(Movie.tmdb_id.in_(list(movies_map.keys())))
         )
         for row in rt_result.all():
             if row.tmdb_id in movies_map:
-                # Don't expose the 0 sentinel to frontend — convert to null
+                # Don't expose 0 sentinels to frontend — convert to null
                 movies_map[row.tmdb_id]["rt_score"] = row.rt_score if row.rt_score and row.rt_score > 0 else None
+                movies_map[row.tmdb_id]["rt_audience_score"] = row.rt_audience_score if row.rt_audience_score and row.rt_audience_score > 0 else None
+                movies_map[row.tmdb_id]["imdb_id"] = row.imdb_id if row.imdb_id else None
+                movies_map[row.tmdb_id]["imdb_rating"] = row.imdb_rating if row.imdb_rating and row.imdb_rating > 0 else None
+                movies_map[row.tmdb_id]["metacritic_score"] = row.metacritic_score if row.metacritic_score and row.metacritic_score > 0 else None
+                movies_map[row.tmdb_id]["letterboxd_score"] = row.letterboxd_score if row.letterboxd_score and row.letterboxd_score > 0 else None
+                movies_map[row.tmdb_id]["mdb_avg_score"] = row.mdb_avg_score if row.mdb_avg_score and row.mdb_avg_score > 0 else None
+
+    # Phase 11: Fetch saved/shortlisted sets for this session
+    # Merge session-scoped saves with global saves (Phase 16: Watch History star action)
+    session_saved_result = await db.execute(
+        select(SessionSave.tmdb_id).where(SessionSave.session_id == session_id)
+    )
+    session_saved_set = {row[0] for row in session_saved_result.all()}
+
+    global_saved_result = await db.execute(
+        select(GlobalSave.tmdb_id)
+    )
+    global_saved_set = {row[0] for row in global_saved_result.all()}
+
+    saved_set = session_saved_set | global_saved_set
+
+    shortlist_result = await db.execute(
+        select(SessionShortlist.tmdb_id).where(SessionShortlist.session_id == session_id)
+    )
+    shortlist_set = {row[0] for row in shortlist_result.all()}
+
+    for tmdb_id, m in movies_map.items():
+        m["saved"] = tmdb_id in saved_set
+        m["shortlisted"] = tmdb_id in shortlist_set
 
     movies = list(movies_map.values())
 
@@ -1610,8 +1833,10 @@ async def get_eligible_movies(
     movies = [m for m in movies if m["tmdb_id"] not in chain_movie_ids]
     if not all_movies:
         movies = [m for m in movies if not m["watched"]]
+    if exclude_nr:
+        movies = [m for m in movies if m.get("mpaa_rating") != "NR"]
 
-    VOTE_FLOOR = 500
+    VOTE_FLOOR = 10
 
     def _effective_rating(m: dict) -> float | None:
         if m.get("vote_count") is None or m["vote_count"] < VOTE_FLOOR:
@@ -1620,37 +1845,47 @@ async def get_eligible_movies(
 
     # Sort — null-stable two-pass approach: separate nulls first, sort each group, then concat.
     # Nulls always land at the end regardless of sort direction.
+    # Secondary key is always tmdb_id (asc) for a fully deterministic, stable order.
     _desc = (sort_dir or "desc") == "desc"
     if sort == "rating":
         rated = [m for m in movies if _effective_rating(m) is not None]
-        unrated = [m for m in movies if _effective_rating(m) is None]
-        rated.sort(key=lambda m: _effective_rating(m) or 0, reverse=_desc)
-        movies = rated + unrated
+        # "unrated" = below VOTE_FLOOR but may still have a vote_average — sort those too.
+        low_rated = [m for m in movies if _effective_rating(m) is None and m.get("vote_average") is not None]
+        no_rating = [m for m in movies if _effective_rating(m) is None and m.get("vote_average") is None]
+        rated.sort(key=lambda m: (_effective_rating(m) or 0, m.get("vote_count") or 0, -m["tmdb_id"]), reverse=_desc)
+        low_rated.sort(key=lambda m: (m.get("vote_average") or 0, m.get("vote_count") or 0, -m["tmdb_id"]), reverse=_desc)
+        no_rating.sort(key=lambda m: m["tmdb_id"])
+        movies = rated + low_rated + no_rating
     elif sort == "runtime":
         with_runtime = [m for m in movies if m.get("runtime") is not None]
         without_runtime = [m for m in movies if m.get("runtime") is None]
-        with_runtime.sort(key=lambda m: m["runtime"], reverse=_desc)
+        with_runtime.sort(key=lambda m: (m["runtime"], m["tmdb_id"]), reverse=_desc)
+        without_runtime.sort(key=lambda m: m["tmdb_id"])
         movies = with_runtime + without_runtime
     elif sort == "genre":
         with_genre = [m for m in movies if m.get("genres") and m["genres"] != ""]
         without_genre = [m for m in movies if not m.get("genres") or m["genres"] == ""]
-        with_genre.sort(key=lambda m: m["genres"] or "", reverse=_desc)
+        with_genre.sort(key=lambda m: (m["genres"] or "", m["tmdb_id"]), reverse=_desc)
+        without_genre.sort(key=lambda m: m["tmdb_id"])
         movies = with_genre + without_genre
     elif sort == "year":
         with_year = [m for m in movies if m.get("year") is not None]
         without_year = [m for m in movies if m.get("year") is None]
-        with_year.sort(key=lambda m: m.get("year") or 0, reverse=_desc)
+        with_year.sort(key=lambda m: (m.get("year") or 0, m["tmdb_id"]), reverse=_desc)
+        without_year.sort(key=lambda m: m["tmdb_id"])
         movies = with_year + without_year
     elif sort == "mpaa":
         _mpaa_order = {"G": 0, "PG": 1, "PG-13": 2, "R": 3, "NC-17": 4}
         with_mpaa = [m for m in movies if m.get("mpaa_rating") and m.get("mpaa_rating") != ""]
         without_mpaa = [m for m in movies if not m.get("mpaa_rating") or m.get("mpaa_rating") == ""]
-        with_mpaa.sort(key=lambda m: _mpaa_order.get(m.get("mpaa_rating") or "", 99), reverse=_desc)
+        with_mpaa.sort(key=lambda m: (_mpaa_order.get(m.get("mpaa_rating") or "", 99), m["tmdb_id"]), reverse=_desc)
+        without_mpaa.sort(key=lambda m: m["tmdb_id"])
         movies = with_mpaa + without_mpaa
     elif sort == "rt":
         with_rt = [m for m in movies if m.get("rt_score") is not None]
         without_rt = [m for m in movies if m.get("rt_score") is None]
-        with_rt.sort(key=lambda m: m.get("rt_score") or 0, reverse=_desc)
+        with_rt.sort(key=lambda m: (m.get("rt_score") or 0, m["tmdb_id"]), reverse=_desc)
+        without_rt.sort(key=lambda m: m["tmdb_id"])
         movies = with_rt + without_rt
 
     # Search — when provided, filter by title (case-insensitive) and bypass pagination.
@@ -1745,12 +1980,80 @@ async def pick_actor(
     )
     session = result.scalar_one()
     wa_map = await _enrich_steps_watched_at(session.steps, db)
-    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session))
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
+    return _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session), current_movie_detail=current_movie_detail)
 
 
 # ---------------------------------------------------------------------------
 # Request movie endpoint
 # ---------------------------------------------------------------------------
+
+# ── Save endpoints ──────────────────────────────────────────────────────
+@router.post("/sessions/{session_id}/saves/{tmdb_id}", status_code=204)
+async def save_movie(session_id: int, tmdb_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-01: Save a movie for later in this session."""
+    stmt = pg_insert(SessionSave).values(
+        session_id=session_id, tmdb_id=tmdb_id
+    ).on_conflict_do_nothing()
+    await db.execute(stmt)
+    await db.commit()
+
+@router.delete("/sessions/{session_id}/saves/{tmdb_id}", status_code=204)
+async def unsave_movie(session_id: int, tmdb_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-01: Remove a saved movie."""
+    await db.execute(
+        sa.delete(SessionSave).where(
+            SessionSave.session_id == session_id,
+            SessionSave.tmdb_id == tmdb_id
+        )
+    )
+    await db.commit()
+
+@router.get("/sessions/{session_id}/saves")
+async def get_saves(session_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-02: List all saved tmdb_ids for a session."""
+    result = await db.execute(
+        select(SessionSave.tmdb_id).where(SessionSave.session_id == session_id)
+    )
+    return [row[0] for row in result.all()]
+
+# ── Shortlist endpoints ────────────────────────────────────────────────
+@router.post("/sessions/{session_id}/shortlist/{tmdb_id}", status_code=204)
+async def shortlist_movie(session_id: int, tmdb_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-04: Add a movie to the shortlist."""
+    stmt = pg_insert(SessionShortlist).values(
+        session_id=session_id, tmdb_id=tmdb_id
+    ).on_conflict_do_nothing()
+    await db.execute(stmt)
+    await db.commit()
+
+@router.delete("/sessions/{session_id}/shortlist", status_code=204)
+async def clear_shortlist(session_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-04: Clear entire shortlist for a session."""
+    await db.execute(
+        sa.delete(SessionShortlist).where(SessionShortlist.session_id == session_id)
+    )
+    await db.commit()
+
+@router.delete("/sessions/{session_id}/shortlist/{tmdb_id}", status_code=204)
+async def unshortlist_movie(session_id: int, tmdb_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-04: Remove a movie from the shortlist."""
+    await db.execute(
+        sa.delete(SessionShortlist).where(
+            SessionShortlist.session_id == session_id,
+            SessionShortlist.tmdb_id == tmdb_id
+        )
+    )
+    await db.commit()
+
+@router.get("/sessions/{session_id}/shortlist")
+async def get_shortlist(session_id: int, db: AsyncSession = Depends(get_db)):
+    """SESS-04: List all shortlisted tmdb_ids for a session."""
+    result = await db.execute(
+        select(SessionShortlist.tmdb_id).where(SessionShortlist.session_id == session_id)
+    )
+    return [row[0] for row in result.all()]
+
 
 @router.post("/sessions/{session_id}/request-movie")
 async def request_movie(
@@ -1796,6 +2099,40 @@ async def request_movie(
     previous_movie_tmdb_id = session.current_movie_tmdb_id  # movie being transitioned FROM
     already_picked_ids = [s.actor_tmdb_id for s in session.steps if s.actor_tmdb_id is not None]
 
+    # Validate: when an explicit actor was already picked, confirm that actor actually appears
+    # in the selected movie's credits. Stale DB credit data can present invalid links.
+    # Re-fetch from TMDB once on cache miss before rejecting.
+    if (
+        last_step is not None
+        and last_step.actor_tmdb_id is not None
+        and body.movie_tmdb_id != previous_movie_tmdb_id
+    ):
+        credit_check = await db.execute(
+            select(Credit.id)
+            .join(Actor, Actor.id == Credit.actor_id)
+            .join(Movie, Movie.id == Credit.movie_id)
+            .where(Actor.tmdb_id == last_step.actor_tmdb_id)
+            .where(Movie.tmdb_id == body.movie_tmdb_id)
+            .limit(1)
+        )
+        if credit_check.first() is None:
+            # Not found in cache — re-fetch the movie's cast from TMDB and retry.
+            _tmdb = request.app.state.tmdb_client
+            await _ensure_movie_cast_in_db(body.movie_tmdb_id, _tmdb, db)
+            credit_recheck = await db.execute(
+                select(Credit.id)
+                .join(Actor, Actor.id == Credit.actor_id)
+                .join(Movie, Movie.id == Credit.movie_id)
+                .where(Actor.tmdb_id == last_step.actor_tmdb_id)
+                .where(Movie.tmdb_id == body.movie_tmdb_id)
+                .limit(1)
+            )
+            if credit_recheck.first() is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Selected actor does not appear in this movie — pick is not valid",
+                )
+
     need_actor_auto_resolve = (
         last_step is not None and                        # not the first pick
         last_step.actor_tmdb_id is None and             # last step is a movie step (no actor picked)
@@ -1826,6 +2163,7 @@ async def request_movie(
             # Multiple connecting actors — require user to disambiguate.
             # Do NOT create any steps. Return disambiguation response immediately.
             # Frontend will show a dialog and re-submit after user picks.
+            _detail = await _resolve_current_movie_detail(session, db)
             return {
                 "status": "disambiguation_required",
                 "candidates": [
@@ -1836,6 +2174,7 @@ async def request_movie(
                     session,
                     await _enrich_steps_watched_at(session.steps, db),
                     current_movie_title=_resolve_current_movie_title(session),
+                    current_movie_detail=_detail,
                 ),
             }
         elif len(shared_actors) == 1:
@@ -1873,6 +2212,17 @@ async def request_movie(
     # Advance the session's current movie
     session.current_movie_tmdb_id = body.movie_tmdb_id
     session.current_movie_watched = False
+
+    # Phase 11: Clear shortlist and remove save for picked movie (per D-06, D-07)
+    await db.execute(
+        sa.delete(SessionShortlist).where(SessionShortlist.session_id == session_id)
+    )
+    await db.execute(
+        sa.delete(SessionSave).where(
+            SessionSave.session_id == session_id,
+            SessionSave.tmdb_id == body.movie_tmdb_id
+        )
+    )
     await db.commit()
 
     # Spawn background credits pre-fetch for the new movie's cast
@@ -1900,9 +2250,10 @@ async def request_movie(
         radarr_result = {"status": "skipped"}
 
     wa_map = await _enrich_steps_watched_at(session.steps, db)
+    current_movie_detail = await _resolve_current_movie_detail(session, db)
     return {
         "status": radarr_result["status"],
-        "session": _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session)),
+        "session": _build_session_response(session, wa_map, current_movie_title=_resolve_current_movie_title(session), current_movie_detail=current_movie_detail),
     }
 
 
@@ -1928,9 +2279,43 @@ async def delete_last_step(
         )
 
     last_step = steps[-1]
-    await db.delete(last_step)
 
-    # Revert session state to previous step
+    # D-25: Atomic two-step revert
+    # If last step is a movie step (actor_tmdb_id is null) AND the preceding step
+    # is an actor step (actor_tmdb_id is not null), delete BOTH steps.
+    # This restores the session to the movie the actor was picked from.
+    if last_step.actor_tmdb_id is None and len(steps) >= 3:
+        prev_step = steps[-2]
+        if prev_step.actor_tmdb_id is not None:
+            # Delete both: the movie step and the actor step
+            await db.delete(last_step)
+            await db.delete(prev_step)
+            # Revert to the step before the actor step
+            revert_step = steps[-3]
+            session.current_movie_tmdb_id = revert_step.movie_tmdb_id
+            session.current_movie_watched = False
+            if session.status == "awaiting_continue":
+                session.status = "active"
+            await db.commit()
+            # Re-fetch for response
+            refreshed = await db.get(GameSession, session_id, options=[selectinload(GameSession.steps)])
+            watched_at_map = await _enrich_steps_watched_at(refreshed.steps, db)
+            poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(refreshed.steps, db)
+            runtime_map = await _enrich_steps_runtime(refreshed.steps, db)
+            current_movie_detail = await _resolve_current_movie_detail(refreshed, db)
+            return _build_session_response(
+                refreshed,
+                watched_at_map=watched_at_map,
+                current_movie_title=_resolve_current_movie_title(refreshed),
+                poster_map=poster_map,
+                profile_map=profile_map,
+                runtime_map=runtime_map,
+                imdb_map=imdb_map,
+                current_movie_detail=current_movie_detail,
+            )
+
+    # Default: single step delete (actor-only step, or movie step without preceding actor step)
+    await db.delete(last_step)
     prev_step = steps[-2]
     session.current_movie_tmdb_id = prev_step.movie_tmdb_id
     session.current_movie_watched = False  # revert to unwatched so home page CTA appears
@@ -1944,8 +2329,9 @@ async def delete_last_step(
     # Re-fetch with steps for response building
     refreshed = await db.get(GameSession, session_id, options=[selectinload(GameSession.steps)])
     watched_at_map = await _enrich_steps_watched_at(refreshed.steps, db)
-    poster_map, profile_map = await _enrich_steps_thumbnails(refreshed.steps, db)
+    poster_map, profile_map, imdb_map = await _enrich_steps_thumbnails(refreshed.steps, db)
     runtime_map = await _enrich_steps_runtime(refreshed.steps, db)
+    current_movie_detail = await _resolve_current_movie_detail(refreshed, db)
     return _build_session_response(
         refreshed,
         watched_at_map=watched_at_map,
@@ -1953,6 +2339,8 @@ async def delete_last_step(
         poster_map=poster_map,
         profile_map=profile_map,
         runtime_map=runtime_map,
+        imdb_map=imdb_map,
+        current_movie_detail=current_movie_detail,
     )
 
 

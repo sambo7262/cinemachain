@@ -8,14 +8,12 @@ import { Input } from "@/components/ui/input"
 export function OnboardingScreen() {
   const queryClient = useQueryClient()
   const [tmdbApiKey, setTmdbApiKey] = useState("")
-  const [tmdbBaseUrl, setTmdbBaseUrl] = useState("https://api.themoviedb.org/3")
-  const [errors, setErrors] = useState<{ apiKey?: string; baseUrl?: string }>({})
+  const [errors, setErrors] = useState<{ apiKey?: string }>({})
 
   const saveMutation = useMutation({
     mutationFn: () =>
       api.saveSettings({
         tmdb_api_key: tmdbApiKey,
-        tmdb_base_url: tmdbBaseUrl,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settingsStatus"] })
@@ -25,11 +23,6 @@ export function OnboardingScreen() {
   const handleSubmit = () => {
     const newErrors: typeof errors = {}
     if (!tmdbApiKey.trim()) newErrors.apiKey = "This field is required."
-    if (!tmdbBaseUrl.trim()) {
-      newErrors.baseUrl = "This field is required."
-    } else if (!/^https?:\/\//.test(tmdbBaseUrl)) {
-      newErrors.baseUrl = "Enter a valid URL starting with http:// or https://."
-    }
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
     saveMutation.mutate()
@@ -51,25 +44,13 @@ export function OnboardingScreen() {
             </label>
             <Input
               id="onboard-tmdb-key"
+              type="password"
               value={tmdbApiKey}
               onChange={(e) => { setTmdbApiKey(e.target.value); setErrors((prev) => ({ ...prev, apiKey: undefined })) }}
               placeholder=""
             />
             <p className="text-xs text-muted-foreground">Required. Found in your TMDB account under Settings &gt; API.</p>
             {errors.apiKey && <p className="text-red-500 text-xs">{errors.apiKey}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="onboard-tmdb-url" className="text-xs">
-              TMDB Base URL
-            </label>
-            <Input
-              id="onboard-tmdb-url"
-              value={tmdbBaseUrl}
-              onChange={(e) => { setTmdbBaseUrl(e.target.value); setErrors((prev) => ({ ...prev, baseUrl: undefined })) }}
-            />
-            <p className="text-xs text-muted-foreground">Required. Default: https://api.themoviedb.org/3</p>
-            {errors.baseUrl && <p className="text-red-500 text-xs">{errors.baseUrl}</p>}
           </div>
 
           {saveMutation.isError && (

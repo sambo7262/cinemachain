@@ -66,8 +66,16 @@ async def test_db_overrides_env(client):
     # PUT a new value
     put_resp = await client.put("/api/settings", json={"tmdb_api_key": "new_test_key_override"})
     assert put_resp.status_code == 200, f"PUT /settings returned {put_resp.status_code}"
+    # PUT response also returns masked value (per SEC-01)
+    assert put_resp.json()["tmdb_api_key"] == "***ide", (
+        "PUT /settings should return masked key value in response (per SEC-01)"
+    )
 
-    # GET again — should reflect the DB-stored override
+    # GET again — should reflect the DB-stored override (masked)
     resp2 = await client.get("/api/settings")
     assert resp2.status_code == 200
-    assert resp2.json()["tmdb_api_key"] == "new_test_key_override", "DB setting did not override .env value"
+    assert resp2.json()["tmdb_api_key"] == "***ide", (
+        "GET /settings should return masked key value after PUT (per SEC-01)"
+    )
+
+

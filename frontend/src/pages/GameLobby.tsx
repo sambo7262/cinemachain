@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react"
+import { ArchivedSessionsTab } from "./ArchivedSessions"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api, type GameSessionDTO, type CsvValidationResponse, type CsvOverride, type CsvActorError, type CsvActorOverride } from "@/lib/api"
@@ -67,11 +68,6 @@ function formatRuntime(minutes: number): string {
   return `${h}h ${m}m total`
 }
 
-function formatDate(isoString: string | null): string {
-  if (!isoString) return "Unknown"
-  const d = new Date(isoString)
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-}
 
 function currentMovieForSession(session: GameSessionDTO): string {
   const step = session.steps.find(s => s.movie_tmdb_id === session.current_movie_tmdb_id)
@@ -105,7 +101,7 @@ export default function GameLobby() {
 
   const { data: searchResults, isLoading: searchLoading } = useQuery({
     queryKey: ["movieSearch", debouncedQuery],
-    queryFn: () => api.searchMovies(debouncedQuery),
+    queryFn: () => api.searchMoviesLegacy(debouncedQuery),
     enabled: debouncedQuery.length >= 2,
   })
 
@@ -196,7 +192,7 @@ export default function GameLobby() {
   const isSequenceValid = !csvRows.some(r => !r.isValid)
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-6 gap-8">
+    <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 gap-8">
       {/* Header */}
       <div className="text-center mt-8">
         <h1 className="text-3xl font-bold tracking-tight">CinemaChain</h1>
@@ -206,6 +202,12 @@ export default function GameLobby() {
       </div>
 
       <div className="w-full max-w-2xl">
+        <Tabs defaultValue="active">
+          <TabsList className="mb-4">
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
+          </TabsList>
+          <TabsContent value="active">
         {view === "grid" ? (
           /* Session grid view */
           <div className="flex flex-col gap-4">
@@ -216,31 +218,44 @@ export default function GameLobby() {
             ) : (
               <div className="flex flex-col gap-3">
                 {activeSessions.map((session) => (
-                  <Card key={session.id} className="cursor-pointer hover:border-primary/50 transition-colors">
-                    <CardContent className="flex items-center justify-between py-4 px-5">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-semibold text-foreground">{session.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center rounded-md bg-primary/10 text-primary text-xs font-medium px-2 py-0.5 ring-1 ring-inset ring-primary/20">
-                            {session.current_movie_title ?? currentMovieForSession(session)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {session.steps.length} step{session.steps.length !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {session.watched_count} watched · {formatRuntime(session.watched_runtime_minutes)} · Started {formatDate(session.created_at)}
-                        </p>
+                  <Card key={session.id} className="cursor-pointer hover:border-primary/50 transition-colors overflow-hidden"
+                    onClick={() => navigate(`/game/${session.id}`)}
+                  >
+                    <CardContent className="flex gap-3 p-3">
+                      {/* Poster */}
+                      <div className="flex-shrink-0">
+                        {(() => {
+                          const currentStep = session.steps.find(s => s.movie_tmdb_id === session.current_movie_tmdb_id)
+                          const posterPath = currentStep?.poster_path
+                          return posterPath ? (
+                            <img
+                              src={`https://image.tmdb.org/t/p/w185${posterPath}`}
+                              alt={currentStep?.movie_title ?? "Current movie"}
+                              className="w-[80px] h-[120px] rounded object-cover"
+                            />
+                          ) : (
+                            <div className="w-[80px] h-[120px] rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                              No poster
+                            </div>
+                          )
+                        })()}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-green-100 text-green-800 border border-green-200 hover:bg-green-200"
-                          onClick={() => navigate(`/game/${session.id}`)}
-                        >
-                          Continue →
-                        </Button>
+                      {/* Session info */}
+                      <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <span className="font-semibold text-foreground truncate text-sm">{session.name}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {session.current_movie_title ?? currentMovieForSession(session)}
+                        </span>
+                        <p className="text-xs text-muted-foreground flex flex-wrap gap-x-1">
+                          <span>{session.watched_count} watched</span>
+                          <span>&middot;</span>
+                          <span>{formatRuntime(session.watched_runtime_minutes)}</span>
+                        </p>
+                        <div className="mt-auto pt-2">
+                          <button className="w-full text-xs font-medium py-1.5 rounded bg-green-700 hover:bg-green-600 text-white transition-colors">
+                            Continue
+                          </button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -548,6 +563,11 @@ export default function GameLobby() {
             </div>}
           </div>
         )}
+          </TabsContent>
+          <TabsContent value="archived">
+            <ArchivedSessionsTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

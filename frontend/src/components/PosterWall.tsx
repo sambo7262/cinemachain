@@ -39,7 +39,7 @@ export function PosterWall({ posters }: PosterWallProps) {
   const allColumns = distributeColumns(renderablePosters, 4)
 
   return (
-    <div className="fixed inset-0 z-[1] overflow-hidden" aria-hidden="true">
+    <div className="fixed inset-0 z-[1] overflow-hidden hidden sm:block" aria-hidden="true">
       {/* Dark overlay — must be above poster columns */}
       <div className="absolute inset-0 bg-black/60 z-10" />
 
@@ -72,7 +72,7 @@ export function PosterWall({ posters }: PosterWallProps) {
                     src={url}
                     alt=""
                     className="w-full object-cover bg-muted"
-                    loading="lazy"
+                    loading="eager"
                     onError={(e) => {
                       // Hide broken images rather than showing broken image icon
                       ;(e.target as HTMLImageElement).style.display = "none"

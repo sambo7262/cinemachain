@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: CinemaChain v1.0
-status: archived
-stopped_at: Milestone closed and archived
-last_updated: "2026-03-22T00:00:00.000Z"
+milestone: v2.0
+milestone_name: "**Goal:** Expand CinemaChain beyond the game loop — fix all known friction points, add Query Mode for direct movie discovery, richer session tools"
+status: in_progress
+stopped_at: Completed 021-pre-deploy-hardening 21-01-PLAN.md
+last_updated: "2026-04-02T21:30:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 13
-  total_plans: 122
-  completed_plans: 122
+  completed_phases: 12
+  total_plans: 46
+  completed_plans: 46
 ---
 
 # STATE.md — CinemaChain
@@ -24,12 +24,12 @@ progress:
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
+Phase: 021
+Plan: 01 — complete
 
 ## Progress
 
-`[██████████] 100%` — 117 of 117 plans complete
+`[██████████] 97%` — 46 of 47 plans complete
 
 | Phase | Status |
 |-------|--------|
@@ -50,6 +50,31 @@ Plan: Not started
 
 ## Recent Decisions
 
+- **2026-04-02:** 21-01: Masked sentinel resolution in _resolve_key() enables testing stored DB keys without re-entry; Radarr quality profile mismatch returns ok=true with warning (not error) — Radarr is still usable; saveMutation.onSuccess made async for auto-validate after save
+- **2026-04-02:** 19-06: v2BUG-01 marked complete; MDBSYNC-01/02 superseded (first-party Watch History); IMDB-01 partial (actor backfill deferred); UAT mostly passed — 5 visual gap items deferred (mark-watched dialog layout, now-playing post-watch, iPhone portrait padding, wider-screen tile height, session tile poster/continue)
+- **2026-04-02:** 19-04: D-25: delete_last_step atomically removes movie step + preceding actor step; reverts current_movie_tmdb_id to steps[-3]; requires len(steps)>=3 guard; actor-only last steps fall through to single-step delete; D-24: session settings menu order is Export CSV, Edit Session Name, Delete Last Step, Archive Session
+- **2026-04-02:** 19-03: needsAllResults extends filteringByMark to include search+sidebar filters (9999-fetch for cross-page filter/search); exclude_nr filters only mpaa_rating==NR (NULL passes); sort new column always defaults desc (D-16/D-17/D-18/D-21)
+- **2026-04-02:** 19-01: RatingSlider pure presentational component — caller owns mutation + dialog state; onSave/onSkip callbacks only; WatchHistoryPage ratingMutation narrowed from number|null to number (Skip dismisses, does not clear rating); GameSession passes currentRating=null (fresh watch, no prior rating)
+- **2026-04-02:** 18-02: ScrubSecretsFilter on root logger (not handler); async _scrub_request_headers event hook on TMDB/Radarr/MDBList httpx clients; logger.exception replaced with logger.error+scrub_traceback at all httpx exception call sites; MDBList apikey= query param not scrubbed (httpx URLs immutable — DEBUG-level only, acceptable)
+- **2026-04-02:** 18-01: mask_key sentinel format ***xyz (last 3 chars); is_masked_sentinel threshold len<=10; PUT sentinel skip on _SECRET_FIELDS={tmdb_api_key,radarr_api_key,mdblist_api_key}; bootstrap_encryption_key priority env>file>generate with atomic write; TMDB v4 Bearer token auth replaces api_key query param; register_secret() called at startup for log scrubbing
+- **2026-04-02:** 17-02: _CacheState dataclass + _cache_state singleton; 25k limits on stub+MPAA passes; 429 backoff on discover loop + _backfill_mpaa_pass; _backfill_overview_pass removed from nightly_cache_job; cache router (POST /run-now, GET /status); mdblist_nightly_job with 90-day refetch + quota; both CronTriggers use America/Los_Angeles; nightly_mdblist APScheduler job registered
+- **2026-04-01:** 17-01: DB engine pool_size=10/max_overflow=5/pool_pre_ping=True/pool_recycle=1800/pool_timeout=60/command_timeout=60; StepResponse.movie_imdb_id added; _enrich_steps_thumbnails returns 3-tuple with imdb_map; _build_session_response wired with imdb_map; 5 call-sites updated (plan identified 4; 5th in archive/reload path also updated)
+- **2026-04-02:** 16-03: saveMovieGlobal/unsaveMovieGlobal renamed to avoid conflict with session-scoped saveMovie/unsaveMovie in api.ts; RatingsBadge uses `ratings` prop (not `movie`); WatchHistoryPage tile view uses variant='tile', splash uses variant='splash'
+- **2026-04-02:** 16-02: GlobalSave has no ForeignKey to game_sessions (session-independent bookmark); null-stable two-pass sort for 7 sort keys; PATCH /rating validates 1-10 in Python; pg_insert on_conflict_do_nothing for save upsert; /watched route before /{tmdb_id} catch-all
+- **2026-04-01:** 16-01: migration 0016 drops mdblist_synced_at from watch_events; _push_watch_to_mdblist removed from movies.py and game.py; /watched-sync/* endpoints deleted from mdblist.py; WatchedSyncStatusDTO removed from api.ts; Watch Sync card removed from Settings.tsx
+- **2026-04-01:** 15-03: GET /sessions/{session_id}/suggestions endpoint added to game.py; SuggestionsResponse Pydantic model; 4-step eligible pool intersection (used actors → chain movies → eligible actors → eligible movies); guards for missing api_key and seed_count=0; settings_service imported
+- **2026-04-01:** 15-02: TMDBClient.fetch_recommendations added; suggestions.py with fetch_and_cache_recommendations + get_session_suggestions + _update_session_suggestions; _update_session_suggestions wired into mark_current_watched; 6 unit tests passing
+- **2026-04-01:** 15-01: Alembic migration 0015 (nullable JSON tmdb_recommendations on movies); Movie.tmdb_recommendations mapped column; tmdb_suggestions_seed_count str|None added to SettingsResponse + SettingsUpdateRequest
+- **2026-04-01:** 14-03: WatchedSyncStatusDTO + startWatchedSync + getWatchedSyncStatus added to api.ts; mdblist_list_id in SettingsDTO; Settings page MDBList Watch Sync card with list ID input, confirm dialog, polling progress bar, completion message
+- **2026-04-01:** 14-01: _push_watch_to_mdblist fire-and-forget helper; truthy `if imdb_id:` check handles None + "" sentinel; mdblist_synced_at set only on HTTP 200; BackgroundTasks wired into mark_current_watched (game.py) and mark_movie_watched (movies.py); migration 0013 adds mdblist_synced_at to watch_events
+- **2026-04-01:** 14-02: _SyncState dataclass separate from _BackfillState; _run_watched_sync background task with per-item commit and quota guard; POST /watched-sync/start (409 guard) + GET /watched-sync/status endpoints; mdblist_list_id added to SettingsResponse and SettingsUpdateRequest (plaintext — not a secret)
+- **2026-03-31:** 13-04: api.mdblist namespace (startBackfill + getBackfillStatus); Settings page backfill UI with confirm dialog, 2s polling, progress bar, quota counter, completion message
+- **2026-04-01:** 13-03: RatingsBadge component with card/splash/tile variants; variant-keyed BADGE_DEFS; null+0-sentinel hiding; SiImdb/SiLetterboxd/SiThemoviedatabase icons; IMDB conditional links in GameSession + SearchPage + ChainHistory (TMDB fallback)
+- **2026-04-01:** 13-02: mdblist router created with POST /mdblist/backfill/start + GET /mdblist/backfill/status; _BackfillState in-memory tracking; _increment_quota persists mdblist_calls_today + mdblist_calls_reset_date in app_settings; 409 on concurrent start; uses _bg_session_factory
+- **2026-04-01:** 13-01: mdblist.py extended to parse all 6 rating sources + imdbid + score_average; 5 new Movie columns (imdb_id, imdb_rating, metacritic_score, letterboxd_score, mdb_avg_score); migration 0011 adds columns + resets rt_score=NULL; game.py + search.py DTOs wired with all new fields + rt_audience_score bug fix
+- **2026-04-01:** 12-01: Card-based eligible-movies list replaces wide table — no horizontal scrolling on mobile; sort dropdown (shadcn Select) with 10 options replaces column header clicks; save/shortlist icons moved to absolute poster overlays with bg-black/40 backdrop; Watched badge dropped
+- **2026-03-31:** 10-02: radarr_helper.py extracted; search router added (QMODE-01/02); /movies/popular + /request + source param on /watched (QMODE-03/06); from __future__ import annotations added for Python 3.9 compat
+- **2026-03-31:** 10-01: SearchPage.tsx null stub created for Vite 6 compatibility — dynamic imports cannot be caught before vite:import-analysis transform step; stub is Wave 0 placeholder replaced by Wave 2
 - **2026-03-22:** 06.1-03: RT scores displayed as '🍅 N%' inline — no placeholder when null; MDBList API key masked with type=password in Settings; backend sort for rt uses null-stable two-pass pattern matching all other sort columns
 - **2026-03-22:** 06-07: RT ratings (Item 7) — MDBList API selected; accepts TMDB ID natively, returns Tomatometer + Audience Score, 1000 req/day free with DB caching; implementation deferred to post-Phase-6 backlog
 - **2026-03-22:** 06-02: overview stored in _ensure_movie_details_in_db and _backfill_movie_posters_background so populated via all TMDB fetch paths; skip_radarr=True bypasses Radarr and returns "skipped" status; PATCH /sessions/{id}/name validates and checks uniqueness excluding self; CSV actor name resolved via fetch_person when actor_tmdb_id set and actor_name missing
@@ -306,6 +331,6 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:15:52.170Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-04-02T20:53:21.650Z
+Stopped at: Completed 020-now-playing-polish plan 01
 Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.

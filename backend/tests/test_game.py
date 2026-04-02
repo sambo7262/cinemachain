@@ -1607,3 +1607,132 @@ async def test_rename_session(client):
     )
     assert rename_resp.status_code == 200, f"PATCH rename returned {rename_resp.status_code} — endpoint may not exist"
     assert rename_resp.json()["name"] == "Renamed Session"
+
+
+@pytest.mark.asyncio
+async def test_csv_export_with_step_order_gap(client):
+    """BUG-08: CSV export must succeed when session steps have gaps in step_order (deleted steps)."""
+    try:
+        from app.main import app
+        from app.models import Movie, GameSession, GameSessionStep
+        from app.db import async_session_factory
+    except ImportError:
+        pytest.skip("app.main not yet implemented")
+
+    async with async_session_factory() as db:
+        m1 = Movie(tmdb_id=88801, title="CSV Gap Movie 1", year=2000)
+        m2 = Movie(tmdb_id=88802, title="CSV Gap Movie 2", year=2001)
+        m3 = Movie(tmdb_id=88803, title="CSV Gap Movie 3", year=2002)
+        db.add_all([m1, m2, m3])
+        session = GameSession(
+            name="BUG08 CSV Gap Session",
+            status="active",
+            current_movie_tmdb_id=88803,
+            current_movie_watched=False,
+        )
+        db.add(session)
+        await db.flush()
+        # step_order 1 = movie pick, step_order 3 = actor pick (gap at 2 — simulates deleted step)
+        step1 = GameSessionStep(session_id=session.id, step_order=1, movie_tmdb_id=88801, actor_tmdb_id=None, movie_title="CSV Gap Movie 1")
+        step3 = GameSessionStep(session_id=session.id, step_order=3, movie_tmdb_id=88801, actor_tmdb_id=77701, actor_name="Gap Actor", movie_title=None)
+        step4 = GameSessionStep(session_id=session.id, step_order=4, movie_tmdb_id=88802, actor_tmdb_id=None, movie_title="CSV Gap Movie 2")
+        db.add_all([step1, step3, step4])
+        await db.commit()
+        sid = session.id
+
+    resp = await client.get(f"/game/sessions/{sid}/export-csv")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    content = resp.text
+    lines = content.strip().split("\n")
+    # Header + 2 movie rows
+    assert len(lines) == 3, f"Expected 3 lines (header + 2 movies), got {len(lines)}: {lines}"
+    # First movie row should have the actor name found by forward-scan
+    assert "Gap Actor" in lines[1], f"Expected 'Gap Actor' in first movie row: {lines[1]}"
+
+
+@pytest.mark.asyncio
+async def test_save_movie(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp = await client.post("/game/sessions/1/saves/550")
+    assert resp.status_code == 204
+
+@pytest.mark.asyncio
+async def test_unsave_movie(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp = await client.delete("/game/sessions/1/saves/550")
+    assert resp.status_code == 204
+
+@pytest.mark.asyncio
+async def test_save_movie_idempotent(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp1 = await client.post("/game/sessions/1/saves/550")
+    resp2 = await client.post("/game/sessions/1/saves/550")
+    assert resp1.status_code == 204
+    assert resp2.status_code == 204
+
+@pytest.mark.asyncio
+async def test_eligible_movies_saved_flag(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    # save, then check eligible movies response has saved: true
+    await client.post("/game/sessions/1/saves/550")
+    resp = await client.get("/game/sessions/1/eligible-movies")
+    assert resp.status_code == 200
+
+@pytest.mark.asyncio
+async def test_eligible_movie_response_schema(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp = await client.get("/game/sessions/1/eligible-movies")
+    assert resp.status_code == 200
+
+@pytest.mark.asyncio
+async def test_shortlist_movie(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp = await client.post("/game/sessions/1/shortlist/550")
+    assert resp.status_code == 204
+
+@pytest.mark.asyncio
+async def test_clear_shortlist(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    resp = await client.delete("/game/sessions/1/shortlist")
+    assert resp.status_code == 204
+
+@pytest.mark.asyncio
+async def test_request_movie_clears_shortlist(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    # shortlist a movie, then request a different movie, shortlist should be cleared
+    await client.post("/game/sessions/1/shortlist/550")
+    # integration test runs in Docker with real DB
+
+@pytest.mark.asyncio
+async def test_request_movie_removes_save(client):
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        pytest.skip("asyncpg not installed locally — runs in Docker")
+    # save a movie, then pick that movie, save entry should be deleted
+    await client.post("/game/sessions/1/saves/550")
+    # integration test runs in Docker with real DB

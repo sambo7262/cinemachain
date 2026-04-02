@@ -1,21 +1,59 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models import Actor, Credit, Movie, WatchEvent
+from app.models import Actor, Credit, GlobalSave, Movie, WatchEvent
+from app.services.tmdb import TMDBClient
+from app.services.mdblist import fetch_rt_scores
 
 
 class PosterWallItem(BaseModel):
     tmdb_id: int
     poster_path: str
     poster_local_path: str | None = None
+
+
+class WatchedMovieDTO(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None = None
+    poster_path: str | None = None
+    vote_average: float | None = None
+    genres: str | None = None          # raw JSON string, same as EligibleMovieDTO
+    runtime: int | None = None
+    mpaa_rating: str | None = None
+    overview: str | None = None
+    rt_score: int | None = None
+    rt_audience_score: int | None = None
+    imdb_id: str | None = None
+    imdb_rating: float | None = None
+    metacritic_score: int | None = None
+    letterboxd_score: float | None = None
+    mdb_avg_score: float | None = None
+    watched_at: str                     # ISO 8601 datetime string
+    personal_rating: int | None = None  # WatchEvent.rating
+
+
+class WatchedMoviesResponse(BaseModel):
+    items: list[WatchedMovieDTO]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
+
+class RatingUpdate(BaseModel):
+    rating: int | None = None  # None clears the rating
+
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
@@ -44,24 +82,111 @@ async def search_movies(
     ]
 
 
-@router.get("/watched")
-async def get_watched_movies(db: AsyncSession = Depends(get_db)):
-    """Return all movies the user has watched (from WatchEvent table, joined with Movie)."""
-    result = await db.execute(
-        select(Movie)
+@router.get("/watched", response_model=WatchedMoviesResponse)
+async def get_watched_movies(
+    db: AsyncSession = Depends(get_db),
+    sort: str = Query(default="title"),
+    sort_dir: str = Query(default="asc"),
+    search: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=24, ge=1, le=100),
+):
+    """Return all watched movies with sort, search, and pagination.
+
+    Sort keys: title, year, runtime, rating (TMDB vote_average), rt (RT score),
+               watched_at, personal_rating.
+    Nulls are always sorted last (null-stable two-pass pattern).
+    """
+    # Fetch all matching rows (join Movie + WatchEvent)
+    stmt = (
+        select(Movie, WatchEvent)
         .join(WatchEvent, WatchEvent.tmdb_id == Movie.tmdb_id)
-        .order_by(Movie.title)
     )
-    movies = result.scalars().all()
-    return [
-        {
-            "tmdb_id": m.tmdb_id,
-            "title": m.title,
-            "year": m.year,
-            "poster_path": m.poster_path,
-        }
-        for m in movies
-    ]
+    if search:
+        stmt = stmt.where(Movie.title.ilike(f"%{search}%"))
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    movies: list[dict] = []
+    for movie, we in rows:
+        movies.append({
+            "tmdb_id": movie.tmdb_id,
+            "title": movie.title or "",
+            "year": movie.year,
+            "poster_path": movie.poster_path,
+            "vote_average": movie.vote_average,
+            "genres": movie.genres,
+            "runtime": movie.runtime,
+            "mpaa_rating": movie.mpaa_rating,
+            "overview": movie.overview,
+            "rt_score": movie.rt_score,
+            "rt_audience_score": movie.rt_audience_score,
+            "imdb_id": movie.imdb_id,
+            "imdb_rating": movie.imdb_rating,
+            "metacritic_score": movie.metacritic_score,
+            "letterboxd_score": movie.letterboxd_score,
+            "mdb_avg_score": movie.mdb_avg_score,
+            "watched_at": we.watched_at.isoformat() if we.watched_at else "",
+            "personal_rating": we.rating,
+        })
+
+    # Null-stable two-pass sort
+    _desc = sort_dir == "desc"
+
+    if sort == "title":
+        movies.sort(key=lambda m: (m["title"].lower(), m["tmdb_id"]), reverse=_desc)
+    elif sort == "year":
+        with_val = [m for m in movies if m.get("year") is not None]
+        without_val = [m for m in movies if m.get("year") is None]
+        with_val.sort(key=lambda m: (m["year"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "runtime":
+        with_val = [m for m in movies if m.get("runtime") is not None]
+        without_val = [m for m in movies if m.get("runtime") is None]
+        with_val.sort(key=lambda m: (m["runtime"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "rating":
+        with_val = [m for m in movies if m.get("vote_average") is not None]
+        without_val = [m for m in movies if m.get("vote_average") is None]
+        with_val.sort(key=lambda m: (m["vote_average"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "rt":
+        with_val = [m for m in movies if m.get("rt_score") is not None]
+        without_val = [m for m in movies if m.get("rt_score") is None]
+        with_val.sort(key=lambda m: (m["rt_score"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "watched_at":
+        with_val = [m for m in movies if m.get("watched_at")]
+        without_val = [m for m in movies if not m.get("watched_at")]
+        with_val.sort(key=lambda m: (m["watched_at"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "personal_rating":
+        with_val = [m for m in movies if m.get("personal_rating") is not None]
+        without_val = [m for m in movies if m.get("personal_rating") is None]
+        with_val.sort(key=lambda m: (m["personal_rating"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    else:
+        # Unknown sort key: fall back to title asc
+        movies.sort(key=lambda m: (m["title"].lower(), m["tmdb_id"]))
+
+    total = len(movies)
+    offset = (page - 1) * page_size
+    paginated = movies[offset: offset + page_size]
+
+    return WatchedMoviesResponse(
+        items=[WatchedMovieDTO(**m) for m in paginated],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_more=(offset + page_size) < total,
+    )
 
 
 @router.get("/poster-wall", response_model=list[PosterWallItem])
@@ -113,6 +238,159 @@ async def get_poster_wall(
             )
 
     return collected
+
+
+TMDB_GENRE_IDS = {
+    "Action": 28, "Adventure": 12, "Animation": 16, "Comedy": 35,
+    "Crime": 80, "Documentary": 99, "Drama": 18, "Horror": 27,
+    "Romance": 10749, "Science Fiction": 878, "Thriller": 53,
+    "Fantasy": 14, "History": 36, "Music": 10402,
+}
+
+
+@router.get("/popular")
+async def get_popular_by_genre(
+    genre: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """QMODE-03: Return top ~100 popular movies for a genre via TMDB Discover (5 pages x 20)."""
+    from app.routers.game import _ensure_movie_details_in_db
+    tmdb: TMDBClient = request.app.state.tmdb_client
+
+    # Fetch pages 1-5 sequentially (semaphore respected inside discover_movies)
+    all_results: list = []
+    seen_ids: set = set()
+    for page in (1, 2, 3, 4, 5):
+        data = await tmdb.discover_movies(genre, page=page)
+        for m in data.get("results", []):
+            if m.get("id") and m["id"] not in seen_ids:
+                seen_ids.add(m["id"])
+                all_results.append(m)
+
+    if not all_results:
+        return []
+
+    # Upsert movie stubs
+    for m in all_results:
+        year = int(m["release_date"][:4]) if m.get("release_date") else None
+        stmt = pg_insert(Movie).values(
+            tmdb_id=m["id"],
+            title=m.get("title", ""),
+            year=year,
+            poster_path=m.get("poster_path"),
+            vote_average=m.get("vote_average"),
+            vote_count=m.get("vote_count"),
+        ).on_conflict_do_update(
+            index_elements=["tmdb_id"],
+            set_={
+                "title": m.get("title", ""),
+                "poster_path": m.get("poster_path"),
+                "vote_average": m.get("vote_average"),
+                "vote_count": m.get("vote_count"),
+            },
+        )
+        await db.execute(stmt)
+    await db.commit()
+
+    tmdb_ids = [m["id"] for m in all_results]
+
+    # Enrich details (genres, runtime, overview) and RT scores
+    await _ensure_movie_details_in_db(tmdb_ids, tmdb, db)
+    await fetch_rt_scores(tmdb_ids, db)
+    await db.commit()
+
+    # Fetch enriched rows
+    from sqlalchemy import select as _select
+    result = await db.execute(_select(Movie).where(Movie.tmdb_id.in_(tmdb_ids)))
+    movies = {m.tmdb_id: m for m in result.scalars().all()}
+
+    # Fetch watched set
+    watch_result = await db.execute(_select(WatchEvent.tmdb_id))
+    watched_ids = {r[0] for r in watch_result.all()}
+
+    return [
+        {
+            "tmdb_id": movies[tid].tmdb_id,
+            "title": movies[tid].title,
+            "year": movies[tid].year,
+            "poster_path": movies[tid].poster_path,
+            "vote_average": movies[tid].vote_average,
+            "genres": movies[tid].genres,
+            "runtime": movies[tid].runtime,
+            "watched": tid in watched_ids,
+            "selectable": True,
+            "via_actor_name": None,
+            "vote_count": movies[tid].vote_count,
+            "mpaa_rating": movies[tid].mpaa_rating,
+            "overview": movies[tid].overview,
+            "rt_score": movies[tid].rt_score,
+        }
+        for tid in tmdb_ids
+        if tid in movies
+    ]
+
+
+@router.post("/{tmdb_id}/request")
+async def request_movie_standalone(
+    tmdb_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """QMODE-06: Queue a movie via Radarr without a game session."""
+    from app.services.radarr_helper import _request_radarr
+    from app.services.radarr import RadarrClient
+    radarr: RadarrClient = request.app.state.radarr_client
+    result = await _request_radarr(tmdb_id, radarr)
+    return result
+
+
+@router.patch("/{tmdb_id}/rating")
+async def set_movie_rating(
+    tmdb_id: int,
+    body: RatingUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Set or clear the personal rating on a WatchEvent. rating=null clears it."""
+    result = await db.execute(
+        select(WatchEvent).where(WatchEvent.tmdb_id == tmdb_id)
+    )
+    we = result.scalar_one_or_none()
+    if we is None:
+        raise HTTPException(status_code=404, detail="No watch event found for this movie")
+    if body.rating is not None and not (1 <= body.rating <= 10):
+        raise HTTPException(status_code=422, detail="Rating must be between 1 and 10")
+    we.rating = body.rating
+    await db.commit()
+    return {"tmdb_id": tmdb_id, "rating": we.rating}
+
+
+@router.post("/{tmdb_id}/save")
+async def save_movie(
+    tmdb_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Globally bookmark a movie. Surfaces as saved in any game session's eligible-movies list."""
+    stmt = pg_insert(GlobalSave).values(
+        tmdb_id=tmdb_id,
+        saved_at=sa.func.now(),
+    ).on_conflict_do_nothing(index_elements=["tmdb_id"])
+    await db.execute(stmt)
+    await db.commit()
+    return {"tmdb_id": tmdb_id, "saved": True}
+
+
+@router.delete("/{tmdb_id}/save")
+async def unsave_movie(
+    tmdb_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a global bookmark."""
+    await db.execute(
+        sa.delete(GlobalSave).where(GlobalSave.tmdb_id == tmdb_id)
+    )
+    await db.commit()
+    return {"tmdb_id": tmdb_id, "saved": False}
 
 
 @router.get("/{tmdb_id}")
@@ -188,14 +466,21 @@ async def get_movie(tmdb_id: int, request: Request, db: AsyncSession = Depends(g
 
 
 @router.patch("/{tmdb_id}/watched")
-async def mark_movie_watched(tmdb_id: int, db: AsyncSession = Depends(get_db)):
-    """DATA-06: Manually mark a movie as watched (fallback without Plex Pass)."""
+async def mark_movie_watched(
+    tmdb_id: int,
+    db: AsyncSession = Depends(get_db),
+    source: str = "manual",
+):
+    """DATA-06: Log a WatchEvent for a movie. source param: 'manual' (default) | 'online' | 'radarr'."""
+    if source not in ("manual", "online", "radarr"):
+        source = "manual"
     stmt = pg_insert(WatchEvent).values(
         tmdb_id=tmdb_id,
         movie_id=None,
-        source="manual",
+        source=source,
         watched_at=datetime.utcnow(),
     ).on_conflict_do_nothing(index_elements=["tmdb_id"])
     await db.execute(stmt)
     await db.commit()
-    return {"tmdb_id": tmdb_id, "watched": True, "source": "manual"}
+
+    return {"tmdb_id": tmdb_id, "watched": True, "source": source}

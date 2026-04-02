@@ -29,7 +29,14 @@ class Movie(Base):
     poster_local_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     rt_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     rt_audience_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    imdb_id: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    imdb_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    metacritic_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    letterboxd_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mdb_avg_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mdblist_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    tmdb_recommendations: Mapped[Optional[list]] = mapped_column(sa.JSON, nullable=True)
 
     credits: Mapped[list[Credit]] = relationship(back_populates="movie", lazy="raise")
     watch_events: Mapped[list[WatchEvent]] = relationship(back_populates="movie", lazy="raise")
@@ -43,6 +50,7 @@ class Actor(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     profile_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    filmography_fetched: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     credits: Mapped[list[Credit]] = relationship(back_populates="actor", lazy="raise")
 
@@ -70,6 +78,7 @@ class WatchEvent(Base):
     movie_id: Mapped[Optional[int]] = mapped_column(ForeignKey("movies.id"), nullable=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False)  # plex_sync | plex_webhook | manual
     watched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     movie: Mapped[Optional[Movie]] = relationship(back_populates="watch_events", lazy="raise")
 
@@ -124,3 +133,29 @@ class AppSettings(Base):
     value: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SessionSave(Base):
+    __tablename__ = "session_saves"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False)
+    tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    saved_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("session_id", "tmdb_id"),)
+
+
+class SessionShortlist(Base):
+    __tablename__ = "session_shortlist"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False)
+    tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    __table_args__ = (UniqueConstraint("session_id", "tmdb_id"),)
+
+
+class GlobalSave(Base):
+    __tablename__ = "global_saves"
+    __table_args__ = (UniqueConstraint("tmdb_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    saved_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
