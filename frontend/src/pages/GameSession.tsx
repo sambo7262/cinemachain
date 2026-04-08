@@ -61,7 +61,7 @@ export default function GameSession() {
   // Tab + selection state
   const [activeTab, setActiveTab] = useState<"actors" | "movies">("actors")
   const [selectedActor, setSelectedActor] = useState<EligibleActorDTO | null>(null)
-  const [sortCol, setSortCol] = useState<"rating" | "year" | "runtime" | "mpaa" | "rt" | "rt">("rating")
+  const [sortCol, setSortCol] = useState<"rating" | "year" | "runtime" | "mpaa" | "rt" | "rt_audience" | "imdb" | "metacritic" | "letterboxd" | "mdb_avg">("rating")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const [allMovies, setAllMovies] = useState(false)
   const [showSavedOnly, setShowSavedOnly] = useState(false)
@@ -914,11 +914,16 @@ export default function GameSession() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="rating">Rating</SelectItem>
+                        <SelectItem value="rating">TMDB</SelectItem>
+                        <SelectItem value="rt">RT Score</SelectItem>
+                        <SelectItem value="rt_audience">RT Audience</SelectItem>
+                        <SelectItem value="imdb">IMDb</SelectItem>
+                        <SelectItem value="metacritic">Metacritic</SelectItem>
+                        <SelectItem value="letterboxd">Letterboxd</SelectItem>
+                        <SelectItem value="mdb_avg">MDB Avg</SelectItem>
                         <SelectItem value="year">Year</SelectItem>
                         <SelectItem value="runtime">Runtime</SelectItem>
                         <SelectItem value="mpaa">MPAA</SelectItem>
-                        <SelectItem value="rt">RT</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button

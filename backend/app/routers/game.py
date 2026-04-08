@@ -377,16 +377,48 @@ async def _resolve_current_movie_detail(session: GameSession, db: AsyncSession) 
     )
 
 
+_TV_MOVIE_GENRE_ID = 10770
+
+
+def _should_skip_credit(credit_data: dict, vote_threshold: int) -> bool:
+    """Return True if this TMDB credit entry should be filtered out at ingestion.
+
+    Filters applied:
+    - vote_count below configurable threshold (default 5)
+    - TV Movie genre (genre_id 10770)
+    - Ghost entries: no release_date AND no vote_count
+    """
+    vc = credit_data.get("vote_count") or 0
+    has_date = bool(credit_data.get("release_date"))
+    genre_ids = credit_data.get("genre_ids") or []
+
+    # Ghost entry: no date and no votes — completely unknown
+    if not has_date and vc == 0:
+        return True
+
+    # Below vote threshold
+    if vc < vote_threshold:
+        return True
+
+    # TV Movie genre
+    if _TV_MOVIE_GENRE_ID in genre_ids:
+        return True
+
+    return False
+
+
 async def _ensure_actor_credits_in_db(
     actor_tmdb_id: int,
     tmdb: TMDBClient,
     db: AsyncSession,
+    vote_threshold: int = 5,
 ) -> None:
     """Fetch actor filmography from TMDB and upsert Movie + Credit rows.
 
     Called before eligible-movies DB query to ensure on-demand filmography is populated.
     Uses on_conflict_do_nothing so repeated calls are safe (idempotent).
     Short-circuits if Credit rows already exist for this actor — avoids TMDB call.
+    Filters out low-quality entries (low votes, TV movies, ghost entries) at ingestion.
     """
     actor_row = await db.execute(select(Actor).where(Actor.tmdb_id == actor_tmdb_id))
     existing_actor = actor_row.scalar_one_or_none()
@@ -426,8 +458,9 @@ async def _ensure_actor_credits_in_db(
     if actor is None:
         return
 
-    # Upsert movie stubs from filmography
-    for credit_data in data.get("cast", []):
+    # Filter and upsert movie stubs from filmography
+    accepted_credits = [c for c in data.get("cast", []) if not _should_skip_credit(c, vote_threshold)]
+    for credit_data in accepted_credits:
         _year = int(credit_data["release_date"][:4]) if credit_data.get("release_date") else None
         movie_stmt = pg_insert(Movie).values(
             tmdb_id=credit_data["id"],
@@ -453,7 +486,7 @@ async def _ensure_actor_credits_in_db(
     await db.commit()
 
     # Upsert Credit rows linking actor to each movie
-    for credit_data in data.get("cast", []):
+    for credit_data in accepted_credits:
         movie_result = await db.execute(
             select(Movie).where(Movie.tmdb_id == credit_data["id"])
         )
@@ -621,7 +654,9 @@ async def _prefetch_actor_credits_background(
     """
     try:
         async with _bg_session_factory() as db:
-            await _ensure_actor_credits_in_db(actor_tmdb_id, tmdb, db)
+            _vt_raw = await settings_service.get_setting(db, "vote_count_threshold")
+            _vt = int(_vt_raw) if _vt_raw else 5
+            await _ensure_actor_credits_in_db(actor_tmdb_id, tmdb, db, vote_threshold=_vt)
     except Exception:
         pass
 
@@ -1605,6 +1640,10 @@ async def get_eligible_movies(
     - all_movies: if False (default), only return unwatched movies
     - exclude_nr: if True, exclude movies where mpaa_rating == "NR" (NULL MPAA passes through)
     """
+    # Read vote threshold setting (used by _ensure_actor_credits_in_db calls below)
+    _vt_raw = await settings_service.get_setting(db, "vote_count_threshold")
+    _vote_threshold = int(_vt_raw) if _vt_raw else 5
+
     result = await db.execute(
         select(GameSession)
         .where(GameSession.id == session_id)
@@ -1638,7 +1677,7 @@ async def get_eligible_movies(
     if actor_id is not None:
         # Ensure actor filmography is in DB (fetch from TMDB on demand if missing)
         tmdb: TMDBClient = request.app.state.tmdb_client
-        await _ensure_actor_credits_in_db(actor_id, tmdb, db)
+        await _ensure_actor_credits_in_db(actor_id, tmdb, db, vote_threshold=_vote_threshold)
 
         # Specific actor filmography
         stmt = (
@@ -1723,7 +1762,7 @@ async def get_eligible_movies(
                 )
             )
             for unfetched_actor in unfetched_result.scalars().all():
-                await _ensure_actor_credits_in_db(unfetched_actor.tmdb_id, _tmdb_combined, db)
+                await _ensure_actor_credits_in_db(unfetched_actor.tmdb_id, _tmdb_combined, db, vote_threshold=_vote_threshold)
 
         if eligible_actor_tmdb_ids:
             film_stmt = (
@@ -1887,6 +1926,36 @@ async def get_eligible_movies(
         with_rt.sort(key=lambda m: (m.get("rt_score") or 0, m["tmdb_id"]), reverse=_desc)
         without_rt.sort(key=lambda m: m["tmdb_id"])
         movies = with_rt + without_rt
+    elif sort == "rt_audience":
+        with_val = [m for m in movies if m.get("rt_audience_score") is not None]
+        without_val = [m for m in movies if m.get("rt_audience_score") is None]
+        with_val.sort(key=lambda m: (m.get("rt_audience_score") or 0, m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "imdb":
+        with_val = [m for m in movies if m.get("imdb_rating") is not None]
+        without_val = [m for m in movies if m.get("imdb_rating") is None]
+        with_val.sort(key=lambda m: (m.get("imdb_rating") or 0, m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "metacritic":
+        with_val = [m for m in movies if m.get("metacritic_score") is not None]
+        without_val = [m for m in movies if m.get("metacritic_score") is None]
+        with_val.sort(key=lambda m: (m.get("metacritic_score") or 0, m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "letterboxd":
+        with_val = [m for m in movies if m.get("letterboxd_score") is not None]
+        without_val = [m for m in movies if m.get("letterboxd_score") is None]
+        with_val.sort(key=lambda m: (m.get("letterboxd_score") or 0, m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "mdb_avg":
+        with_val = [m for m in movies if m.get("mdb_avg_score") is not None]
+        without_val = [m for m in movies if m.get("mdb_avg_score") is None]
+        with_val.sort(key=lambda m: (m.get("mdb_avg_score") or 0, m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
 
     # Search — when provided, filter by title (case-insensitive) and bypass pagination.
     # Calls _ensure_actor_credits_in_db to guarantee full filmography coverage (no-op if cached).
@@ -1895,7 +1964,7 @@ async def get_eligible_movies(
         # Ensure full filmography is in DB for the actor (short-circuits if already cached)
         if actor_id is not None and hasattr(request.app.state, "tmdb_client"):
             tmdb_for_search: TMDBClient = request.app.state.tmdb_client
-            await _ensure_actor_credits_in_db(actor_id, tmdb_for_search, db)
+            await _ensure_actor_credits_in_db(actor_id, tmdb_for_search, db, vote_threshold=_vote_threshold)
         movies = [m for m in movies if search_lower in m["title"].lower()]
         total = len(movies)
         return {

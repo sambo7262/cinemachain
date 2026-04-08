@@ -165,6 +165,7 @@ export interface SettingsDTO {
   tmdb_suggestions_seed_count: string | null
   mdblist_schedule_time: string | null
   mdblist_refetch_days: string | null
+  vote_count_threshold: string | null
 }
 
 export interface SettingsStatusDTO {

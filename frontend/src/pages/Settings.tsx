@@ -54,6 +54,7 @@ const emptyForm: SettingsDTO = {
   tmdb_suggestions_seed_count: "",
   mdblist_schedule_time: "",
   mdblist_refetch_days: "",
+  vote_count_threshold: "",
 }
 
 function nullToEmpty(settings: SettingsDTO): SettingsDTO {
@@ -374,6 +375,22 @@ export function Settings() {
               placeholder="1500"
             />
             <p className="text-xs text-muted-foreground">Number of top actors to pre-fetch filmographies nightly</p>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="vote-count-threshold" className="text-xs">Vote count threshold</label>
+            <Input
+              id="vote-count-threshold"
+              type="number"
+              min={0}
+              max={100}
+              value={formData.vote_count_threshold ?? ""}
+              onChange={handleChange("vote_count_threshold")}
+              placeholder="5"
+            />
+            <p className="text-xs text-muted-foreground">
+              Minimum TMDB vote count to keep a movie during actor filmography ingestion (default 5).
+              Lower values keep more obscure titles; higher values filter more aggressively.
+            </p>
           </div>
           <div className="space-y-1">
             <label htmlFor="tmdb-suggestions-seed-count" className="text-xs">Suggestions seed count</label>

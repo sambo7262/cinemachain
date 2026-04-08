@@ -12,9 +12,12 @@ from sqlalchemy import update as sa_update
 
 from sqlalchemy import or_
 
+from sqlalchemy import delete as sa_delete
+
 from app.db import _bg_session_factory
-from app.models import Movie
+from app.models import Credit, GameSessionStep, Movie, SessionSave, SessionShortlist, WatchEvent
 from app.routers.game import _ensure_actor_credits_in_db, _ensure_movie_cast_in_db, _ensure_movie_details_in_db
+from app.services import settings_service
 from app.services.mdblist import backfill_rt_scores
 from app.services.tmdb import TMDBClient
 from app.utils.masking import scrub_traceback
@@ -208,6 +211,69 @@ async def _backfill_overview_pass(tmdb: TMDBClient, limit: int = 2000) -> None:
     logger.info("_backfill_overview_pass: %d overviews fetched", fetched)
 
 
+async def _cleanup_low_quality_movies(vote_threshold: int = 5) -> int:
+    """Remove movies that fail quality filters after enrichment data is available.
+
+    Removes:
+    - Movies with vote_count below threshold (default 5)
+    - Non-documentary movies with runtime < 40 minutes
+    - TV Movies (genre contains "TV Movie")
+
+    Protects movies referenced by watch_events, session_saves, session_shortlist,
+    or game_session_steps — these are never deleted regardless of filter match.
+    Returns the number of movies removed.
+    """
+    async with _bg_session_factory() as db:
+        # Collect protected tmdb_ids (user has interacted with these)
+        protected: set[int] = set()
+        for model, col in [
+            (WatchEvent, WatchEvent.tmdb_id),
+            (SessionSave, SessionSave.tmdb_id),
+            (SessionShortlist, SessionShortlist.tmdb_id),
+            (GameSessionStep, GameSessionStep.movie_tmdb_id),
+        ]:
+            rows = await db.execute(select(col).distinct())
+            protected.update(row[0] for row in rows.all())
+
+        # Find movies matching removal criteria
+        # Only consider enriched movies (genres IS NOT NULL) so we don't delete
+        # stubs that haven't been evaluated yet
+        result = await db.execute(
+            select(Movie.id, Movie.tmdb_id, Movie.vote_count, Movie.runtime, Movie.genres)
+            .where(Movie.tmdb_id.notin_(protected) if protected else True)
+        )
+        to_delete: list[int] = []
+        for row in result.all():
+            mid, tmdb_id, vc, runtime, genres = row
+
+            # vote_count below threshold
+            if (vc is not None) and vc < vote_threshold:
+                to_delete.append(mid)
+                continue
+
+            # Short non-documentary (only if runtime is known)
+            if runtime is not None and runtime < 40 and genres is not None:
+                if "Documentary" not in genres:
+                    to_delete.append(mid)
+                    continue
+
+            # TV Movie (only if genres are enriched)
+            if genres is not None and "TV Movie" in genres:
+                to_delete.append(mid)
+                continue
+
+        if not to_delete:
+            logger.info("_cleanup_low_quality_movies: nothing to remove")
+            return 0
+
+        # Delete credits first (FK constraint), then movies
+        await db.execute(sa_delete(Credit).where(Credit.movie_id.in_(to_delete)))
+        await db.execute(sa_delete(Movie).where(Movie.id.in_(to_delete)))
+        await db.commit()
+        logger.info("_cleanup_low_quality_movies: removed %d movies and their credits", len(to_delete))
+        return len(to_delete)
+
+
 async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000, top_actors: int = 1500) -> None:
     """Fetch top-N movies by vote count and ensure all are fully cached in the DB.
 
@@ -331,13 +397,23 @@ async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000, top_actors: int
 
         logger.info("nightly_cache_job: pre-fetching credits for %d actors", len(actor_ids))
         async with _bg_session_factory() as db:
+            _vt_raw = await settings_service.get_setting(db, "vote_count_threshold")
+            _vote_threshold = int(_vt_raw) if _vt_raw else 5
             for actor_id in actor_ids:
                 try:
-                    await _ensure_actor_credits_in_db(actor_id, tmdb, db)
+                    await _ensure_actor_credits_in_db(actor_id, tmdb, db, vote_threshold=_vote_threshold)
                 except Exception as exc:
                     logger.warning("nightly_cache_job: actor %d pre-fetch failed: %s", actor_id, exc)
                 await asyncio.sleep(0.05)
         logger.info("nightly_cache_job: actor pre-fetch complete")
+
+        # --- Post-enrichment cleanup: remove low-quality movies ---
+        logger.info("nightly_cache_job: starting post-enrichment cleanup")
+        async with _bg_session_factory() as db:
+            _vt_raw2 = await settings_service.get_setting(db, "vote_count_threshold")
+            _vt2 = int(_vt_raw2) if _vt_raw2 else 5
+        removed = await _cleanup_low_quality_movies(vote_threshold=_vt2)
+        logger.info("nightly_cache_job: cleanup removed %d movies", removed)
 
         logger.info("nightly_cache_job: complete")
     finally:

@@ -172,6 +172,36 @@ async def get_watched_movies(
         with_val.sort(key=lambda m: (m["personal_rating"], m["tmdb_id"]), reverse=_desc)
         without_val.sort(key=lambda m: m["tmdb_id"])
         movies = with_val + without_val
+    elif sort == "rt_audience":
+        with_val = [m for m in movies if m.get("rt_audience_score") is not None]
+        without_val = [m for m in movies if m.get("rt_audience_score") is None]
+        with_val.sort(key=lambda m: (m["rt_audience_score"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "imdb":
+        with_val = [m for m in movies if m.get("imdb_rating") is not None]
+        without_val = [m for m in movies if m.get("imdb_rating") is None]
+        with_val.sort(key=lambda m: (m["imdb_rating"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "metacritic":
+        with_val = [m for m in movies if m.get("metacritic_score") is not None]
+        without_val = [m for m in movies if m.get("metacritic_score") is None]
+        with_val.sort(key=lambda m: (m["metacritic_score"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "letterboxd":
+        with_val = [m for m in movies if m.get("letterboxd_score") is not None]
+        without_val = [m for m in movies if m.get("letterboxd_score") is None]
+        with_val.sort(key=lambda m: (m["letterboxd_score"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
+    elif sort == "mdb_avg":
+        with_val = [m for m in movies if m.get("mdb_avg_score") is not None]
+        without_val = [m for m in movies if m.get("mdb_avg_score") is None]
+        with_val.sort(key=lambda m: (m["mdb_avg_score"], m["tmdb_id"]), reverse=_desc)
+        without_val.sort(key=lambda m: m["tmdb_id"])
+        movies = with_val + without_val
     else:
         # Unknown sort key: fall back to title asc
         movies.sort(key=lambda m: (m["title"].lower(), m["tmdb_id"]))
