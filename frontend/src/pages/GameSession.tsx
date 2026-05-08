@@ -1145,10 +1145,7 @@ export default function GameSession() {
                                 <Star className={cn("w-4 h-4", movie.saved ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
                               </button>
                               <button
-                                className={cn(
-                                  "p-1.5 rounded hover:bg-accent/50 transition-colors",
-                                  shortlistedCount >= 6 && !movie.shortlisted && "opacity-40 pointer-events-none"
-                                )}
+                                className="p-1.5 rounded hover:bg-accent/50 transition-colors"
                                 onClick={(e) => { e.stopPropagation(); toggleShortlist(movie) }}
                                 aria-label={movie.shortlisted ? "Remove from shortlist" : "Add to shortlist"}
                               >

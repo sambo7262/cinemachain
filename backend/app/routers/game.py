@@ -1005,6 +1005,17 @@ async def create_session(
     )
     db.add(initial_step)
 
+    # Auto-populate shortlist with globally-starred movies for the first step,
+    # so the user doesn't have to re-shortlist them at the start of every new session.
+    global_saved_rows = await db.execute(select(GlobalSave.tmdb_id))
+    auto_shortlist_ids = {row[0] for row in global_saved_rows.all()} - {body.start_movie_tmdb_id}
+    if auto_shortlist_ids:
+        await db.execute(
+            pg_insert(SessionShortlist)
+            .values([{"session_id": session.id, "tmdb_id": tid} for tid in auto_shortlist_ids])
+            .on_conflict_do_nothing()
+        )
+
     await db.commit()
     await db.refresh(session)
 
@@ -2292,6 +2303,24 @@ async def request_movie(
             SessionSave.tmdb_id == body.movie_tmdb_id
         )
     )
+
+    # Auto-populate shortlist with starred (saved) movies for the next step,
+    # so the user doesn't have to re-shortlist them every step.
+    session_saved_rows = await db.execute(
+        select(SessionSave.tmdb_id).where(SessionSave.session_id == session_id)
+    )
+    global_saved_rows = await db.execute(select(GlobalSave.tmdb_id))
+    auto_shortlist_ids = (
+        {row[0] for row in session_saved_rows.all()}
+        | {row[0] for row in global_saved_rows.all()}
+    ) - {body.movie_tmdb_id}
+    if auto_shortlist_ids:
+        await db.execute(
+            pg_insert(SessionShortlist)
+            .values([{"session_id": session_id, "tmdb_id": tid} for tid in auto_shortlist_ids])
+            .on_conflict_do_nothing()
+        )
+
     await db.commit()
 
     # Spawn background credits pre-fetch for the new movie's cast
