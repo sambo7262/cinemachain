@@ -280,6 +280,15 @@ export function Settings() {
     }
   }
 
+  const handleRefreshActorsNow = async () => {
+    try {
+      await api.cache.refreshActorsNow()
+      setCacheRunning(true)
+    } catch {
+      // silently fail — user will see button re-enabled on next poll
+    }
+  }
+
   const handleRefreshDbHealth = async () => {
     setDbHealthLoading(true)
     try {
@@ -418,6 +427,15 @@ export function Settings() {
               onClick={handleRunCacheNow}
             >
               {cacheRunning ? "Running..." : "Run TMDB Cache Now"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={cacheRunning}
+              onClick={handleRefreshActorsNow}
+              className="ml-2"
+            >
+              {cacheRunning ? "Refreshing..." : "Refresh actor filmographies"}
             </Button>
             {cacheLastRunAt && (
               <p className="text-xs text-muted-foreground">
