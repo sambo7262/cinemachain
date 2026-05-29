@@ -35,6 +35,35 @@ class _CacheState:
 _cache_state = _CacheState()
 
 
+async def refresh_top_actors_force(
+    tmdb: TMDBClient,
+    actor_ids: list[int],
+    vote_threshold: int = 5,
+) -> None:
+    """Force-refresh TMDB filmographies for a list of actor IDs.
+
+    Bypasses the _ensure_actor_credits_in_db short-circuit/TTL via force_refresh=True.
+    Used by both the nightly cache job and the on-demand POST /cache/actors/refresh-now
+    endpoint (Phase 22 Decisions 4 + 5).
+
+    Caller is responsible for providing the actor_ids list (typically fetched from
+    TMDB's /person/popular endpoint). Errors per-actor are swallowed and logged so
+    one bad TMDB response doesn't abort the entire pass.
+    """
+    async with _bg_session_factory() as db:
+        for actor_id in actor_ids:
+            try:
+                await _ensure_actor_credits_in_db(
+                    actor_id, tmdb, db, vote_threshold=vote_threshold, force_refresh=True
+                )
+            except Exception as exc:
+                logger.warning(
+                    "refresh_top_actors_force: actor %d refresh failed: %s",
+                    actor_id, exc,
+                )
+            await asyncio.sleep(0.05)
+
+
 async def _download_posters_pass(tmdb: TMDBClient) -> None:
     """Download poster images for all movies that have poster_path but no local file yet.
 
@@ -396,15 +425,15 @@ async def nightly_cache_job(tmdb: TMDBClient, top_n: int = 5000, top_actors: int
                 break
 
         logger.info("nightly_cache_job: pre-fetching credits for %d actors", len(actor_ids))
+        # Phase 22 STALE-01: fetch vote_threshold setting, then delegate to
+        # refresh_top_actors_force which calls _ensure_actor_credits_in_db with
+        # force_refresh=True for every actor. This ensures the nightly job actually
+        # re-fetches cached actors (previously a no-op against any actor with
+        # filmography_fetched=True).
         async with _bg_session_factory() as db:
             _vt_raw = await settings_service.get_setting(db, "vote_count_threshold")
             _vote_threshold = int(_vt_raw) if _vt_raw else 5
-            for actor_id in actor_ids:
-                try:
-                    await _ensure_actor_credits_in_db(actor_id, tmdb, db, vote_threshold=_vote_threshold)
-                except Exception as exc:
-                    logger.warning("nightly_cache_job: actor %d pre-fetch failed: %s", actor_id, exc)
-                await asyncio.sleep(0.05)
+        await refresh_top_actors_force(tmdb, actor_ids, vote_threshold=_vote_threshold)
         logger.info("nightly_cache_job: actor pre-fetch complete")
 
         # --- Post-enrichment cleanup: remove low-quality movies ---
