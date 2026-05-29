@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "**Goal:** Expand CinemaChain beyond the game loop — fix all known friction points, add Query Mode for direct movie discovery, richer session tools"
 status: in_progress
-stopped_at: Completed 021-pre-deploy-hardening 21-01-PLAN.md
-last_updated: "2026-04-02T21:30:00.000Z"
+stopped_at: Phase 22 Wave 1 + Wave 2 complete (22-01/02/03 shipped); awaiting Wave 3 human verification on live NAS (22-04)
+last_updated: "2026-05-29T21:45:00Z"
 progress:
-  total_phases: 13
-  completed_phases: 12
-  total_plans: 46
-  completed_plans: 46
+  total_phases: 14
+  completed_phases: 13
+  total_plans: 50
+  completed_plans: 49
 ---
 
 # STATE.md — CinemaChain
@@ -332,6 +332,6 @@ Plan: 01 — complete
 
 ## Session Continuity
 
-Last session: 2026-05-29T21:05:00Z
-Stopped at: Phase 22 planned (4 plans, 3 waves) — plan-checker VERIFICATION PASSED
-Resume with: Run /gsd:execute-phase 22 to apply the filmography refresh fix (migration 0019 + on-demand TTL + nightly force-refresh + Settings button). Wave 2 (22-02 + 22-03) parallelizes after 22-01. Wave 3 (22-04) is human verification on live NAS — confirms Meryl Streep filmography now shows Devil Wears Prada 2.
+Last session: 2026-05-29T21:45:00Z
+Stopped at: Phase 22 Wave 1 + Wave 2 complete (22-01/02/03 cherry-picked to main); awaiting Wave 3 verification
+Resume with: Deploy to live NAS via `make rebuild` + `alembic upgrade head` to apply migration 0019, then run the 4-part 22-04 verification matrix: (1) Meryl Streep filmography shows DWP2 in active game session, (2) Settings "Refresh actor filmographies" button completes successfully, (3) filmography_fetched_at timestamps populate after refresh, (4) no fresh-actor gameplay latency regression. Phase 22 complete once verified.

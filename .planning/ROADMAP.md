@@ -243,7 +243,7 @@ Plans:
 | 19. v2 Bug Fixes & Polish | 9/9 | Complete | 2026-04-02 |
 | 20. Now Playing Polish & Layout Alignment | 0/2 | Complete    | 2026-04-02 |
 | 21. Pre-Deploy Hardening | 0/2 | Planned | |
-| 22. Filmography Refresh Gap | 0/4 | Planned | |
+| 22. Filmography Refresh Gap | 3/4 | Awaiting NAS verification | |
 
 ---
 
@@ -292,9 +292,9 @@ Plans:
   5. Migration 0019 ships `filmography_fetched_at TIMESTAMP NULL` with no destructive backfill (NULL means stale → triggers self-heal)
 
 Plans:
-- [ ] 22-01-PLAN.md — Migration 0019 + Actor.filmography_fetched_at model column + _ensure_actor_credits_in_db force_refresh/TTL self-heal + tests (STALE-02)
-- [ ] 22-02-PLAN.md — Nightly force_refresh=True + POST /cache/actors/refresh-now endpoint with concurrent-run guard + tests (STALE-01, STALE-03)
-- [ ] 22-03-PLAN.md — api.cache.refreshActorsNow() + Settings 'Refresh actor filmographies' button with shared running/last-run feedback (STALE-03)
+- [x] 22-01-PLAN.md — Migration 0019 + Actor.filmography_fetched_at model column + _ensure_actor_credits_in_db force_refresh/TTL self-heal + tests (STALE-02)
+- [x] 22-02-PLAN.md — Nightly force_refresh=True + POST /cache/actors/refresh-now endpoint with concurrent-run guard + tests (STALE-01, STALE-03)
+- [x] 22-03-PLAN.md — api.cache.refreshActorsNow() + Settings 'Refresh actor filmographies' button with shared running/last-run feedback (STALE-03)
 - [ ] 22-04-PLAN.md — Live NAS deploy via make rebuild + 4-part human verification: Meryl Streep DWP2, Settings button completes, filmography_fetched_at populated, no fresh-actor latency regression
 
 ---
