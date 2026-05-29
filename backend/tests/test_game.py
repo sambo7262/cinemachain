@@ -1736,3 +1736,129 @@ async def test_request_movie_removes_save(client):
     # save a movie, then pick that movie, save entry should be deleted
     await client.post("/game/sessions/1/saves/550")
     # integration test runs in Docker with real DB
+
+
+# ---------------------------------------------------------------------------
+# Phase 22 STALE-02: _ensure_actor_credits_in_db TTL self-heal + force_refresh
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timedelta
+
+
+# Skip locally when backend deps + env aren't fully wired (project convention).
+# Two failure modes block the import path in a dev shell:
+#   1. asyncpg not installed (the canonical asyncpg-skip pattern)
+#   2. required env vars (DATABASE_URL, TMDB_API_KEY, RADARR_URL, RADARR_API_KEY)
+#      not set, which fires a pydantic ValidationError when app.settings imports.
+# Probe both up-front so the four TTL tests either run cleanly in Docker (where
+# both are satisfied) or skip cleanly locally without spurious red bars.
+try:
+    import asyncpg  # noqa: F401  -- presence == Docker container; absence == local
+    from app.routers.game import _ensure_actor_credits_in_db as _probe  # noqa: F401
+    _GAME_IMPORTABLE = True
+except Exception:  # noqa: BLE001 — ImportError OR pydantic ValidationError
+    _GAME_IMPORTABLE = False
+
+
+@pytest.mark.asyncio
+async def test_ensure_actor_credits_force_refresh_bypasses_short_circuit():
+    """Phase 22 STALE-02: force_refresh=True bypasses cache even when filmography_fetched=True and within TTL."""
+    if not _GAME_IMPORTABLE:
+        pytest.skip("backend not importable locally (asyncpg / env)")
+    from app.routers.game import _ensure_actor_credits_in_db, FILMOGRAPHY_TTL_DAYS  # noqa: F401
+
+    # Build a cached actor that is FRESH (within TTL)
+    from app.models import Actor
+    fresh_actor = Actor(
+        id=1, tmdb_id=500, name="Test", filmography_fetched=True,
+        filmography_fetched_at=datetime.utcnow() - timedelta(days=1),
+    )
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = fresh_actor
+    mock_db.execute.return_value = mock_result
+
+    mock_tmdb = AsyncMock()
+    mock_tmdb.fetch_actor_credits.return_value = {"cast": []}
+    mock_tmdb.fetch_person.return_value = {"name": "Test", "profile_path": None}
+
+    await _ensure_actor_credits_in_db(500, mock_tmdb, mock_db, force_refresh=True)
+    # force_refresh=True must call TMDB regardless of cache freshness
+    assert mock_tmdb.fetch_actor_credits.called
+
+
+@pytest.mark.asyncio
+async def test_ensure_actor_credits_null_timestamp_refetches():
+    """Phase 22 STALE-02: filmography_fetched=True but filmography_fetched_at=NULL → re-fetch (stale)."""
+    if not _GAME_IMPORTABLE:
+        pytest.skip("backend not importable locally (asyncpg / env)")
+    from app.routers.game import _ensure_actor_credits_in_db
+
+    from app.models import Actor
+    null_ts_actor = Actor(
+        id=1, tmdb_id=501, name="Test", filmography_fetched=True,
+        filmography_fetched_at=None,
+    )
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = null_ts_actor
+    mock_db.execute.return_value = mock_result
+
+    mock_tmdb = AsyncMock()
+    mock_tmdb.fetch_actor_credits.return_value = {"cast": []}
+    mock_tmdb.fetch_person.return_value = {"name": "Test", "profile_path": None}
+
+    await _ensure_actor_credits_in_db(501, mock_tmdb, mock_db)
+    assert mock_tmdb.fetch_actor_credits.called
+
+
+@pytest.mark.asyncio
+async def test_ensure_actor_credits_within_ttl_short_circuits():
+    """Phase 22 STALE-02: filmography_fetched_at within TTL → short-circuit (no TMDB call)."""
+    if not _GAME_IMPORTABLE:
+        pytest.skip("backend not importable locally (asyncpg / env)")
+    from app.routers.game import _ensure_actor_credits_in_db, FILMOGRAPHY_TTL_DAYS
+
+    from app.models import Actor
+    fresh_actor = Actor(
+        id=1, tmdb_id=502, name="Test", filmography_fetched=True,
+        filmography_fetched_at=datetime.utcnow() - timedelta(days=FILMOGRAPHY_TTL_DAYS - 1),
+    )
+    mock_db = AsyncMock()
+    # First execute() call returns the actor; second (blank-count) returns 0
+    actor_result = MagicMock()
+    actor_result.scalar_one_or_none.return_value = fresh_actor
+    blank_result = MagicMock()
+    blank_result.scalar_one.return_value = 0
+    mock_db.execute.side_effect = [actor_result, blank_result]
+
+    mock_tmdb = AsyncMock()
+
+    await _ensure_actor_credits_in_db(502, mock_tmdb, mock_db)
+    # Fresh actor with no blank stubs must NOT trigger a TMDB call
+    assert not mock_tmdb.fetch_actor_credits.called
+
+
+@pytest.mark.asyncio
+async def test_ensure_actor_credits_beyond_ttl_refetches():
+    """Phase 22 STALE-02: filmography_fetched_at older than TTL → re-fetch."""
+    if not _GAME_IMPORTABLE:
+        pytest.skip("backend not importable locally (asyncpg / env)")
+    from app.routers.game import _ensure_actor_credits_in_db, FILMOGRAPHY_TTL_DAYS
+
+    from app.models import Actor
+    stale_actor = Actor(
+        id=1, tmdb_id=503, name="Test", filmography_fetched=True,
+        filmography_fetched_at=datetime.utcnow() - timedelta(days=FILMOGRAPHY_TTL_DAYS + 1),
+    )
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = stale_actor
+    mock_db.execute.return_value = mock_result
+
+    mock_tmdb = AsyncMock()
+    mock_tmdb.fetch_actor_credits.return_value = {"cast": []}
+    mock_tmdb.fetch_person.return_value = {"name": "Test", "profile_path": None}
+
+    await _ensure_actor_credits_in_db(503, mock_tmdb, mock_db)
+    assert mock_tmdb.fetch_actor_credits.called

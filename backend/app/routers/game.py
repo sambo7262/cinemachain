@@ -26,6 +26,13 @@ from app.utils.masking import scrub_traceback
 from app.services.radarr_helper import _request_radarr
 from app.services.tmdb import TMDBClient
 
+# Filmography refresh TTL — actors with filmography_fetched_at older than this
+# (or NULL) are treated as stale and re-fetched on the next _ensure_actor_credits_in_db
+# call. Per Phase 22 Decision 2: 14 days balances TMDB load against typical 2-week
+# release cadence. Module-level constant for now; promote to settings if user-configurable
+# demand emerges.
+FILMOGRAPHY_TTL_DAYS = 14
+
 router = APIRouter(prefix="/game", tags=["game"])
 
 
@@ -412,6 +419,7 @@ async def _ensure_actor_credits_in_db(
     tmdb: TMDBClient,
     db: AsyncSession,
     vote_threshold: int = 5,
+    force_refresh: bool = False,
 ) -> None:
     """Fetch actor filmography from TMDB and upsert Movie + Credit rows.
 
@@ -419,18 +427,27 @@ async def _ensure_actor_credits_in_db(
     Uses on_conflict_do_nothing so repeated calls are safe (idempotent).
     Short-circuits if Credit rows already exist for this actor — avoids TMDB call.
     Filters out low-quality entries (low votes, TV movies, ghost entries) at ingestion.
+
+    When ``force_refresh=True``, the TTL/short-circuit is bypassed and TMDB is re-queried.
+    When the cached actor's ``filmography_fetched_at`` is NULL or older than
+    ``FILMOGRAPHY_TTL_DAYS``, the short-circuit is also bypassed (self-heal). Otherwise
+    the existing short-circuit fires.
     """
     actor_row = await db.execute(select(Actor).where(Actor.tmdb_id == actor_tmdb_id))
     existing_actor = actor_row.scalar_one_or_none()
-    if existing_actor is not None and existing_actor.filmography_fetched:
-        # Also check for blank-title stubs — if any exist, fall through to backfill them
-        blank = await db.execute(
-            select(_func.count()).select_from(Movie)
-            .join(Credit, Credit.movie_id == Movie.id)
-            .where(Credit.actor_id == existing_actor.id, Movie.title == "")
-        )
-        if blank.scalar_one() == 0:
-            return
+    if existing_actor is not None and existing_actor.filmography_fetched and not force_refresh:
+        # TTL self-heal: NULL timestamp or older than FILMOGRAPHY_TTL_DAYS → fall through to re-fetch
+        ts = existing_actor.filmography_fetched_at
+        is_fresh = ts is not None and (_datetime.utcnow() - ts).days < FILMOGRAPHY_TTL_DAYS
+        if is_fresh:
+            # Also check for blank-title stubs — if any exist, fall through to backfill them
+            blank = await db.execute(
+                select(_func.count()).select_from(Movie)
+                .join(Credit, Credit.movie_id == Movie.id)
+                .where(Credit.actor_id == existing_actor.id, Movie.title == "")
+            )
+            if blank.scalar_one() == 0:
+                return
 
     try:
         data = await tmdb.fetch_actor_credits(actor_tmdb_id)
@@ -500,8 +517,10 @@ async def _ensure_actor_credits_in_db(
             ).on_conflict_do_nothing(index_elements=["movie_id", "actor_id"])
             await db.execute(credit_stmt)
 
-    # Mark filmography as fully fetched so the short-circuit fires on future calls.
+    # Mark filmography as fully fetched and stamp the refresh time so the short-circuit
+    # fires on future calls within the TTL (per Phase 22 Decisions 1 + 2).
     actor.filmography_fetched = True
+    actor.filmography_fetched_at = _datetime.utcnow()
     await db.commit()
 
 
