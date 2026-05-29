@@ -243,6 +243,7 @@ Plans:
 | 19. v2 Bug Fixes & Polish | 9/9 | Complete | 2026-04-02 |
 | 20. Now Playing Polish & Layout Alignment | 0/2 | Complete    | 2026-04-02 |
 | 21. Pre-Deploy Hardening | 0/2 | Planned | |
+| 22. Filmography Refresh Gap | 0/4 | Planned | |
 
 ---
 
@@ -278,6 +279,26 @@ Plans:
 
 ---
 
+### Phase 22: Filmography Refresh Gap
+**Goal:** Close the actor-filmography staleness gap so newly-released movies appear for cached actors. Today the `filmography_fetched` short-circuit means an actor's TMDB credits are frozen at first-fetch time forever; the nightly cache job is also a no-op against cached actors. Add a `filmography_fetched_at` timestamp + 14-day TTL, force-refresh top popular actors nightly, lazily re-fetch on-demand when stale, and expose a manual "Refresh actor filmographies" button in Settings.
+**Depends on:** Phase 21
+**Requirements:** STALE-01, STALE-02, STALE-03
+**Plans:** 4 plans
+**Success Criteria** (what must be TRUE):
+  1. New TMDB releases appear for cached actors within 24h on the nightly path
+  2. On-demand actor-filmography requests re-fetch synchronously when `filmography_fetched_at` is NULL or older than the TTL (default 14 days), so users in active games see fresh data on the next click after deploy
+  3. Settings exposes a "Refresh actor filmographies" button that triggers a full force-refresh pass and reports progress
+  4. No regression in gameplay latency for fresh actors (short-circuit preserved for actors fetched within TTL)
+  5. Migration 0019 ships `filmography_fetched_at TIMESTAMP NULL` with no destructive backfill (NULL means stale → triggers self-heal)
+
+Plans:
+- [ ] 22-01-PLAN.md — Migration 0019 + Actor.filmography_fetched_at model column + _ensure_actor_credits_in_db force_refresh/TTL self-heal + tests (STALE-02)
+- [ ] 22-02-PLAN.md — Nightly force_refresh=True + POST /cache/actors/refresh-now endpoint with concurrent-run guard + tests (STALE-01, STALE-03)
+- [ ] 22-03-PLAN.md — api.cache.refreshActorsNow() + Settings 'Refresh actor filmographies' button with shared running/last-run feedback (STALE-03)
+- [ ] 22-04-PLAN.md — Live NAS deploy via make rebuild + 4-part human verification: Meryl Streep DWP2, Settings button completes, filmography_fetched_at populated, no fresh-actor latency regression
+
+---
+
 ## Coverage Map
 
 | Requirement | Phase |
@@ -296,6 +317,7 @@ Plans:
 | v2BUG-01+ | Phase 19 |
 | POLISH-01 through POLISH-02 | Phase 20 |
 | PREDEPLOY-01 through PREDEPLOY-02 | Phase 21 |
+| STALE-01 through STALE-03 | Phase 22 |
 
 ---
 

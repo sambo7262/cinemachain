@@ -84,6 +84,12 @@
 
 - [x] **POLISH-01**: Now Playing hub shows full movie metadata (ratings, runtime, year, MPAA, overview) in both pre-watch and post-watch states, sourced from backend session response
 - [x] **POLISH-02**: Content padding on all pages aligns exactly with NavBar edges on all viewport sizes — no double-padding
+
+### Filmography Refresh Gap (STALE)
+
+- [ ] **STALE-01**: Actor `filmography_fetched_at` timestamp added (migration 0019, nullable); nightly cache job force-refreshes top popular actors so newly-released movies appear within 24 hours
+- [ ] **STALE-02**: On-demand `_ensure_actor_credits_in_db` re-fetches synchronously when `filmography_fetched_at` is NULL or older than the 14-day TTL — guarantees active games see fresh filmography on the next actor click after deploy
+- [ ] **STALE-03**: Settings exposes a "Refresh actor filmographies" button that triggers a full force-refresh pass via a new `POST /cache/actors/refresh-now` endpoint, with running/complete visual feedback
 ---
 
 ## Out of Scope
@@ -147,8 +153,11 @@
 | SEC-03 | Phase 18 |
 | POLISH-01 | Phase 20 |
 | POLISH-02 | Phase 20 |
+| STALE-01 | Phase 22 |
+| STALE-02 | Phase 22 |
+| STALE-03 | Phase 22 |
 
-**Coverage:** 44 requirements · 13 phases · 0 unmapped
+**Coverage:** 47 requirements · 14 phases · 0 unmapped
 
 ---
 

@@ -308,6 +308,7 @@ Plan: 01 — complete
 ### Roadmap Evolution
 
 - Phase 03.1 inserted after Phase 03: UI improvements and multi-session support (INSERTED)
+- Phase 22 added (2026-05-29): Filmography Refresh Gap — close actor-filmography staleness; surfaced from real-world report (Meryl Streep filmography missing Devil Wears Prada 2 after fresh TMDB release)
 
 ## Accumulated Context
 
@@ -331,6 +332,6 @@ Plan: 01 — complete
 
 ## Session Continuity
 
-Last session: 2026-04-02T20:53:21.650Z
-Stopped at: Completed 020-now-playing-polish plan 01
-Resume with: Run /gsd:plan-phase --gaps to create gap closure plans for BUG-A (poster wall images not visible on NAS) and UX-A (rating sort wrong order). Fix both then re-verify on NAS before Phase 5.
+Last session: 2026-05-29T21:05:00Z
+Stopped at: Phase 22 planned (4 plans, 3 waves) — plan-checker VERIFICATION PASSED
+Resume with: Run /gsd:execute-phase 22 to apply the filmography refresh fix (migration 0019 + on-demand TTL + nightly force-refresh + Settings button). Wave 2 (22-02 + 22-03) parallelizes after 22-01. Wave 3 (22-04) is human verification on live NAS — confirms Meryl Streep filmography now shows Devil Wears Prada 2.
