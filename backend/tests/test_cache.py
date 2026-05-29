@@ -104,3 +104,59 @@ async def test_lazy_enrich_populates_genres_and_runtime():
         assert mock_enrich.call_count == 1  # enrichment called for stub movie
         call_args = mock_enrich.call_args[0]
         assert 999 in call_args[0]  # tmdb_id in the ids list
+
+
+# Phase 22 STALE-01 / STALE-03 — force-refresh helper + manual refresh endpoint
+
+
+# Broader skip pattern (matches Plan 22-01 test_game.py): probe import wrapped in
+# try/except Exception so tests skip cleanly in any local environment without a
+# wired .env (asyncpg-only catch misses pydantic ValidationError on missing env).
+try:
+    from app.services.cache import refresh_top_actors_force as _probe_refresh  # noqa: F401
+    from app.routers.cache import refresh_actor_filmographies_now as _probe_endpoint  # noqa: F401
+    _CACHE_IMPORTABLE = True
+except Exception:
+    _CACHE_IMPORTABLE = False
+
+
+@pytest.mark.asyncio
+async def test_refresh_top_actors_force_passes_force_refresh_true():
+    """Phase 22 STALE-01: refresh_top_actors_force calls _ensure_actor_credits_in_db with force_refresh=True."""
+    if not _CACHE_IMPORTABLE:
+        pytest.skip("app.services.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import refresh_top_actors_force
+
+    mock_tmdb = AsyncMock()
+    with patch("app.services.cache._ensure_actor_credits_in_db", new_callable=AsyncMock) as mock_ensure, \
+         patch("app.services.cache._bg_session_factory") as mock_factory:
+        mock_session = AsyncMock()
+        mock_factory.return_value.__aenter__.return_value = mock_session
+
+        await refresh_top_actors_force(mock_tmdb, [100, 200, 300], vote_threshold=5)
+
+        assert mock_ensure.call_count == 3
+        for call in mock_ensure.call_args_list:
+            assert call.kwargs.get("force_refresh") is True, \
+                "every call must pass force_refresh=True"
+
+
+@pytest.mark.asyncio
+async def test_refresh_now_endpoint_returns_running_when_already_running():
+    """Phase 22 STALE-03: POST /cache/actors/refresh-now returns {running: True} when _cache_state.running is already True."""
+    if not _CACHE_IMPORTABLE:
+        pytest.skip("app.routers.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import _cache_state
+    from app.routers.cache import refresh_actor_filmographies_now
+
+    mock_bg = MagicMock()
+    mock_request = MagicMock()
+
+    _cache_state.running = True
+    try:
+        result = await refresh_actor_filmographies_now(mock_bg, mock_request)
+        assert result == {"running": True}
+        # Background task must NOT be scheduled when guard is hit
+        assert mock_bg.add_task.call_count == 0
+    finally:
+        _cache_state.running = False

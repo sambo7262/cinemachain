@@ -64,6 +64,51 @@ async def refresh_top_actors_force(
             await asyncio.sleep(0.05)
 
 
+async def manual_actor_refresh_job(tmdb: TMDBClient, top_actors: int = 1500) -> None:
+    """One-shot force-refresh pass over top popular actors.
+
+    Entry point for POST /cache/actors/refresh-now (Phase 22 STALE-03). Mirrors the
+    actor-collection + force-refresh loop from nightly_cache_job but skips the discover
+    movie pass and the post-enrichment cleanup — actors only.
+
+    Uses the shared _cache_state.running flag for concurrent-run prevention so manual
+    and nightly refreshes don't stomp on each other.
+    """
+    _cache_state.running = True
+    start = datetime.utcnow()
+    try:
+        logger.info("manual_actor_refresh_job starting: top_actors=%d", top_actors)
+        actor_ids: list[int] = []
+        actor_pages = math.ceil(top_actors / 20)
+        for actor_page in range(1, actor_pages + 1):
+            try:
+                r = await tmdb._client.get("/person/popular", params={"page": actor_page})
+                r.raise_for_status()
+                for person in r.json().get("results", []):
+                    actor_ids.append(person["id"])
+                await asyncio.sleep(0.05)
+            except Exception as exc:
+                safe_tb = scrub_traceback(exc)
+                logger.error(
+                    "manual_actor_refresh_job: actor page %d failed\n%s",
+                    actor_page, safe_tb,
+                )
+                break
+
+        logger.info(
+            "manual_actor_refresh_job: force-refreshing %d actors", len(actor_ids)
+        )
+        async with _bg_session_factory() as db:
+            _vt_raw = await settings_service.get_setting(db, "vote_count_threshold")
+            _vote_threshold = int(_vt_raw) if _vt_raw else 5
+        await refresh_top_actors_force(tmdb, actor_ids, vote_threshold=_vote_threshold)
+        logger.info("manual_actor_refresh_job: complete")
+    finally:
+        _cache_state.running = False
+        _cache_state.last_run_at = start
+        _cache_state.last_run_duration_s = (datetime.utcnow() - start).total_seconds()
+
+
 async def _download_posters_pass(tmdb: TMDBClient) -> None:
     """Download poster images for all movies that have poster_path but no local file yet.
 
