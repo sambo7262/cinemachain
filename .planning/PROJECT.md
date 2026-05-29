@@ -2,62 +2,72 @@
 
 ## What This Is
 
-A Dockerized home media companion app running on Synology NAS, integrated with Radarr. Given a movie as the starting point, it surfaces filmography data to guide the user's next media selection through a structured actor-chain discovery game. Selections are queued automatically via Radarr.
+A Dockerized home media companion app running on Synology NAS, integrated with Radarr. Surfaces filmography data to guide media selection through a structured actor-chain discovery game, plus direct search (Query Mode), save/shortlist tools, a Watched History view, and multi-source ratings (IMDB / RT / Metacritic / Letterboxd / MDB Average). Selections are queued automatically via Radarr.
 
 ## Core Value
 
-The Movie Game — a chain-based discovery engine that navigates cinema through shared actors, making "what to watch next" effortless and exploratory without ever repeating an actor.
+**The Movie Game inside a complete media companion.** Chain-based actor discovery is still the default mode, but users can now search directly, save/compare candidates, see what they've watched, and trust the ratings on every tile.
 
-## Current State — v2.0 in progress (Phase 20 complete — Now Playing polish & padding alignment)
+## Current State — v2.0 shipped (2026-05-29)
 
-**v1.0 is live on Synology NAS and publicly deployable via Docker Hub.**
+**v2.0 is live on Synology NAS, deployable via Docker Hub, and verified against the original Filmography Refresh Gap bug.**
 
-### What's Working
-- **Movie Game** — full actor-chain loop: start movie → pick actor → pick next movie → repeat; Radarr queuing on each pick
-- **Multi-session support** — concurrent named sessions, archive/delete, session grid on home page
-- **CSV import/export** — import a pre-existing chain with fuzzy actor resolution and disambiguation UI
-- **Eligible Movies** — sortable (rating/runtime/year/MPAA), filterable (genre/MPAA/rating/vote-floor), searchable by title
-- **RT scores** — MDBList Tomatometer displayed in eligible movies table, Now Playing tile, and movie splash
-- **Settings page** — configure Radarr URL/key, TMDB key, MDBList key with encrypted DB storage and onboarding gate
-- **Nightly TMDB cache** — pre-warms top 5,000 movies + 1,500 actors; zero on-demand calls during gameplay
-- **Local poster caching** — nightly download of poster images; CDN fallback
-- **Chain history** — searchable table of all picks with actor/movie thumbnails and TMDB external links
-- **Public deployment** — generic `compose.yaml`, placeholder `.env.example`, 148-line README
+### What v2.0 Added Over v1.0
+- **Query Mode** — direct movie/actor/genre search with Radarr requests, no game needed
+- **Save + Shortlist** — bookmark or compare 2–6 movies during a session
+- **Watched History** — first-party `/watched` route with tile/grid + sort + search
+- **Multi-source ratings** — IMDB + RT + Metacritic + Letterboxd + MDB Average via MDBList API
+- **TMDB suggestions** — recommendations filter intersected with eligible actors
+- **Mobile redesign** — card-based eligible movies, mobile nav overflow fixes
+- **Settings hardening** — key masking (`***xyz`), log scrubbing, encrypted DB storage, per-card test-connection buttons
+- **Filmography freshness** — 14-day TTL self-heal + nightly force-refresh + manual Settings button (closes the Meryl/DWP2 staleness gap)
 
 ### Known Tech Debt
-- `backend/app/routers/debug.py` exists as dead code (unreachable — not registered in main.py)
-- `backend/.env.example` has orphaned Plex/Sonarr/Tailscale placeholder fields
-- `postgres` service in compose.yaml lacks explicit `networks:` declaration (implicit, works correctly)
+- Two ad-hoc post-Phase-21 commits (`e2a8695`, `e5d54c7`) are on `main` but never assigned to a formal phase
+- `backend/app/routers/debug.py` — dead code, not registered in main.py
+- `postgres` service in `compose.yaml` lacks explicit `networks:` declaration (implicit, works)
+- `filmography_fetched_at` only populated for actors interacted with post-v2.0 deploy; long-tail stays NULL until first encounter (by design — additive-only migration)
+- `IMDB-01` partial: movie IMDB links delivered, actor IMDB backfill deferred
 
-## Next Milestone: v2.0
+## Next Milestone — v2.1 (not yet planned)
 
-**Not yet planned.** Seed requirements from v1 scope exceptions:
+Run `/gsd:new-milestone` to start requirements gathering. Candidate seeds surfaced from v2.0 close-out:
 
-| Requirement | Description |
-|-------------|-------------|
-| QUERY-01 | Search by actor name → full filmography |
-| QUERY-02 | Search by movie/TV title → that specific item |
-| QUERY-03 | Browse by genre/keyword |
-| QUERY-04 | Sort results by genre, rating, year |
-| QUERY-05 | Toggle show/hide watched items |
-| QUERY-06 | Movie request via Radarr |
-| QUERY-07 | TV show request via Sonarr |
-| DATA-05 | Optional Plex webhook re-integration |
-
-Run `/gsd:new-milestone` to begin requirements gathering for v2.
+| Candidate | Description |
+|-----------|-------------|
+| Plex polling sync | Automatic watched-detection via polling (webhook was removed in v1) |
+| Stats dashboard | Longest chain, most-picked actors, total runtime, chains over time |
+| Alt chain types | Director / writer / composer chains — TMDB data already available |
+| Genre-constrained game | Lock a session to a single genre (e.g., horror-only) |
+| DB metadata scrub | Audit + re-enrich movies missing rating/overview |
+| Retroactive phase | Formalize the two post-Phase-21 ad-hoc commits |
+| Actor IMDB links | Backfill `imdb_person_id`, finish IMDB-01 |
+| Discord notifications | NOTIF-01 from v1 backlog — Radarr download complete pings |
+| Dead-end recovery | Surface nearby actors when chain is stuck |
 
 ## Stack
 
 - **Backend:** FastAPI + SQLAlchemy (async) + PostgreSQL + Alembic
 - **Frontend:** React + TypeScript + Vite + Tailwind v3 + shadcn/ui
 - **Infrastructure:** Docker Compose + Nginx proxy + APScheduler
-- **External APIs:** TMDB, Radarr, MDBList
+- **External APIs:** TMDB (Bearer token auth), Radarr (X-Api-Key), MDBList
 
 ## Context
 
 - **Infrastructure:** Synology NAS running Docker; app on Tailscale LAN
-- **Integrations:** Radarr API (movie requests), TMDB API (filmography + metadata), MDBList API (RT scores)
+- **Integrations:** Radarr API (movie requests), TMDB API (filmography + metadata), MDBList API (ratings — RT, IMDB, Metacritic, Letterboxd, MDB Average)
 - **Primary use case:** On-the-couch media selection — UI designed for tablet/TV
 
+<details>
+<summary>Previous milestone state — v1.0</summary>
+
+> A Dockerized home media companion app running on Synology NAS, integrated with Radarr. Given a movie as the starting point, it surfaced filmography data to guide the user's next media selection through a structured actor-chain discovery game. Selections were queued automatically via Radarr.
+>
+> Core value (v1): The Movie Game — a chain-based discovery engine.
+>
+> v1 delivered the full initial app — TMDB data layer, Movie Game with actor-chain session state, multi-session support, UI/UX polish, RT ratings via MDBList, Docker deployment hardened for public use. 13 phases, 122 plans, 457 commits.
+
+</details>
+
 ---
-*Updated: 2026-04-02 — Phase 20 complete: Now Playing metadata + ratings hub, PosterWall desktop fix, app-wide padding alignment*
+*Updated: 2026-05-29 — v2.0 milestone shipped and archived.*
