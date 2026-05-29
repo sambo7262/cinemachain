@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "**Goal:** Expand CinemaChain beyond the game loop — fix all known friction points, add Query Mode for direct movie discovery, richer session tools"
 status: in_progress
-stopped_at: Phase 22 Wave 1 + Wave 2 complete (22-01/02/03 shipped); awaiting Wave 3 human verification on live NAS (22-04)
-last_updated: "2026-05-29T21:45:00Z"
+stopped_at: Phase 22 COMPLETE — all 3 verifications PASS on live NAS (Meryl/DWP2 visible, Settings button works, 901 actors stamped). v2.0 milestone ready to close.
+last_updated: "2026-05-29T22:15:00Z"
 progress:
   total_phases: 14
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 50
-  completed_plans: 49
+  completed_plans: 50
 ---
 
 # STATE.md — CinemaChain
@@ -332,6 +332,6 @@ Plan: 01 — complete
 
 ## Session Continuity
 
-Last session: 2026-05-29T21:45:00Z
-Stopped at: Phase 22 Wave 1 + Wave 2 complete (22-01/02/03 cherry-picked to main); awaiting Wave 3 verification
-Resume with: Deploy to live NAS via `make rebuild` + `alembic upgrade head` to apply migration 0019, then run the 4-part 22-04 verification matrix: (1) Meryl Streep filmography shows DWP2 in active game session, (2) Settings "Refresh actor filmographies" button completes successfully, (3) filmography_fetched_at timestamps populate after refresh, (4) no fresh-actor gameplay latency regression. Phase 22 complete once verified.
+Last session: 2026-05-29T22:15:00Z
+Stopped at: Phase 22 complete — Filmography Refresh Gap shipped and verified on live NAS (Meryl Streep / DWP2 bug closed, 901 actors carrying fresh timestamps)
+Resume with: Run /gsd:audit-milestone for v2.0 to confirm milestone goal achieved, then /gsd:complete-milestone to archive v2.0 and prepare PROJECT.md for v2.1. Outstanding backlog candidates for v2.1: Plex polling sync, stats dashboard, alt-chain modes (director/writer), genre-locked sessions, DB metadata scrub audit, plain-text key logging hardening review.
