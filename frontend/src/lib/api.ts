@@ -400,6 +400,7 @@ export const api = {
 
   cache: {
     runNow: () => apiFetch<{ started?: boolean; running?: boolean }>("/cache/run-now", { method: "POST" }),
+    refreshActorsNow: () => apiFetch<{ started?: boolean; running?: boolean }>("/cache/actors/refresh-now", { method: "POST" }),
     getStatus: () => apiFetch<{ running: boolean; last_run_at: string | null; last_run_duration_s: number | null }>("/cache/status"),
   },
 
