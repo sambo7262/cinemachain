@@ -51,6 +51,7 @@ class Actor(Base):
     profile_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     filmography_fetched: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    filmography_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     credits: Mapped[list[Credit]] = relationship(back_populates="actor", lazy="raise")
 
