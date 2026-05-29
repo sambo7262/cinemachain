@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "v2.0 CinemaChain — beyond the game loop"
 status: shipped
-stopped_at: v2.0 milestone closed; ready to plan v2.1
-last_updated: "2026-05-29T22:30:00Z"
+stopped_at: Phase 23 added (v2.0.2 patch — Smart Metadata Backfill); CONTEXT captured, ready for /gsd:plan-phase 23
+last_updated: "2026-05-29T22:45:00Z"
 progress:
-  total_phases: 14
+  total_phases: 15
   completed_phases: 14
   total_plans: 50
   completed_plans: 50
