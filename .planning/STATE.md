@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "v2.0 CinemaChain — beyond the game loop"
 status: shipped
-stopped_at: Phase 23 Wave 1 shipped (migration 0020 + cache.py NR sentinel + /db-health alignment); awaiting Wave 2 NAS verification
-last_updated: "2026-05-29T23:25:00Z"
+stopped_at: Phase 23 COMPLETE — v2.0.2 patch verified on live NAS (MPAA waste eliminated, DB Health reads honestly, no regression)
+last_updated: "2026-05-29T23:35:00Z"
 progress:
   total_phases: 15
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 52
-  completed_plans: 51
+  completed_plans: 52
 ---
 
 # STATE.md — CinemaChain

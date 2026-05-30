@@ -16,7 +16,7 @@ Bug-fix and data-quality patches shipping under the v2.0 lineage. Each patch tag
 | Patch | Phase | Description | Status |
 |-------|-------|-------------|--------|
 | v2.0.1 | Phase 22 | Filmography Refresh Gap — newly-released movies surface for cached actors | Shipped 2026-05-29 |
-| v2.0.2 | Phase 23 | Smart Metadata Backfill — stop wasteful nightly re-tries on confirmed-empty fields; align DB Health audit semantics with sentinel pattern | Wave 1 shipped; awaiting NAS verification |
+| v2.0.2 | Phase 23 | Smart Metadata Backfill — stop wasteful nightly re-tries on confirmed-empty fields; align DB Health audit semantics with sentinel pattern | Shipped 2026-05-29 |
 
 ### Phase 23: Smart Metadata Backfill
 **Goal:** Stop the nightly cache job from wastefully re-querying TMDB/MDBList for movies where the data ceiling has already been reached, AND fix the DB Health audit so it shows the actually-addressable gap (not the sentinel-zero false positives). Net effect: `Missing MPAA` and `Missing RT score` stats drop from ~30k each to a few hundred genuinely addressable rows that close within 1-2 nightly cycles.
