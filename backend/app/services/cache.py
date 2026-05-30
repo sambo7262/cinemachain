@@ -184,15 +184,18 @@ async def _download_posters_pass(tmdb: TMDBClient) -> None:
 
 
 async def _backfill_mpaa_pass(tmdb: TMDBClient, limit: int = 25000) -> None:
-    """Fetch MPAA ratings for movies with NULL or empty mpaa_rating.
+    """Fetch MPAA ratings for movies with NULL mpaa_rating.
 
-    Retries empty-string sentinel so previously-failed lookups get another chance.
-    Uses 429 exponential backoff: starts at 5s, caps at 60s, skips after 3 retries.
+    Writes positive sentinel "NR" when TMDB has no US certification so the row
+    is excluded from future backfill passes (no more nightly re-tries on the
+    ~25k confirmed-empty rows that previously wasted TMDB budget). Mirror of the
+    MDBList sentinel pattern in services/mdblist.py. Uses 429 exponential
+    backoff: starts at 5s, caps at 60s, skips after 3 retries.
     """
     async with _bg_session_factory() as db:
         result = await db.execute(
             select(Movie.tmdb_id).where(
-                or_(Movie.mpaa_rating.is_(None), Movie.mpaa_rating == "")
+                Movie.mpaa_rating.is_(None)
             ).order_by(Movie.vote_count.desc().nulls_last()).limit(limit)
         )
         tmdb_ids = [row[0] for row in result.all()]
@@ -222,7 +225,7 @@ async def _backfill_mpaa_pass(tmdb: TMDBClient, limit: int = 25000) -> None:
             r.raise_for_status()
 
             results = r.json().get("results", [])
-            cert = ""
+            cert = "NR"  # positive sentinel: TMDB had no US certification; excludes row from future passes
             for country in results:
                 if country.get("iso_3166_1") == "US":
                     for rd in country.get("release_dates", []):
@@ -237,7 +240,7 @@ async def _backfill_mpaa_pass(tmdb: TMDBClient, limit: int = 25000) -> None:
                     sa_update(Movie).where(Movie.tmdb_id == tmdb_id).values(mpaa_rating=cert)
                 )
                 await db.commit()
-            if cert:
+            if cert != "NR":
                 fetched += 1
         except Exception as exc:
             logger.warning("_backfill_mpaa_pass: failed for tmdb_id=%d: %s", tmdb_id, exc)
