@@ -200,15 +200,24 @@ async def get_settings_status(db: AsyncSession = Depends(get_db)) -> SettingsSta
 
 @router.get("/db-health")
 async def get_db_health(db: AsyncSession = Depends(get_db)):
-    """Return live DB row-level health stats and table sizes."""
+    """Return live DB row-level health stats and table sizes.
+
+    Counts use "addressable gap" semantics: positive sentinels written by
+    nightly backfill jobs (mpaa_rating='NR', imdb_id='', imdb_rating=0,
+    rt_score=0) are excluded from the "missing X" counts because the data
+    ceiling has been reached for those rows (no point re-fetching). Rows
+    counted as "missing" are still genuinely actionable on the next nightly
+    pass. The `never_mdblist_fetched` count tracks rows that have never been
+    attempted (truly unaddressed).
+    """
     row_stats = await db.execute(text("""
         SELECT
           COUNT(*) AS total_movies,
           COUNT(*) FILTER (WHERE overview IS NULL OR overview = '') AS missing_overview,
-          COUNT(*) FILTER (WHERE mpaa_rating IS NULL OR mpaa_rating = '') AS missing_mpaa,
-          COUNT(*) FILTER (WHERE imdb_id IS NULL OR imdb_id = '') AS missing_imdb_id,
-          COUNT(*) FILTER (WHERE imdb_rating IS NULL OR imdb_rating = 0) AS missing_imdb_rating,
-          COUNT(*) FILTER (WHERE rt_score IS NULL OR rt_score = 0) AS missing_rt_score,
+          COUNT(*) FILTER (WHERE mpaa_rating IS NULL) AS missing_mpaa,
+          COUNT(*) FILTER (WHERE imdb_id IS NULL) AS missing_imdb_id,
+          COUNT(*) FILTER (WHERE imdb_rating IS NULL) AS missing_imdb_rating,
+          COUNT(*) FILTER (WHERE rt_score IS NULL) AS missing_rt_score,
           COUNT(*) FILTER (WHERE mdblist_fetched_at IS NULL) AS never_mdblist_fetched
         FROM movies
     """))

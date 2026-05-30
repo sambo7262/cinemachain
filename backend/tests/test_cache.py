@@ -160,3 +160,160 @@ async def test_refresh_now_endpoint_returns_running_when_already_running():
         assert mock_bg.add_task.call_count == 0
     finally:
         _cache_state.running = False
+
+
+# ===== Phase 23 HEALTH-01 — MPAA sentinel + query fix =====
+
+try:
+    from app.services.cache import _backfill_mpaa_pass as _probe_mpaa  # noqa: F401
+    _MPAA_IMPORTABLE = True
+except Exception:
+    _MPAA_IMPORTABLE = False
+
+
+def _make_mpaa_tmdb_mock(release_dates_json):
+    """Helper: build a TMDB client mock returning the given release_dates payload."""
+    mock_tmdb = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = release_dates_json
+    mock_response.raise_for_status = MagicMock()
+    # _sem is an async context manager
+    mock_tmdb._sem = AsyncMock()
+    mock_tmdb._sem.__aenter__ = AsyncMock(return_value=None)
+    mock_tmdb._sem.__aexit__ = AsyncMock(return_value=False)
+    mock_tmdb._client.get = AsyncMock(return_value=mock_response)
+    return mock_tmdb
+
+
+def _make_bg_session_mock(returned_ids):
+    """Helper: build a _bg_session_factory mock yielding a session whose SELECT
+    returns the given tmdb_ids and whose UPDATE captures values."""
+    mock_db = AsyncMock()
+    mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+    mock_db.__aexit__ = AsyncMock(return_value=False)
+    mock_result = MagicMock()
+    mock_result.all.return_value = [(tid,) for tid in returned_ids]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+    return mock_db
+
+
+@pytest.mark.asyncio
+async def test_backfill_mpaa_writes_nr_when_tmdb_returns_no_us_cert():
+    """HEALTH-01: _backfill_mpaa_pass writes 'NR' (not '') when TMDB has no US cert."""
+    if not _MPAA_IMPORTABLE:
+        pytest.skip("app.services.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import _backfill_mpaa_pass
+
+    mock_tmdb = _make_mpaa_tmdb_mock({"results": []})  # no US country block
+    mock_db = _make_bg_session_mock([12345])
+
+    update_values = []
+
+    async def capture_execute(stmt):
+        # The UPDATE stmt is sa_update(Movie)...values(mpaa_rating=cert)
+        try:
+            compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+            update_values.append(str(compiled))
+        except Exception:
+            pass
+        return MagicMock(all=MagicMock(return_value=[(12345,)]))
+
+    mock_db.execute = AsyncMock(side_effect=capture_execute)
+
+    with patch("app.services.cache._bg_session_factory", return_value=mock_db):
+        await _backfill_mpaa_pass(mock_tmdb, limit=10)
+
+    # Find the UPDATE statement among captured executions
+    update_stmts = [s for s in update_values if "UPDATE" in s.upper() and "mpaa_rating" in s]
+    assert any("'NR'" in s for s in update_stmts), (
+        f"Expected an UPDATE writing 'NR' sentinel; got: {update_stmts}"
+    )
+    assert not any("mpaa_rating = ''" in s for s in update_stmts), (
+        f"Must NOT write empty-string sentinel anymore; got: {update_stmts}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_backfill_mpaa_writes_actual_cert_when_present():
+    """HEALTH-01: real US certification wins over 'NR' sentinel."""
+    if not _MPAA_IMPORTABLE:
+        pytest.skip("app.services.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import _backfill_mpaa_pass
+
+    mock_tmdb = _make_mpaa_tmdb_mock({
+        "results": [
+            {"iso_3166_1": "US", "release_dates": [{"certification": "R"}]}
+        ]
+    })
+    mock_db = _make_bg_session_mock([12345])
+
+    captured = []
+    async def capture_execute(stmt):
+        try:
+            compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+            captured.append(str(compiled))
+        except Exception:
+            pass
+        return MagicMock(all=MagicMock(return_value=[(12345,)]))
+    mock_db.execute = AsyncMock(side_effect=capture_execute)
+
+    with patch("app.services.cache._bg_session_factory", return_value=mock_db):
+        await _backfill_mpaa_pass(mock_tmdb, limit=10)
+
+    update_stmts = [s for s in captured if "UPDATE" in s.upper() and "mpaa_rating" in s]
+    assert any("'R'" in s for s in update_stmts), (
+        f"Expected an UPDATE writing 'R' real certification; got: {update_stmts}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_backfill_mpaa_query_targets_null_only():
+    """HEALTH-01: SELECT filters mpaa_rating IS NULL only (no '' OR clause)."""
+    if not _MPAA_IMPORTABLE:
+        pytest.skip("app.services.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import _backfill_mpaa_pass
+
+    mock_tmdb = _make_mpaa_tmdb_mock({"results": []})
+    mock_db = _make_bg_session_mock([])  # no rows — work loop won't run
+
+    captured_selects = []
+    async def capture_execute(stmt):
+        try:
+            compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+            sql = str(compiled)
+            if "SELECT" in sql.upper():
+                captured_selects.append(sql)
+        except Exception:
+            pass
+        return MagicMock(all=MagicMock(return_value=[]))
+    mock_db.execute = AsyncMock(side_effect=capture_execute)
+
+    with patch("app.services.cache._bg_session_factory", return_value=mock_db):
+        await _backfill_mpaa_pass(mock_tmdb, limit=10)
+
+    assert captured_selects, "Expected at least one SELECT against movies.mpaa_rating"
+    first = captured_selects[0]
+    assert "IS NULL" in first.upper(), f"Expected IS NULL filter; got: {first}"
+    assert "mpaa_rating = ''" not in first, (
+        f"Empty-string OR clause must be removed; got: {first}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_backfill_mpaa_skips_when_no_null_rows():
+    """HEALTH-01: zero NULL rows → zero TMDB calls (NR-stamped rows are excluded)."""
+    if not _MPAA_IMPORTABLE:
+        pytest.skip("app.services.cache not yet importable (asyncpg or env missing)")
+    from app.services.cache import _backfill_mpaa_pass
+
+    mock_tmdb = _make_mpaa_tmdb_mock({"results": []})
+    mock_db = _make_bg_session_mock([])  # DB returns no rows to process
+
+    with patch("app.services.cache._bg_session_factory", return_value=mock_db):
+        await _backfill_mpaa_pass(mock_tmdb, limit=10)
+
+    assert mock_tmdb._client.get.call_count == 0, (
+        "No TMDB calls should fire when the work set is empty"
+    )
